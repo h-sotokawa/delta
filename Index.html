@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <title>スプレッドシートビューアー</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        background: #f4f6fa;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 40px auto 0 auto;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        padding: 32px 32px 24px 32px;
+      }
+      h1 {
+        text-align: center;
+        font-size: 2rem;
+        margin-bottom: 24px;
+        color: #222;
+      }
+      .location-selector, .query-selector {
+        margin: 20px 0;
+        padding: 10px 20px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .location-selector label, .query-selector label {
+        font-weight: bold;
+        margin-right: 10px;
+      }
+      .location-selector select, .query-selector select {
+        padding: 5px 10px;
+        font-size: 16px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        min-width: 200px;
+      }
+      .radio-group {
+        display: flex;
+        gap: 20px;
+      }
+      .radio-group label {
+        font-weight: normal;
+      }
+      .radio-group input[type="radio"] {
+        margin-right: 5px;
+      }
+      .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        margin-bottom: 24px;
+        /* スマホ時の左右マージン */
+        box-sizing: border-box;
+      }
+      table {
+        width: 100%;
+        min-width: 1500px;
+        margin: 0 auto 24px auto;
+        border-collapse: collapse;
+        background: #fff;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      }
+      th, td {
+        border: 1px solid #e0e0e0;
+        padding: 12px 10px;
+        text-align: left;
+        font-size: 15px;
+      }
+      th {
+        background-color: #eaf1fb;
+        color: #222;
+        font-weight: bold;
+      }
+      th:nth-child(1), td:nth-child(1) { min-width: 180px; }
+      th:nth-child(2), td:nth-child(2) { min-width: 160px; }
+      th:nth-child(3), td:nth-child(3) { min-width: 160px; }
+      th:nth-child(4), td:nth-child(4) { min-width: 120px; }
+      th:nth-child(5), td:nth-child(5) { min-width: 120px; }
+      th:nth-child(6), td:nth-child(6) { min-width: 120px; }
+      th:nth-child(7), td:nth-child(7) { min-width: 120px; }
+      th:nth-child(8), td:nth-child(8) { min-width: 120px; }
+      th:nth-child(9), td:nth-child(9) { min-width: 120px; }
+      th:nth-child(10), td:nth-child(10) { min-width: 120px; }
+      th:nth-child(11), td:nth-child(11) { min-width: 120px; }
+      tr:nth-child(even) td {
+        background: #f6f8fa;
+      }
+      tr:hover td {
+        background: #e3f0ff;
+      }
+      .error {
+        color: #d32f2f;
+        margin-top: 10px;
+        text-align: center;
+      }
+      .loading {
+        text-align: center;
+        margin: 20px 0;
+        color: #888;
+      }
+      .debug {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .debug pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .debug-controls {
+        margin-bottom: 10px;
+      }
+      .debug-controls button {
+        margin-right: 10px;
+        padding: 5px 10px;
+        background-color: #4285f4;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .debug-controls button:hover {
+        background-color: #3367d6;
+      }
+      @media (max-width: 900px) {
+        .container {
+          padding: 8px 2vw 8px 2vw;
+        }
+        .table-responsive {
+          margin-left: 2vw;
+          margin-right: 2vw;
+        }
+        table {
+          min-width: 900px;
+        }
+        th, td {
+          font-size: 15px;
+          padding: 10px 6px;
+        }
+      }
+      @media (max-width: 600px) {
+        .container {
+          padding: 2px 0 2px 0;
+        }
+        .table-responsive {
+          margin-left: 10px;
+          margin-right: 10px;
+        }
+        table {
+          min-width: 600px;
+        }
+        th, td {
+          font-size: 22px;
+          padding: 16px 6px;
+        }
+        td select.status-select {
+          font-size: 22px !important;
+          padding: 8px 4px;
+        }
+        td select.status-select option {
+          font-size: 22px !important;
+        }
+      }
+      .popup-message {
+        position: fixed;
+        top: 32px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #4caf50;
+        color: #fff;
+        padding: 16px 32px;
+        border-radius: 8px;
+        font-size: 20px;
+        font-weight: bold;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.6s;
+        pointer-events: none;
+      }
+      .popup-message.show {
+        display: block;
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>スプレッドシートビューアー</h1>
+      <div id="popupMessage" class="popup-message" style="display:none;"></div>
+      <div class="location-selector">
+        <label for="location">拠点を選択：</label>
+        <select id="location" onchange="handleLocationChange()">
+          <option value="">拠点を選択してください</option>
+        </select>
+      </div>
+      <div class="query-selector" style="display: none;">
+        <label>表示内容：</label>
+        <div class="radio-group">
+          <label>
+            <input type="radio" name="queryType" value="all" checked onchange="handleQueryChange()">
+            一覧
+          </label>
+          <label>
+            <input type="radio" name="queryType" value="lending" onchange="handleQueryChange()">
+            貸出中(ユーザー預り機有)
+          </label>
+        </div>
+      </div>
+      <div id="loading" class="loading" style="display:none;">データを読み込み中...</div>
+      <div id="error" class="error"></div>
+      <div class="table-responsive">
+        <div id="tableContainer"></div>
+      </div>
+      <div id="debug" class="debug">
+        <h3>デバッグ情報</h3>
+        <div class="debug-controls">
+          <button onclick="clearDebugInfo()">ログをクリア</button>
+          <button onclick="toggleDebugInfo()">ログの表示/非表示</button>
+        </div>
+        <pre id="debugInfo"></pre>
+      </div>
+    </div>
+
+    <script>
+      // デバッグ情報を表示する関数
+      function showDebugInfo(message, data) {
+        const debugInfo = document.getElementById('debugInfo');
+        const timestamp = new Date().toISOString();
+        const debugMessage = `[${timestamp}] ${message}\n${JSON.stringify(data, null, 2)}\n\n`;
+        debugInfo.textContent = (debugInfo.textContent || '') + debugMessage;
+      }
+
+      // サーバーログを表示する関数
+      function showServerLogs(logs) {
+        if (!logs || !Array.isArray(logs)) return;
+        
+        const debugInfo = document.getElementById('debugInfo');
+        logs.forEach(log => {
+          const debugMessage = `[SERVER ${log.timestamp}] ${log.message}\n${JSON.stringify(log.data, null, 2)}\n\n`;
+          debugInfo.textContent = (debugInfo.textContent || '') + debugMessage;
+        });
+      }
+
+      // デバッグ情報をクリアする関数
+      function clearDebugInfo() {
+        const debugInfo = document.getElementById('debugInfo');
+        debugInfo.textContent = '';
+      }
+
+      // デバッグ情報の表示/非表示を切り替える関数
+      function toggleDebugInfo() {
+        const debugInfo = document.getElementById('debugInfo');
+        debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+      }
+
+      // シリアル値を日付文字列に変換する関数
+      function convertSerialToDate(serial) {
+        if (!serial || isNaN(serial)) return '';
+        
+        // 1900年1月1日からの経過日数を計算
+        const date = new Date((serial - 25569) * 86400 * 1000);
+        
+        // 日付をフォーマット
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        
+        return `${year}/${month}/${day}`;
+      }
+
+      // 拠点一覧を取得してプルダウンメニューに設定
+      function initializeLocations() {
+        google.script.run
+          .withSuccessHandler(function(response) {
+            if (response.success) {
+              const locationSelect = document.getElementById('location');
+              Object.entries(response.locations).forEach(([key, name]) => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = name;
+                locationSelect.appendChild(option);
+              });
+            }
+            // 初期表示時はローディング非表示
+            document.getElementById('loading').style.display = 'none';
+          })
+          .withFailureHandler(function(error) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = '拠点一覧の取得に失敗しました: ' + error;
+          })
+          .getLocations();
+      }
+
+      // 現在選択されている拠点を保持
+      let currentLocation = '';
+
+      // 拠点が変更されたときの処理
+      function handleLocationChange() {
+        const locationSelect = document.getElementById('location');
+        const selectedLocation = locationSelect.value;
+        const querySelector = document.querySelector('.query-selector');
+        
+        if (selectedLocation) {
+          currentLocation = selectedLocation;
+          querySelector.style.display = 'block';
+          // 現在選択されているクエリタイプを取得して反映
+          const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
+          loadSpreadsheet(selectedLocation, queryType);
+        } else {
+          currentLocation = '';
+          querySelector.style.display = 'none';
+          const tableContainer = document.getElementById('tableContainer');
+          tableContainer.innerHTML = '';
+        }
+      }
+
+      // クエリタイプが変更されたときの処理
+      function handleQueryChange() {
+        if (currentLocation) {
+          const queryType = document.querySelector('input[name="queryType"]:checked').value;
+          loadSpreadsheet(currentLocation, queryType);
+        }
+      }
+
+      // ページ読み込み時に拠点一覧を初期化
+      window.onload = function() {
+        showDebugInfo('ページ読み込み完了', {});
+        initializeLocations();
+      };
+
+      function loadSpreadsheet(location, queryType) {
+        showDebugInfo('データ取得開始', { location, queryType });
+        
+        const errorDiv = document.getElementById('error');
+        const tableContainer = document.getElementById('tableContainer');
+        const loadingDiv = document.getElementById('loading');
+
+        loadingDiv.style.display = 'block';
+        errorDiv.textContent = '';
+        tableContainer.innerHTML = '';
+
+        try {
+          if (!google || !google.script || !google.script.run) {
+            throw new Error('Google Apps Scriptの実行環境が正しく初期化されていません');
+          }
+
+          showDebugInfo('getSpreadsheetData関数の呼び出し開始', { location, queryType });
+          google.script.run
+            .withSuccessHandler(function(response) {
+              showDebugInfo('サーバーからの応答', response);
+              loadingDiv.style.display = 'none';
+              
+              if (!response) {
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = 'エラーが発生しました : スプレッドシート内の日時の表示形式を"書式なし"に変更してください';
+                tableContainer.innerHTML = '';
+                return;
+              }
+              
+              if (response.success) {
+                showDebugInfo('データ表示開始', response.data);
+                displayData(response.data, queryType);
+                errorDiv.textContent = '';
+              } else {
+                const errorMessage = response.error || '不明なエラーが発生しました';
+                const errorDetails = response.errorDetails || {};
+                showDebugInfo('エラー発生', { 
+                  error: errorMessage,
+                  details: errorDetails
+                });
+                errorDiv.textContent = 'エラー: ' + errorMessage;
+                tableContainer.innerHTML = '';
+              }
+
+              if (response.logs) {
+                showServerLogs(response.logs);
+              }
+            })
+            .withFailureHandler(function(error) {
+              showDebugInfo('サーバーエラー', { 
+                error: error,
+                errorType: typeof error,
+                errorString: String(error),
+                errorStack: error.stack
+              });
+              loadingDiv.style.display = 'none';
+              errorDiv.textContent = 'エラーが発生しました: ' + error;
+              tableContainer.innerHTML = '';
+            })
+            .getSpreadsheetData(location, queryType);
+        } catch (error) {
+          showDebugInfo('クライアントサイドエラー', {
+            error: error,
+            errorType: typeof error,
+            errorString: String(error),
+            errorStack: error.stack
+          });
+          loadingDiv.style.display = 'none';
+          errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
+          tableContainer.innerHTML = '';
+        }
+      }
+
+      function displayData(data, queryType) {
+        const tableContainer = document.getElementById('tableContainer');
+        if (!data || data.length === 0) {
+          showDebugInfo('データが空', {});
+          tableContainer.innerHTML = '<p>データがありません</p>';
+          return;
+        }
+
+        showDebugInfo('テーブル作成開始', { rows: data.length, columns: data[0].length });
+
+        let table = '<table>';
+        
+        // ヘッダー行
+        table += '<tr>';
+        data[0].forEach(cell => {
+          table += `<th>${cell}</th>`;
+        });
+        table += '</tr>';
+
+        // データ行
+        for (let i = 1; i < data.length; i++) {
+          // クエリタイプに応じて表示する行をフィルタリング
+          if (queryType === 'all' || 
+              (queryType === 'lending' && 
+               data[i][3] && 
+               data[i][3].includes('貸出') && 
+               data[i][9])) {  // 10列目（インデックス9）に値が存在するかチェック
+            table += '<tr>';
+            data[i].forEach((cell, index) => {
+              if (index === 0) {
+                // 10列目（インデックス9）に内容があり、かつ4列目（インデックス3）に"貸出"が含まれる場合のみプルダウンを表示
+                if (!data[i][9] || !data[i][3] || !data[i][3].includes('貸出')) {
+                  table += '<td></td>';
+                } else {
+                  const currentValue = cell || '';
+                  table += `<td>
+                    <select onchange="updateStatus(${i}, this.value)" class="status-select">
+                      <option value="" ${currentValue === '' ? 'selected' : ''}></option>
+                      <option value="1.返却可能" ${currentValue === '1.返却可能' ? 'selected' : ''}>1.返却可能</option>
+                      <option value="2.商談/金銭的な理由により返却不可" ${currentValue === '2.商談/金銭的な理由により返却不可' ? 'selected' : ''}>2.商談/金銭的な理由により返却不可</option>
+                      <option value="3.お客様にて返却拒否" ${currentValue === '3.お客様にて返却拒否' ? 'selected' : ''}>3.お客様にて返却拒否</option>
+                      <option value="4.HW延長保守にて貸出" ${currentValue === '4.HW延長保守にて貸出' ? 'selected' : ''}>4.HW延長保守にて貸出</option>
+                    </select>
+                  </td>`;
+                }
+              } else if (index === 6) {
+                // 7列目は日付変換
+                table += `<td>${convertSerialToDate(cell)}</td>`;
+              } else {
+                table += `<td>${cell}</td>`;
+              }
+            });
+            table += '</tr>';
+          }
+        }
+
+        table += '</table>';
+        tableContainer.innerHTML = table;
+        showDebugInfo('テーブル作成完了', {});
+      }
+
+      // ポップアップメッセージを表示する関数
+      function showPopupMessage(message) {
+        const popup = document.getElementById('popupMessage');
+        popup.textContent = message;
+        popup.classList.add('show');
+        popup.style.display = 'block';
+        setTimeout(() => {
+          popup.classList.remove('show');
+          setTimeout(() => {
+            popup.style.display = 'none';
+          }, 600);
+        }, 1800);
+      }
+
+      // ステータス更新関数
+      function updateStatus(rowIndex, newStatus) {
+        showDebugInfo('ステータス更新開始', { rowIndex, newStatus });
+        
+        // 空文字列の場合はnullに変換
+        const statusToUpdate = newStatus === '' ? null : newStatus;
+        
+        // ステータス変更の確認ダイアログ
+        let label = '';
+        switch (statusToUpdate) {
+          case null:
+          case '':
+            label = '空欄'; break;
+          case '1.返却可能':
+            label = '1.返却可能'; break;
+          case '2.商談/金銭的な理由により返却不可':
+            label = '2.商談/金銭的な理由により返却不可'; break;
+          case '3.お客様にて返却拒否':
+            label = '3.お客様にて返却拒否'; break;
+          case '4.HW延長保守にて貸出':
+            label = '4.HW延長保守にて貸出'; break;
+          default:
+            label = statusToUpdate;
+        }
+        if (!window.confirm(`${label}に変更しますか？`)) {
+          return;
+        }
+        google.script.run
+          .withSuccessHandler(function(response) {
+            showDebugInfo('ステータス更新成功', response);
+            if (response.success) {
+              showPopupMessage('ステータスを更新しました');
+              // 更新成功時の処理
+              loadSpreadsheet(currentLocation, document.querySelector('input[name="queryType"]:checked').value);
+            } else {
+              // エラー時の処理
+              const errorDiv = document.getElementById('error');
+              errorDiv.textContent = 'ステータスの更新に失敗しました: ' + (response.error || '不明なエラー');
+            }
+          })
+          .withFailureHandler(function(error) {
+            showDebugInfo('ステータス更新エラー', { error });
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = 'エラーが発生しました: ' + error;
+          })
+          .updateMachineStatus(rowIndex, statusToUpdate, currentLocation);
+      }
+    </script>
+  </body>
+</html> 
