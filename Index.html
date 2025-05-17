@@ -447,7 +447,7 @@
               if (index === 0) {
                 // 10列目（インデックス9）に内容があり、かつ4列目（インデックス3）に"貸出"が含まれる場合のみプルダウンを表示
                 if (!data[i][9] || !data[i][3] || !data[i][3].includes('貸出')) {
-                  table += '<td></td>';
+                  table += `<td>${cell || ''}</td>`;
                 } else {
                   const currentValue = cell || '';
                   table += `<td>
@@ -460,11 +460,8 @@
                     </select>
                   </td>`;
                 }
-              } else if (index === 6) {
-                // 7列目は日付変換
-                table += `<td>${convertSerialToDate(cell)}</td>`;
               } else {
-                table += `<td>${cell}</td>`;
+                table += `<td>${cell || ''}</td>`;
               }
             });
             table += '</tr>';
