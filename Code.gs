@@ -120,6 +120,23 @@ function getSpreadsheetData(location, queryType) {
     const range = sheet.getDataRange();
     const data = range.getValues();
     
+    // 日付データの処理
+    for (let i = 1; i < data.length; i++) {
+      for (let j = 0; j < data[i].length; j++) {
+        const cell = data[i][j];
+        if (cell instanceof Date) {
+          // 日付オブジェクトを文字列に変換
+          const year = cell.getFullYear();
+          const month = String(cell.getMonth() + 1).padStart(2, '0');
+          const day = String(cell.getDate()).padStart(2, '0');
+          const hours = String(cell.getHours()).padStart(2, '0');
+          const minutes = String(cell.getMinutes()).padStart(2, '0');
+          const seconds = String(cell.getSeconds()).padStart(2, '0');
+          data[i][j] = `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+        }
+      }
+    }
+    
     const response = {
       success: true,
       data: data,
