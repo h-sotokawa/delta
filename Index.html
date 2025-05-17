@@ -429,7 +429,11 @@
         
         // ヘッダー行
         table += '<tr>';
-        data[0].forEach(cell => {
+        data[0].forEach((cell, index) => {
+          // 一覧表示の場合はA列を非表示、貸出中(ユーザー預り機有)の場合はA列を表示
+          if (index === 0 && queryType === 'all') {
+            return;
+          }
           table += `<th>${cell}</th>`;
         });
         table += '</tr>';
@@ -444,6 +448,10 @@
                data[i][9])) {  // 10列目（インデックス9）に値が存在するかチェック
             table += '<tr>';
             data[i].forEach((cell, index) => {
+              // 一覧表示の場合はA列を非表示、貸出中(ユーザー預り機有)の場合はA列を表示
+              if (index === 0 && queryType === 'all') {
+                return;
+              }
               if (index === 0) {
                 // 10列目（インデックス9）に内容があり、かつ4列目（インデックス3）に"貸出"が含まれる場合のみプルダウンを表示
                 if (!data[i][9] || !data[i][3] || !data[i][3].includes('貸出')) {
