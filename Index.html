@@ -443,8 +443,9 @@
           // クエリタイプに応じて表示する行をフィルタリング
           if (queryType === 'all' || 
               (queryType === 'lending' && 
-               data[i][3] && 
-               data[i][3].includes('貸出') && 
+               ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
+                (data[i][2] && data[i][2].includes('貸出')) : 
+                (data[i][3] && data[i][3].includes('貸出'))) && 
                data[i][9])) {  // 10列目（インデックス9）に値が存在するかチェック
             table += '<tr>';
             data[i].forEach((cell, index) => {
