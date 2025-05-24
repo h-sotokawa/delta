@@ -2,10 +2,10 @@
 const LOCATION_NAMES = {
   'osaka_desktop': '大阪(デスクトップ)',
   'osaka_notebook': '大阪(ノート、サーバー)',
-  'kobe': '神戸',
-  'himeji': '姫路',
-  'osaka_printer': '大阪(プリンタ)',
-  'hyogo_printer': '兵庫(プリンタ)'
+  'kobe': '神戸(端末)',
+  'himeji': '姫路(端末)',
+  'osaka_printer': '大阪(プリンタ、その他)',
+  'hyogo_printer': '兵庫(プリンタ、その他)'
 };
 
 const TARGET_SHEET_NAME = 'main';
