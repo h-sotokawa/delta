@@ -445,8 +445,7 @@
               (queryType === 'lending' && 
                ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
                 (data[i][2] && data[i][2].includes('貸出')) : 
-                (data[i][3] && data[i][3].includes('貸出'))) && 
-               data[i][9])) {  // 10列目（インデックス9）に値が存在するかチェック
+                (data[i][3] && data[i][3].includes('貸出') && data[i][9])))) {  // プリンタ以外は10列目のチェックを維持
             table += '<tr>';
             data[i].forEach((cell, index) => {
               // 一覧表示の場合はA列を非表示、貸出中(ユーザー預り機有)の場合はA列を表示
@@ -459,8 +458,12 @@
                   (data[i][2] && data[i][2].includes('貸出')) :
                   (data[i][3] && data[i][3].includes('貸出'));
 
-                // 10列目（インデックス9）に内容があり、かつ"貸出"が含まれる場合のみプルダウンを表示
-                if (!data[i][9] || !isLending) {
+                // プリンタロケーションの場合は10列目のチェックを除外
+                const shouldShowDropdown = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+                  isLending :
+                  (isLending && data[i][9]);
+
+                if (!shouldShowDropdown) {
                   table += `<td>${cell || ''}</td>`;
                 } else {
                   const currentValue = cell || '';
