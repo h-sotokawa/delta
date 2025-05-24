@@ -454,8 +454,13 @@
                 return;
               }
               if (index === 0) {
-                // 10列目（インデックス9）に内容があり、かつ4列目（インデックス3）に"貸出"が含まれる場合のみプルダウンを表示
-                if (!data[i][9] || !data[i][3] || !data[i][3].includes('貸出')) {
+                // プリンタロケーションの場合はC列、それ以外はD列の"貸出"をチェック
+                const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+                  (data[i][2] && data[i][2].includes('貸出')) :
+                  (data[i][3] && data[i][3].includes('貸出'));
+
+                // 10列目（インデックス9）に内容があり、かつ"貸出"が含まれる場合のみプルダウンを表示
+                if (!data[i][9] || !isLending) {
                   table += `<td>${cell || ''}</td>`;
                 } else {
                   const currentValue = cell || '';
