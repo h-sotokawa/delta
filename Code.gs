@@ -3,7 +3,9 @@ const LOCATION_NAMES = {
   'osaka_desktop': '大阪(デスクトップ)',
   'osaka_notebook': '大阪(ノート、サーバー)',
   'kobe': '神戸',
-  'himeji': '姫路'
+  'himeji': '姫路',
+  'osaka_printer': '大阪(プリンタ)',
+  'hyogo_printer': '兵庫(プリンタ)'
 };
 
 const TARGET_SHEET_NAME = 'main';
@@ -88,6 +90,8 @@ function getSpreadsheetIdFromProperty(location) {
     'osaka_notebook': 'SPREADSHEET_ID_SOURCE_OSAKA_LAPTOP',
     'kobe': 'SPREADSHEET_ID_SOURCE_KOBE',
     'himeji': 'SPREADSHEET_ID_SOURCE_HIMEJI',
+    'osaka_printer': 'SPREADSHEET_ID_SOURCE_OSAKA_PRINTER',
+    'hyogo_printer': 'SPREADSHEET_ID_SOURCE_HYOGO_PRINTER'
   };
   const key = propertyKeys[location];
   if (!key) return null;
