@@ -4,83 +4,255 @@
     <base target="_top">
     <meta charset="UTF-8">
     <title>スプレッドシートビューアー</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        background: #f4f6fa;
+      :root {
+        --primary-color: #1e293b;
+        --primary-gradient: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        --secondary-color: #64748b;
+        --secondary-gradient: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        --accent-color: #0f172a;
+        --accent-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        --highlight-color: #3b82f6;
+        --highlight-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        --success-color: #10b981;
+        --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --warning-color: #f59e0b;
+        --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        --text-primary: #0f172a;
+        --text-secondary: #475569;
+        --text-accent: #64748b;
+        --text-light: #94a3b8;
+        --bg-primary: #f8fafc;
+        --bg-secondary: #ffffff;
+        --bg-accent: #f1f5f9;
+        --bg-dark: #0f172a;
+        --border-color: #e2e8f0;
+        --border-accent: #cbd5e0;
+        --border-dark: #334155;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        --shadow-blue: 0 4px 14px 0 rgba(59, 130, 246, 0.15);
+        --border-radius: 6px;
+        --border-radius-lg: 10px;
+        --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic Medium', 'Meiryo', 'MS PGothic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        background: var(--bg-primary);
+        background-image: 
+          linear-gradient(90deg, rgba(30, 41, 59, 0.02) 1px, transparent 1px),
+          linear-gradient(rgba(30, 41, 59, 0.02) 1px, transparent 1px);
+        background-size: 40px 40px;
+        min-height: 100vh;
+        color: var(--text-primary);
+        line-height: 1.6;
+        font-feature-settings: "palt" 1;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        font-weight: 400;
+      }
+
       .container {
         max-width: 95vw;
-        margin: 40px auto 0 auto;
-        background: #fff;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-        padding: 32px 32px 24px 32px;
+        margin: 24px auto 0 auto;
+        background: var(--bg-secondary);
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-xl);
+        padding: 48px 56px;
+        border: 1px solid var(--border-color);
+        position: relative;
+        overflow: hidden;
       }
+
+      .container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--highlight-gradient);
+      }
+
       h1 {
         text-align: center;
-        font-size: 2rem;
-        margin-bottom: 24px;
-        color: #222;
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin-bottom: 32px;
+        margin-top: 0;
+        color: var(--primary-color);
+        letter-spacing: -0.025em;
+        font-feature-settings: "palt" 1, "kern" 1;
+        position: relative;
       }
+
+      h1::after {
+        content: '';
+        position: absolute;
+        bottom: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 2px;
+        background: var(--highlight-color);
+      }
+
       .location-selector, .query-selector {
-        margin: 20px 0;
-        padding: 10px 20px;
-        background-color: #f8f9fa;
-        border-radius: 4px;
+        margin: 24px 0;
+        padding: 20px 24px;
+        background: var(--bg-accent);
+        border-radius: var(--border-radius);
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 20px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-sm);
+        transition: var(--transition);
+        position: relative;
       }
+
+      .location-selector::before, .query-selector::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--highlight-color);
+      }
+
+      .location-selector:hover, .query-selector:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-1px);
+      }
+
       .location-selector label, .query-selector label {
-        font-weight: bold;
-        margin-right: 10px;
+        font-weight: 500;
+        margin-right: 12px;
+        color: var(--text-primary);
+        font-size: 1rem;
+        letter-spacing: 0.025em;
       }
+
       .location-selector select, .query-selector select {
-        padding: 5px 10px;
-        font-size: 16px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
+        padding: 10px 14px;
+        font-size: 14px;
+        border: 1px solid var(--border-accent);
+        border-radius: var(--border-radius);
         min-width: 200px;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        transition: var(--transition);
+        font-weight: 500;
       }
+
+      .location-selector select:focus, .query-selector select:focus {
+        outline: none;
+        border-color: var(--highlight-color);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
       .radio-group {
         display: flex;
-        gap: 20px;
+        gap: 24px;
+        flex-wrap: wrap;
       }
+
       .radio-group label {
-        font-weight: normal;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        padding: 8px 16px;
+        border-radius: 8px;
+        transition: var(--transition);
+        background: transparent;
+        border: 1px solid transparent;
+        letter-spacing: 0.025em;
       }
+
+      .radio-group label:hover {
+        background: rgba(59, 130, 246, 0.08);
+        border-color: var(--highlight-color);
+      }
+
       .radio-group input[type="radio"] {
-        margin-right: 5px;
+        margin-right: 8px;
+        accent-color: var(--highlight-color);
+        transform: scale(1.1);
       }
+
       .table-responsive {
         width: 100%;
         overflow-x: auto;
-        margin-bottom: 24px;
-        /* スマホ時の左右マージン */
-        box-sizing: border-box;
+        margin: 16px 0 32px 0;
+        border-radius: var(--border-radius);
+        background: transparent;
       }
+
+      .table-responsive:has(table) {
+        box-shadow: var(--shadow-lg);
+      }
+
       table {
         width: 100%;
         min-width: 1500px;
-        margin: 0 auto 24px auto;
-        border-collapse: collapse;
-        background: #fff;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        margin: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: var(--bg-secondary);
+        border-radius: var(--border-radius);
+        overflow: hidden;
       }
+
+      #tableContainer {
+        background: transparent !important;
+      }
+
       th, td {
-        border: 1px solid #e0e0e0;
-        padding: 12px 10px;
+        border: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 16px 12px;
         text-align: left;
         font-size: 15px;
+        transition: var(--transition);
       }
+
       th {
-        background-color: #eaf1fb;
-        color: #222;
-        font-weight: bold;
+        background: var(--primary-gradient);
+        color: white;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        font-size: 12px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        font-feature-settings: "palt" 1;
+        padding: 16px 20px;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--border-dark);
       }
-      th:nth-child(1), td:nth-child(1) { min-width: 15px; text-align: center; } /* 項番列 */
+
+      th:first-child {
+        border-top-left-radius: var(--border-radius);
+      }
+
+      th:last-child {
+        border-top-right-radius: var(--border-radius);
+      }
+
+      th:nth-child(1), td:nth-child(1) { min-width: 60px; text-align: center; font-weight: 600; }
       th:nth-child(2), td:nth-child(2) { min-width: 180px; }
       th:nth-child(3), td:nth-child(3) { min-width: 160px; }
       th:nth-child(4), td:nth-child(4) { min-width: 160px; }
@@ -92,109 +264,162 @@
       th:nth-child(10), td:nth-child(10) { min-width: 120px; }
       th:nth-child(11), td:nth-child(11) { min-width: 120px; }
       th:nth-child(12), td:nth-child(12) { min-width: 120px; }
+
       tr:nth-child(even) td {
-        background: #f6f8fa;
+        background: var(--bg-accent);
       }
+
       tr:hover td {
-        background: #e3f0ff;
+        background: rgba(59, 130, 246, 0.04);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
       }
+
+      .status-select {
+        padding: 8px 12px;
+        border: 2px solid var(--border-color);
+        border-radius: 6px;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-size: 14px;
+        font-weight: 500;
+        transition: var(--transition);
+        cursor: pointer;
+      }
+
+      .status-select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
       .error {
-        color: #d32f2f;
-        margin-top: 10px;
+        color: #e53e3e;
+        margin-top: 16px;
         text-align: center;
+        padding: 16px;
+        background: transparent;
+        border-radius: var(--border-radius);
+        border: none;
+        font-weight: 500;
       }
+
+      .error:not(:empty) {
+        background: linear-gradient(135deg, rgba(229, 62, 62, 0.1) 0%, rgba(229, 62, 62, 0.05) 100%);
+        border: 1px solid rgba(229, 62, 62, 0.2);
+      }
+
       .loading {
         text-align: center;
-        margin: 20px 0;
-        color: #888;
+        margin: 32px 0;
+        color: var(--text-secondary);
+        font-size: 18px;
+        font-weight: 500;
       }
+
+      .loading::after {
+        content: '';
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        margin-left: 10px;
+        border: 2px solid var(--border-color);
+        border-top: 2px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
       .debug {
-        margin-top: 20px;
-        padding: 10px;
-        background-color: #f8f9fa;
-        border: 1px solid #ddd;
-        border-radius: 4px;
+        margin-top: 32px;
+        padding: 24px;
+        background: linear-gradient(135deg, rgba(113, 128, 150, 0.05) 0%, rgba(113, 128, 150, 0.02) 100%);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
       }
+
+      .debug h3 {
+        margin-top: 0;
+        color: var(--text-primary);
+        font-weight: 500;
+        letter-spacing: 0.025em;
+      }
+
       .debug pre {
         white-space: pre-wrap;
         word-wrap: break-word;
         max-height: 400px;
         overflow-y: auto;
+        background: var(--bg-primary);
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 13px;
+        line-height: 1.5;
       }
+
       .debug-controls {
-        margin-bottom: 10px;
+        margin-bottom: 16px;
+        display: flex;
+        gap: 12px;
       }
+
       .debug-controls button {
-        margin-right: 10px;
-        padding: 5px 10px;
-        background-color: #4285f4;
-        color: white;
-        border: none;
-        border-radius: 4px;
+        padding: 8px 16px;
+        background: var(--bg-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-accent);
+        border-radius: var(--border-radius);
         cursor: pointer;
+        font-weight: 500;
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 13px;
       }
+
       .debug-controls button:hover {
-        background-color: #3367d6;
+        background: var(--highlight-color);
+        color: white;
+        border-color: var(--highlight-color);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
       }
-      @media (max-width: 900px) {
-        .container {
-          padding: 8px 2vw 8px 2vw;
-        }
-        .table-responsive {
-          margin-left: 2vw;
-          margin-right: 2vw;
-        }
-        table {
-          min-width: 900px;
-        }
-        th, td {
-          font-size: 15px;
-          padding: 10px 6px;
-        }
+
+      .debug-controls button:active {
+        transform: translateY(0);
       }
-      @media (max-width: 600px) {
-        .container {
-          padding: 2px 0 2px 0;
-        }
-        .table-responsive {
-          margin-left: 10px;
-          margin-right: 10px;
-        }
-        table {
-          min-width: 600px;
-        }
-        th, td {
-          font-size: 22px;
-          padding: 16px 6px;
-        }
-        td select.status-select {
-          font-size: 22px !important;
-          padding: 8px 4px;
-        }
-        td select.status-select option {
-          font-size: 22px !important;
-        }
-      }
+
       .popup-message {
         position: fixed;
-        top: 32px;
+        top: 24px;
         left: 50%;
         transform: translateX(-50%);
-        background: #4caf50;
-        color: #fff;
-        padding: 16px 32px;
-        border-radius: 8px;
-        font-size: 20px;
-        font-weight: bold;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        background: var(--success-gradient);
+        color: white;
+        padding: 16px 24px;
+        border-radius: var(--border-radius);
+        font-size: 14px;
+        font-weight: 600;
+        box-shadow: var(--shadow-xl);
         z-index: 9999;
         opacity: 0;
-        transition: opacity 0.6s;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: none;
+        border: 1px solid rgba(255, 255, 255, 0.2);
       }
+
       .popup-message.show {
         display: block;
         opacity: 1;
+        transform: translateX(-50%) translateY(10px);
       }
       
       /* ドラッグ&ドロップ用のスタイル */
@@ -206,13 +431,16 @@
       }
       
       th.dragging {
-        opacity: 0.5;
-        background-color: #d1ecf1;
+        opacity: 0.7;
+        background: var(--secondary-gradient);
+        transform: scale(1.05);
+        z-index: 1000;
       }
       
       th.drag-over {
-        background-color: #bee5eb;
-        border-left: 3px solid #17a2b8;
+        background: var(--warning-gradient);
+        border-left: 4px solid var(--primary-color);
+        transform: scale(1.02);
       }
       
       .drag-indicator {
@@ -221,8 +449,127 @@
         left: -2px;
         width: 4px;
         height: 100%;
-        background-color: #17a2b8;
+        background: var(--primary-gradient);
         display: none;
+        border-radius: 2px;
+      }
+
+      /* レスポンシブデザイン */
+      @media (max-width: 900px) {
+        .container {
+          padding: 24px 16px;
+          margin: 20px auto;
+        }
+        
+        h1 {
+          font-size: 2rem;
+        }
+        
+        .location-selector, .query-selector {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+        }
+        
+        .location-selector select, .query-selector select {
+          min-width: 100%;
+        }
+        
+        .table-responsive {
+          margin-left: 16px;
+          margin-right: 16px;
+        }
+        
+        table {
+          min-width: 900px;
+        }
+        
+        th, td {
+          font-size: 14px;
+          padding: 12px 8px;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .container {
+          padding: 16px 8px;
+          margin: 10px auto;
+        }
+        
+        h1 {
+          font-size: 1.75rem;
+        }
+        
+        .table-responsive {
+          margin-left: 8px;
+          margin-right: 8px;
+        }
+        
+        table {
+          min-width: 600px;
+        }
+        
+        th, td {
+          font-size: 16px;
+          padding: 14px 6px;
+        }
+        
+        td select.status-select {
+          font-size: 16px !important;
+          padding: 10px 8px;
+        }
+        
+        td select.status-select option {
+          font-size: 16px !important;
+        }
+        
+        .radio-group {
+          flex-direction: column;
+          gap: 12px;
+        }
+      }
+
+      /* アニメーション効果 */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .container {
+        animation: fadeInUp 0.6s ease-out;
+      }
+
+      .location-selector, .query-selector {
+        animation: fadeInUp 0.6s ease-out 0.1s both;
+      }
+
+      .table-responsive {
+        animation: fadeInUp 0.6s ease-out 0.2s both;
+      }
+
+      /* スクロールバーのスタイリング */
+      .table-responsive::-webkit-scrollbar {
+        height: 8px;
+      }
+
+      .table-responsive::-webkit-scrollbar-track {
+        background: var(--bg-primary);
+        border-radius: 4px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb {
+        background: var(--primary-gradient);
+        border-radius: 4px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: var(--secondary-gradient);
       }
     </style>
   </head>
@@ -553,6 +900,38 @@
 
         showDebugInfo('テーブル作成開始', { rows: data.length, columns: data[0].length });
 
+        // 空の列を検出する関数
+        function isColumnEmpty(columnIndex) {
+          // ヘッダーが空かチェック
+          if (!data[0][columnIndex] || data[0][columnIndex].trim() === '') {
+            return true;
+          }
+          
+          // データ行で該当する列に内容があるかチェック
+          for (let i = 1; i < data.length; i++) {
+            // 表示される行のみをチェック
+            if (queryType === 'all' || 
+                (queryType === 'lending' && 
+                 ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
+                  (data[i][2] && data[i][2].includes('貸出')) : 
+                  (data[i][3] && data[i][3].includes('貸出') && data[i][9])))) {
+              if (data[i][columnIndex] && data[i][columnIndex].toString().trim() !== '') {
+                return false;
+              }
+            }
+          }
+          return true;
+        }
+
+        // 空の列をログに記録
+        const emptyColumns = [];
+        for (let i = 0; i < data[0].length; i++) {
+          if (isColumnEmpty(i)) {
+            emptyColumns.push({ index: i, header: data[0][i] || '(空)' });
+          }
+        }
+        showDebugInfo('空の列を検出', { emptyColumns });
+
         let table = '<table>';
         
         // ヘッダー行
@@ -563,6 +942,12 @@
           if (index === 0 && queryType === 'all') {
             return;
           }
+          
+          // 空の列は表示しない
+          if (isColumnEmpty(index)) {
+            return;
+          }
+          
           table += `<th>${cell}</th>`;
         });
         table += '</tr>';
@@ -584,6 +969,12 @@
               if (index === 0 && queryType === 'all') {
                 return;
               }
+              
+              // 空の列は表示しない
+              if (isColumnEmpty(index)) {
+                return;
+              }
+              
               if (index === 0) {
                 // プリンタロケーションの場合はC列、それ以外はD列の"貸出"をチェック
                 const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
