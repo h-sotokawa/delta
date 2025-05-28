@@ -602,7 +602,7 @@
         <div id="tableContainer"></div>
       </div>
       <div id="debug" class="debug">
-        <h3>デバッグ情報</h3>
+        <h3>デバッグ情報 <span style="color: var(--success-color); font-size: 0.8em;">(デバッグモード: ON)</span></h3>
         <div class="debug-controls">
           <button onclick="clearDebugInfo()">ログをクリア</button>
           <button onclick="toggleDebugInfo()">ログの表示/非表示</button>
@@ -612,8 +612,25 @@
     </div>
 
     <script>
+      /*
+       * デバッグモード設定
+       * 
+       * DEBUG_MODE = true  : デバッグ情報を表示（開発環境用）
+       * DEBUG_MODE = false : デバッグ情報を非表示（本番環境用）
+       * 
+       * 本番環境にデプロイする際は false に変更してください。
+       * デバッグモードがオフの場合：
+       * - デバッグセクション全体が非表示
+       * - showDebugInfo() 関数の処理がスキップ
+       * - showServerLogs() 関数の処理がスキップ
+       * - デバッグ関連のボタンが無効化
+       */
+      const DEBUG_MODE = true; // false にするとデバッグ情報が非表示になります
+      
       // デバッグ情報を表示する関数
       function showDebugInfo(message, data) {
+        if (!DEBUG_MODE) return; // デバッグモードがオフの場合は何もしない
+        
         const debugInfo = document.getElementById('debugInfo');
         const timestamp = new Date().toISOString();
         const debugMessage = `[${timestamp}] ${message}\n${JSON.stringify(data, null, 2)}\n\n`;
@@ -622,6 +639,7 @@
 
       // サーバーログを表示する関数
       function showServerLogs(logs) {
+        if (!DEBUG_MODE) return; // デバッグモードがオフの場合は何もしない
         if (!logs || !Array.isArray(logs)) return;
         
         const debugInfo = document.getElementById('debugInfo');
@@ -633,12 +651,16 @@
 
       // デバッグ情報をクリアする関数
       function clearDebugInfo() {
+        if (!DEBUG_MODE) return; // デバッグモードがオフの場合は何もしない
+        
         const debugInfo = document.getElementById('debugInfo');
         debugInfo.textContent = '';
       }
 
       // デバッグ情報の表示/非表示を切り替える関数
       function toggleDebugInfo() {
+        if (!DEBUG_MODE) return; // デバッグモードがオフの場合は何もしない
+        
         const debugInfo = document.getElementById('debugInfo');
         debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
       }
@@ -720,6 +742,14 @@
       window.onload = function() {
         showDebugInfo('ページ読み込み完了', {});
         initializeLocations();
+        
+        // デバッグモードがオフの場合はデバッグセクションを非表示
+        if (!DEBUG_MODE) {
+          const debugSection = document.getElementById('debug');
+          if (debugSection) {
+            debugSection.style.display = 'none';
+          }
+        }
       };
 
       // ドラッグ&ドロップ関連の関数
