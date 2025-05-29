@@ -109,6 +109,7 @@
   function updateProgress() {
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
+    const progressBar = document.querySelector('.progress-bar');
     
     const percentage = totalLocations > 0 ? (completedLocations / totalLocations) * 100 : 0;
     
@@ -119,21 +120,49 @@
     if (progressText) {
       progressText.textContent = `${completedLocations} / ${totalLocations} 拠点完了`;
     }
+    
+    // aria属性を更新してアクセシビリティを向上
+    if (progressBar) {
+      progressBar.setAttribute('aria-valuenow', Math.round(percentage));
+      progressBar.setAttribute('aria-valuetext', `${completedLocations}件中${totalLocations}件完了`);
+    }
   }
 
-  // 拠点のステータスを更新
+  // 拠点のステータスを更新（アニメーション付き）
   function updateLocationStatus(location, status) {
     const statusElement = document.getElementById(`status-${location}`);
     if (!statusElement) return;
     
-    // 既存のステータスクラスを削除
-    statusElement.classList.remove('loading', 'success', 'error', 'warning');
+    // ステータス変更時の滑らかなアニメーション
+    statusElement.style.transform = 'scale(0.95)';
+    statusElement.style.opacity = '0.7';
     
-    // 新しいステータスクラスを追加
-    statusElement.classList.add(status);
+    setTimeout(() => {
+      // 既存のステータスクラスを削除
+      statusElement.classList.remove('loading', 'success', 'error', 'warning');
+      
+      // 新しいステータスクラスを追加
+      statusElement.classList.add(status);
+      
+      // アニメーションをリセット
+      statusElement.style.transform = 'scale(1)';
+      statusElement.style.opacity = '1';
+      
+      // アクセシビリティのためのaria-label更新
+      const locationName = LOCATION_NAMES_CLIENT[location] || location;
+      let statusText = '';
+      switch(status) {
+        case 'loading': statusText = '読み込み中'; break;
+        case 'success': statusText = '完了'; break;
+        case 'error': statusText = 'エラー'; break;
+        case 'warning': statusText = '警告'; break;
+        default: statusText = '待機中';
+      }
+      statusElement.setAttribute('aria-label', `${locationName}の読み込み状況: ${statusText}`);
+    }, 150);
   }
 
-  // 通知を追加
+  // 通知を追加（アニメーション改善）
   function addNotification(message, type = 'info') {
     const notifications = document.getElementById('notifications');
     if (!notifications) return;
@@ -141,28 +170,58 @@
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
+    notification.setAttribute('role', 'alert');
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateY(20px)';
     
     notifications.appendChild(notification);
+    
+    // アニメーション開始
+    requestAnimationFrame(() => {
+      notification.style.opacity = '1';
+      notification.style.transform = 'translateY(0)';
+    });
     
     // 自動削除（長時間表示の場合）
     setTimeout(() => {
       if (notification.parentNode) {
-        notification.remove();
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(-20px)';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.remove();
+          }
+        }, 300);
       }
-    }, 10000);
+    }, 8000);
   }
 
-  // オープニング画面を閉じる
+  // オープニング画面を閉じる（アニメーション改善）
   function closeOpeningScreen() {
     const openingScreen = document.getElementById('opening-screen');
     if (!openingScreen) return;
     
-    openingScreen.classList.add('fade-out');
+    // 完了メッセージを短時間表示
+    const loadingText = document.getElementById('loading-text');
+    if (loadingText) {
+      loadingText.textContent = 'データ読み込み完了！';
+      loadingText.style.color = '#4CAF50';
+    }
     
     setTimeout(() => {
-      openingScreen.style.display = 'none';
-      openingScreen.classList.remove('fade-out');
-    }, 500);
+      openingScreen.classList.add('fade-out');
+      
+      setTimeout(() => {
+        openingScreen.style.display = 'none';
+        openingScreen.classList.remove('fade-out');
+        
+        // 完了後のクリーンアップ
+        if (loadingText) {
+          loadingText.textContent = '全拠点データを読み込み中...';
+          loadingText.style.color = '';
+        }
+      }, 800);
+    }, 600);
   }
 
   // プリロードされたデータを取得する関数

@@ -1,52 +1,52 @@
 <!-- opening-screen.html - オープニング画面コンポーネント -->
-<div id="opening-screen" class="opening-screen" style="display: none;">
+<div id="opening-screen" class="opening-screen" style="display: none;" role="dialog" aria-labelledby="logo-title" aria-describedby="loading-text">
   <div class="opening-container">
-    <div class="logo-container">
-      <div class="logo-icon">
+    <header class="logo-container">
+      <div class="logo-icon" aria-hidden="true">
         <i class="fas fa-database"></i>
       </div>
-      <h1 class="logo-title">代替機管理システム</h1>
+      <h1 id="logo-title" class="logo-title">代替機管理システム</h1>
       <p class="logo-subtitle">関西フィールドサービス課</p>
-    </div>
+    </header>
     
-    <div class="loading-container">
-      <div class="loading-spinner">
+    <main class="loading-container">
+      <div class="loading-spinner" aria-hidden="true">
         <div class="spinner"></div>
       </div>
-      <p class="loading-text">全拠点データを読み込み中...</p>
-      <div class="progress-bar">
+      <p id="loading-text" class="loading-text">全拠点データを読み込み中...</p>
+      <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="progress-text">
         <div class="progress-fill" id="progressFill"></div>
       </div>
-      <p class="progress-text" id="progressText">0 / 6 拠点完了</p>
-    </div>
+      <p class="progress-text" id="progressText" aria-live="polite">0 / 6 拠点完了</p>
+    </main>
     
-    <div class="loading-status" id="loadingStatus">
-      <div class="status-item" id="status-osaka_desktop">
-        <i class="fas fa-circle status-icon"></i>
+    <section class="loading-status" id="loadingStatus" aria-label="拠点読み込み状況">
+      <div class="status-item" id="status-osaka_desktop" role="status" aria-label="大阪デスクトップ拠点の読み込み状況">
+        <i class="fas fa-circle status-icon" aria-hidden="true"></i>
         <span>大阪(デスクトップ)</span>
       </div>
-      <div class="status-item" id="status-osaka_notebook">
-        <i class="fas fa-circle status-icon"></i>
+      <div class="status-item" id="status-osaka_notebook" role="status" aria-label="大阪ノート・サーバー拠点の読み込み状況">
+        <i class="fas fa-circle status-icon" aria-hidden="true"></i>
         <span>大阪(ノート、サーバー)</span>
       </div>
-      <div class="status-item" id="status-kobe">
-        <i class="fas fa-circle status-icon"></i>
+      <div class="status-item" id="status-kobe" role="status" aria-label="神戸端末拠点の読み込み状況">
+        <i class="fas fa-circle status-icon" aria-hidden="true"></i>
         <span>神戸(端末)</span>
       </div>
-      <div class="status-item" id="status-himeji">
-        <i class="fas fa-circle status-icon"></i>
+      <div class="status-item" id="status-himeji" role="status" aria-label="姫路端末拠点の読み込み状況">
+        <i class="fas fa-circle status-icon" aria-hidden="true"></i>
         <span>姫路(端末)</span>
       </div>
-      <div class="status-item" id="status-osaka_printer">
-        <i class="fas fa-circle status-icon"></i>
+      <div class="status-item" id="status-osaka_printer" role="status" aria-label="大阪プリンタ・その他拠点の読み込み状況">
+        <i class="fas fa-circle status-icon" aria-hidden="true"></i>
         <span>大阪(プリンタ、その他)</span>
       </div>
-      <div class="status-item" id="status-hyogo_printer">
-        <i class="fas fa-circle status-icon"></i>
+      <div class="status-item" id="status-hyogo_printer" role="status" aria-label="兵庫プリンタ・その他拠点の読み込み状況">
+        <i class="fas fa-circle status-icon" aria-hidden="true"></i>
         <span>兵庫(プリンタ、その他)</span>
       </div>
-    </div>
+    </section>
     
-    <div class="notifications" id="notifications"></div>
+    <section class="notifications" id="notifications" aria-live="polite" aria-label="システム通知"></section>
   </div>
 </div> 
