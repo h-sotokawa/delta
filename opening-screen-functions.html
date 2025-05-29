@@ -30,208 +30,142 @@
     
     openingScreen.style.display = 'flex';
     
+    // 6秒後にメッセージを変更
+    setTimeout(() => {
+      const loadingText = document.getElementById('loading-text');
+      if (loadingText) {
+        loadingText.textContent = 'まもなく準備完了...';
+        loadingText.style.color = '#90CAF9';
+      }
+    }, 6000);
+    
+    // オープニング画面を6秒間表示してダッシュボードに移行
+    setTimeout(() => {
+      hideOpeningScreen();
+      
+      // バックグラウンドでデータ読み込みを開始
+      startBackgroundPreload();
+    }, 8000); // 8秒後にダッシュボードを表示
+  }
+
+  // バックグラウンドでのデータ読み込み
+  function startBackgroundPreload() {
     // プログレス初期化
     const locations = Object.keys(LOCATION_NAMES_CLIENT);
     totalLocations = locations.length;
     completedLocations = 0;
     preloadedData = {};
     
-    updateProgress();
-    
-    // 各拠点のデータを順次読み込み
-    loadAllLocationsData();
+    // 各拠点のデータを順次読み込み（バックグラウンド）
+    loadAllLocationsDataInBackground();
   }
 
-  // 全拠点のデータを読み込み
-  async function loadAllLocationsData() {
+  // バックグラウンドで全拠点のデータを読み込み
+  function loadAllLocationsDataInBackground() {
     const locations = Object.keys(LOCATION_NAMES_CLIENT);
-    const notifications = document.getElementById('notifications');
+    let currentIndex = 0;
     
-    // 並列読み込みではなく順次読み込みで負荷を軽減
-    for (const location of locations) {
-      try {
-        await loadLocationData(location);
-      } catch (error) {
-        console.error(`${location}のデータ読み込みエラー:`, error);
-        updateLocationStatus(location, 'error');
-        addNotification(`${LOCATION_NAMES_CLIENT[location]}のデータ読み込みに失敗しました`, 'error');
+    function loadNextLocation() {
+      if (currentIndex >= locations.length) {
+        // 全拠点の読み込み完了
+        if (DEBUG_MODE && typeof showDebugInfo === 'function') {
+          showDebugInfo('バックグラウンドプリロード完了', { 
+            total: totalLocations,
+            completed: completedLocations,
+            data: preloadedData 
+          });
+        }
+        return;
       }
-    }
-    
-    // 少し待ってからオープニング画面を閉じる
-    setTimeout(() => {
-      closeOpeningScreen();
-    }, 800);
-  }
-
-  // 特定拠点のデータを読み込み
-  function loadLocationData(location) {
-    return new Promise((resolve, reject) => {
-      updateLocationStatus(location, 'loading');
       
+      const location = locations[currentIndex];
+      currentIndex++;
+      
+      // デバッグログ
+      if (DEBUG_MODE && typeof showDebugInfo === 'function') {
+        showDebugInfo('バックグラウンド読み込み開始', { location, index: currentIndex });
+      }
+      
+      // 非同期でデータ取得
       google.script.run
         .withSuccessHandler(function(response) {
-          if (response.success) {
+          completedLocations++;
+          
+          if (response && response.success) {
             preloadedData[location] = response;
-            updateLocationStatus(location, 'success');
-            completedLocations++;
-            updateProgress();
-            resolve(response);
+            if (DEBUG_MODE && typeof showDebugInfo === 'function') {
+              showDebugInfo('バックグラウンド読み込み成功', { 
+                location, 
+                dataRows: response.data ? response.data.length : 0 
+              });
+            }
           } else {
-            // スプレッドシートIDが設定されていない場合は警告として扱う
-            if (response.error && response.error.includes('スプレッドシートIDが設定されていません')) {
-              updateLocationStatus(location, 'warning');
-              addNotification(`${LOCATION_NAMES_CLIENT[location]}のスプレッドシートIDが設定されていません`, 'warning');
-              completedLocations++;
-              updateProgress();
-              resolve(null); // エラーを無視して続行
-            } else {
-              updateLocationStatus(location, 'error');
-              addNotification(`${LOCATION_NAMES_CLIENT[location]}: ${response.error}`, 'error');
-              completedLocations++;
-              updateProgress();
-              reject(new Error(response.error));
+            preloadedData[location] = null;
+            if (DEBUG_MODE && typeof showDebugInfo === 'function') {
+              showDebugInfo('バックグラウンド読み込みエラー', { 
+                location, 
+                error: response ? response.error : 'Unknown error' 
+              });
             }
           }
+          
+          // 次の拠点を読み込み（少し間隔を空ける）
+          setTimeout(() => {
+            loadNextLocation();
+          }, 500); // 0.5秒間隔で読み込み
         })
         .withFailureHandler(function(error) {
-          updateLocationStatus(location, 'error');
-          addNotification(`${LOCATION_NAMES_CLIENT[location]}で通信エラーが発生しました`, 'error');
           completedLocations++;
-          updateProgress();
-          reject(error);
+          preloadedData[location] = null;
+          
+          if (DEBUG_MODE && typeof showDebugInfo === 'function') {
+            showDebugInfo('バックグラウンド通信エラー', { location, error });
+          }
+          
+          // エラーでも次の拠点を読み込み
+          setTimeout(() => {
+            loadNextLocation();
+          }, 500);
         })
         .getSpreadsheetData(location, 'all');
-    });
-  }
-
-  // プログレスバーと進捗テキストを更新
-  function updateProgress() {
-    const progressFill = document.getElementById('progressFill');
-    const progressText = document.getElementById('progressText');
-    const progressBar = document.querySelector('.progress-bar');
-    
-    const percentage = totalLocations > 0 ? (completedLocations / totalLocations) * 100 : 0;
-    
-    if (progressFill) {
-      progressFill.style.width = percentage + '%';
     }
     
-    if (progressText) {
-      progressText.textContent = `${completedLocations} / ${totalLocations} 拠点完了`;
-    }
-    
-    // aria属性を更新してアクセシビリティを向上
-    if (progressBar) {
-      progressBar.setAttribute('aria-valuenow', Math.round(percentage));
-      progressBar.setAttribute('aria-valuetext', `${completedLocations}件中${totalLocations}件完了`);
-    }
+    // 最初の拠点から開始
+    loadNextLocation();
   }
 
-  // 拠点のステータスを更新（アニメーション付き）
-  function updateLocationStatus(location, status) {
-    const statusElement = document.getElementById(`status-${location}`);
-    if (!statusElement) return;
-    
-    // ステータス変更時の滑らかなアニメーション
-    statusElement.style.transform = 'scale(0.95)';
-    statusElement.style.opacity = '0.7';
-    
-    setTimeout(() => {
-      // 既存のステータスクラスを削除
-      statusElement.classList.remove('loading', 'success', 'error', 'warning');
-      
-      // 新しいステータスクラスを追加
-      statusElement.classList.add(status);
-      
-      // アニメーションをリセット
-      statusElement.style.transform = 'scale(1)';
-      statusElement.style.opacity = '1';
-      
-      // アクセシビリティのためのaria-label更新
-      const locationName = LOCATION_NAMES_CLIENT[location] || location;
-      let statusText = '';
-      switch(status) {
-        case 'loading': statusText = '読み込み中'; break;
-        case 'success': statusText = '完了'; break;
-        case 'error': statusText = 'エラー'; break;
-        case 'warning': statusText = '警告'; break;
-        default: statusText = '待機中';
-      }
-      statusElement.setAttribute('aria-label', `${locationName}の読み込み状況: ${statusText}`);
-    }, 150);
-  }
-
-  // 通知を追加（アニメーション改善）
-  function addNotification(message, type = 'info') {
-    const notifications = document.getElementById('notifications');
-    if (!notifications) return;
-    
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    notification.setAttribute('role', 'alert');
-    notification.style.opacity = '0';
-    notification.style.transform = 'translateY(20px)';
-    
-    notifications.appendChild(notification);
-    
-    // アニメーション開始
-    requestAnimationFrame(() => {
-      notification.style.opacity = '1';
-      notification.style.transform = 'translateY(0)';
-    });
-    
-    // 自動削除（長時間表示の場合）
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translateY(-20px)';
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.remove();
-          }
-        }, 300);
-      }
-    }, 8000);
-  }
-
-  // オープニング画面を閉じる（アニメーション改善）
-  function closeOpeningScreen() {
+  // オープニング画面を閉じる
+  function hideOpeningScreen() {
     const openingScreen = document.getElementById('opening-screen');
-    if (!openingScreen) return;
-    
-    // 完了メッセージを短時間表示
-    const loadingText = document.getElementById('loading-text');
-    if (loadingText) {
-      loadingText.textContent = 'データ読み込み完了！';
-      loadingText.style.color = '#4CAF50';
-    }
-    
-    setTimeout(() => {
-      openingScreen.classList.add('fade-out');
-      
+    if (openingScreen) {
+      openingScreen.style.opacity = '0';
       setTimeout(() => {
         openingScreen.style.display = 'none';
-        openingScreen.classList.remove('fade-out');
-        
-        // 完了後のクリーンアップ
-        if (loadingText) {
-          loadingText.textContent = '全拠点データを読み込み中...';
-          loadingText.style.color = '';
-        }
-      }, 800);
-    }, 600);
+      }, 300);
+    }
+  }
+
+  // バックグラウンド読み込み状況の確認
+  function getBackgroundLoadStatus(location) {
+    if (!preloadedData.hasOwnProperty(location)) {
+      return 'not_started'; // 読み込み開始前
+    } else if (preloadedData[location] === null) {
+      return 'error'; // 読み込みエラー
+    } else {
+      return 'completed'; // 読み込み完了
+    }
+  }
+
+  // プリロードデータが利用可能かチェック
+  function isDataPreloaded(location) {
+    return preloadedData.hasOwnProperty(location) && 
+           preloadedData[location] !== null &&
+           preloadedData[location].success;
   }
 
   // プリロードされたデータを取得する関数
   function getPreloadedData(location) {
     return preloadedData[location] || null;
-  }
-
-  // データが既にロードされているかチェック
-  function isDataPreloaded(location) {
-    return preloadedData.hasOwnProperty(location) && preloadedData[location];
   }
 
   // スプレッドシートビューアーでプリロードデータを使用するように更新

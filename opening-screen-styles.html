@@ -1,7 +1,7 @@
 <!-- opening-screen-styles.html - オープニング画面専用スタイル -->
 <style>
   /* ========================================
-     オープニング画面専用スタイル - モダン青基調デザイン
+     オープニング画面専用スタイル - 6秒間仕様
      ======================================== */
   
   .opening-screen {
@@ -74,8 +74,8 @@
   }
 
   .logo-container {
-    margin-bottom: 50px;
-    animation: logoAnimation 1.5s ease-out 0.3s both;
+    margin-bottom: 40px;
+    animation: logoAnimation 1.2s ease-out 0.3s both;
   }
 
   @keyframes logoAnimation {
@@ -97,12 +97,18 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
-    animation: iconPulse 2s ease-in-out infinite;
+    animation: iconPulse 3s ease-in-out infinite;
   }
 
   @keyframes iconPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+    0%, 100% { 
+      transform: scale(1); 
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    }
+    50% { 
+      transform: scale(1.08); 
+      filter: drop-shadow(0 8px 16px rgba(0,0,0,0.4));
+    }
   }
 
   .logo-title {
@@ -116,6 +122,22 @@
     text-shadow: 0 4px 8px rgba(0,0,0,0.3);
     letter-spacing: 0.02em;
     font-family: 'Segoe UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    animation: titleGlow 6s ease-in-out infinite;
+  }
+
+  @keyframes titleGlow {
+    0%, 100% { 
+      background: linear-gradient(45deg, #FFFFFF, #E3F2FD);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    50% { 
+      background: linear-gradient(45deg, #FFFFFF, #BBDEFB, #90CAF9);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
   }
 
   .logo-subtitle {
@@ -126,11 +148,23 @@
     letter-spacing: 0.1em;
     opacity: 0.9;
     font-family: 'Segoe UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    animation: subtitleFade 2s ease-out 0.8s both;
+  }
+
+  @keyframes subtitleFade {
+    0% {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    100% {
+      opacity: 0.9;
+      transform: translateY(0);
+    }
   }
 
   .loading-container {
-    margin-bottom: 50px;
-    animation: loadingFadeIn 1s ease-out 0.6s both;
+    margin-bottom: 40px;
+    animation: loadingFadeIn 1s ease-out 1.2s both;
   }
 
   @keyframes loadingFadeIn {
@@ -157,7 +191,7 @@
     border-right: 3px solid #42A5F5;
     border-radius: 50%;
     margin: 0 auto;
-    animation: modernSpin 1.2s cubic-bezier(0.35, 0, 0.25, 1) infinite;
+    animation: modernSpin 1.5s cubic-bezier(0.35, 0, 0.25, 1) infinite;
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
   }
 
@@ -165,14 +199,22 @@
     0% { 
       transform: rotate(0deg) scale(1);
       border-top-color: #64B5F6;
+      border-right-color: #42A5F5;
     }
-    50% {
-      transform: rotate(180deg) scale(1.1);
+    33% {
+      transform: rotate(120deg) scale(1.1);
       border-top-color: #2196F3;
+      border-right-color: #1976D2;
+    }
+    66% {
+      transform: rotate(240deg) scale(1.05);
+      border-top-color: #1E88E5;
+      border-right-color: #1565C0;
     }
     100% { 
       transform: rotate(360deg) scale(1);
       border-top-color: #64B5F6;
+      border-right-color: #42A5F5;
     }
   }
 
@@ -182,6 +224,175 @@
     color: #E3F2FD;
     font-weight: 300;
     letter-spacing: 0.05em;
+    animation: textPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes textPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .loading-progress-container {
+    margin-bottom: 30px;
+  }
+
+  .animated-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  }
+
+  .progress-wave {
+    height: 100%;
+    background: linear-gradient(90deg, 
+      transparent 0%,
+      #1976D2 20%, 
+      #2196F3 50%, 
+      #64B5F6 80%,
+      transparent 100%);
+    width: 100%;
+    border-radius: 10px;
+    position: relative;
+    animation: progressWave 6s ease-in-out infinite;
+    box-shadow: 
+      0 2px 4px rgba(33, 150, 243, 0.3),
+      inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+
+  @keyframes progressWave {
+    0% { 
+      transform: translateX(-100%) scaleX(0.3);
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      transform: translateX(100%) scaleX(1);
+      opacity: 1;
+    }
+    100% { 
+      transform: translateX(100%) scaleX(0.3);
+      opacity: 0;
+    }
+  }
+
+  .progress-wave::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, 
+      transparent 0%, 
+      rgba(255,255,255,0.4) 50%, 
+      transparent 100%);
+    animation: progressShimmer 2s ease-in-out infinite;
+  }
+
+  @keyframes progressShimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .loading-status-text {
+    font-size: 1rem;
+    margin: 0;
+    color: #BBDEFB;
+    font-weight: 300;
+    text-align: center;
+    animation: statusTextFade 3s ease-in-out infinite;
+  }
+
+  @keyframes statusTextFade {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+  }
+
+  .welcome-message {
+    animation: welcomeFadeIn 1.2s ease-out 1.8s both;
+  }
+
+  @keyframes welcomeFadeIn {
+    0% {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .welcome-content {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+  }
+
+  .feature-highlight {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 10px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(3px);
+    transition: all 0.3s ease;
+    min-width: 90px;
+    animation: featureFloat 6s ease-in-out infinite;
+  }
+
+  .feature-highlight:nth-child(1) {
+    animation-delay: 0s;
+  }
+
+  .feature-highlight:nth-child(2) {
+    animation-delay: 1s;
+  }
+
+  .feature-highlight:nth-child(3) {
+    animation-delay: 2s;
+  }
+
+  @keyframes featureFloat {
+    0%, 100% { 
+      transform: translateY(0px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    50% { 
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+  }
+
+  .feature-highlight:hover {
+    background: rgba(255,255,255,0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  }
+
+  .feature-highlight i {
+    font-size: 1.1rem;
+    color: #90CAF9;
+    filter: none;
+  }
+
+  .feature-highlight span {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #E1F5FE;
+    text-align: center;
+    letter-spacing: 0.01em;
   }
 
   .progress-bar {
@@ -222,11 +433,6 @@
       rgba(255,255,255,0.3) 50%, 
       transparent 100%);
     animation: progressShimmer 2s ease-in-out infinite;
-  }
-
-  @keyframes progressShimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
   }
 
   .progress-text {
@@ -407,13 +613,14 @@
       font-size: 3.5rem;
     }
 
-    .loading-status {
-      grid-template-columns: 1fr;
+    .welcome-content {
+      flex-direction: column;
+      gap: 15px;
     }
 
-    .status-item {
-      padding: 14px 18px;
-      font-size: 0.9rem;
+    .feature-highlight {
+      padding: 14px 10px;
+      min-width: 100px;
     }
 
     .spinner {
@@ -442,10 +649,22 @@
     .loading-text {
       font-size: 1rem;
     }
+
+    .feature-highlight {
+      min-width: 100px;
+    }
+
+    .feature-highlight i {
+      font-size: 1.3rem;
+    }
+
+    .feature-highlight span {
+      font-size: 0.8rem;
+    }
   }
 
-  /* フォーカス可能な要素のアクセシビリティ */
-  .status-item:focus {
+  /* アクセシビリティ対応 */
+  .feature-highlight:focus {
     outline: 2px solid #64B5F6;
     outline-offset: 2px;
   }
@@ -468,7 +687,7 @@
       border: 2px solid rgba(255, 255, 255, 0.3);
     }
     
-    .status-item {
+    .feature-highlight {
       border: 1px solid rgba(255, 255, 255, 0.3);
     }
   }
@@ -479,12 +698,10 @@
     .opening-container,
     .logo-container,
     .loading-container,
-    .loading-status,
-    .notifications,
+    .welcome-message,
     .spinner,
-    .progress-fill,
-    .status-item,
-    .notification {
+    .progress-wave,
+    .feature-highlight {
       animation: none;
     }
     
@@ -494,6 +711,11 @@
     
     .spinner {
       animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   }
 </style> 

@@ -43,27 +43,32 @@
     loadingDiv.style.display = 'none';
     
     if (selectedLocation) {
-      // プリロードデータがある場合は直接表示（高速化）
-      if (typeof isDataPreloaded === 'function' && isDataPreloaded(selectedLocation)) {
+      // バックグラウンド読み込み状況をチェック
+      const loadStatus = typeof getBackgroundLoadStatus === 'function' ? 
+        getBackgroundLoadStatus(selectedLocation) : 'not_started';
+      
+      if (DEBUG_MODE) {
+        showDebugInfo('拠点変更：読み込み状況チェック', { 
+          location: selectedLocation, 
+          loadStatus: loadStatus 
+        });
+      }
+      
+      if (loadStatus === 'completed' && isDataPreloaded(selectedLocation)) {
+        // データ読み込み済み：即座に表示
         currentLocation = selectedLocation;
         querySelector.style.display = 'block';
         
-        // 更新ボタンを有効化
         if (refreshButton) {
           refreshButton.disabled = false;
         }
         
-        // 現在選択されているクエリタイプを取得して反映
         const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
         loadSpreadsheet(selectedLocation, queryType);
         return;
-      }
-      
-      // プリロードデータがない場合、またはプリロード中にエラーだった場合はスプレッドシートIDをチェック
-      if (typeof preloadedData !== 'undefined' && 
-          preloadedData.hasOwnProperty(selectedLocation) && 
-          preloadedData[selectedLocation] === null) {
-        // プリロード時にスプレッドシートIDが未設定だった場合
+        
+      } else if (loadStatus === 'error') {
+        // 読み込みエラー（スプレッドシートID未設定など）
         currentLocation = '';
         querySelector.style.display = 'none';
         
@@ -84,91 +89,117 @@
           </div>
         `;
         
-        // 拠点選択をリセット
         locationSelect.value = '';
+        return;
+        
+      } else {
+        // 読み込み中または未開始：読み込み表示してからデータ取得
+        currentLocation = selectedLocation;
+        querySelector.style.display = 'block';
+        
+        if (refreshButton) {
+          refreshButton.disabled = false;
+        }
+        
+        // 読み込み表示
+        loadingDiv.style.display = 'block';
+        tableContainer.innerHTML = `
+          <div class="background-loading-message">
+            <i class="fas fa-sync-alt fa-spin"></i>
+            <h3>データを読み込み中...</h3>
+            <p>選択された拠点のデータを取得しています。</p>
+            <p class="loading-detail">初回アクセス時やバックグラウンド読み込み中は、少しお時間をいただく場合があります。</p>
+          </div>
+        `;
+        
+        const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
+        
+        // データ取得を実行
+        loadSpreadsheetDirectly(selectedLocation, queryType);
         return;
       }
       
-      // プリロードデータがない場合のみスプレッドシートIDをチェック
-      loadingDiv.style.display = 'block';
-      
-      google.script.run
-        .withSuccessHandler(function(response) {
-          loadingDiv.style.display = 'none';
-          
-          if (response.success && response.exists) {
-            // スプレッドシートIDが設定されている場合
-            currentLocation = selectedLocation;
-            querySelector.style.display = 'block';
-            
-            // 更新ボタンを有効化
-            if (refreshButton) {
-              refreshButton.disabled = false;
-            }
-            
-            // 現在選択されているクエリタイプを取得して反映
-            const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
-            loadSpreadsheet(selectedLocation, queryType);
-            
-          } else if (response.success && !response.exists) {
-            // スプレッドシートIDが設定されていない場合
-            currentLocation = '';
-            querySelector.style.display = 'none';
-            
-            // 更新ボタンを無効化
-            if (refreshButton) {
-              refreshButton.disabled = true;
-            }
-            
-            errorDiv.textContent = `${response.locationName}のスプレッドシートIDが設定されていません。システム管理者にお問い合わせください。`;
-            tableContainer.innerHTML = `
-              <div class="error-message">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>設定エラー</h3>
-                <p>${response.locationName}のスプレッドシートIDが設定されていません。</p>
-                <p class="error-detail">この拠点のデータを表示するには、システム管理者にスプレッドシートIDの設定を依頼してください。</p>
-              </div>
-            `;
-            
-            // 拠点選択をリセット
-            locationSelect.value = '';
-            
-          } else {
-            // チェック処理でエラーが発生した場合
-            currentLocation = '';
-            querySelector.style.display = 'none';
-            
-            if (refreshButton) {
-              refreshButton.disabled = true;
-            }
-            
-            errorDiv.textContent = `拠点設定の確認に失敗しました: ${response.error}`;
-            locationSelect.value = '';
-          }
-        })
-        .withFailureHandler(function(error) {
-          loadingDiv.style.display = 'none';
-          currentLocation = '';
-          querySelector.style.display = 'none';
-          
-          if (refreshButton) {
-            refreshButton.disabled = true;
-          }
-          
-          errorDiv.textContent = `拠点設定の確認に失敗しました: ${error}`;
-          locationSelect.value = '';
-        })
-        .checkSpreadsheetIdExists(selectedLocation);
-        
     } else {
       // 拠点が選択されていない場合
       currentLocation = '';
       querySelector.style.display = 'none';
       
-      // 更新ボタンを無効化
       if (refreshButton) {
         refreshButton.disabled = true;
       }
+    }
+  }
+
+  // 直接データ取得（バックグラウンド読み込み完了を待たない）
+  function loadSpreadsheetDirectly(location, queryType) {
+    if (DEBUG_MODE) {
+      showDebugInfo('直接データ取得開始', { location, queryType });
+    }
+    
+    const errorDiv = document.getElementById('error');
+    const tableContainer = document.getElementById('tableContainer');
+    const loadingDiv = document.getElementById('loading');
+
+    try {
+      if (!google || !google.script || !google.script.run) {
+        throw new Error('Google Apps Scriptの実行環境が正しく初期化されていません');
+      }
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (DEBUG_MODE) {
+            showDebugInfo('直接データ取得成功', response);
+          }
+          loadingDiv.style.display = 'none';
+          
+          if (!response) {
+            errorDiv.textContent = 'エラーが発生しました : スプレッドシート内の日時の表示形式を"書式なし"に変更してください';
+            tableContainer.innerHTML = '';
+            return;
+          }
+          
+          if (response.success) {
+            // 成功時はプリロードデータも更新
+            if (typeof preloadedData !== 'undefined') {
+              preloadedData[location] = response;
+            }
+            
+            displayData(response.data, queryType);
+            errorDiv.textContent = '';
+            
+            // 読み込み完了メッセージを表示
+            if (typeof showPopupMessage === 'function') {
+              showPopupMessage('データを読み込みました');
+            }
+          } else {
+            const errorMessage = response.error || '不明なエラーが発生しました';
+            if (DEBUG_MODE) {
+              showDebugInfo('直接データ取得エラー', { error: errorMessage });
+            }
+            errorDiv.textContent = 'エラー: ' + errorMessage;
+            tableContainer.innerHTML = '';
+          }
+
+          if (response.logs && DEBUG_MODE) {
+            showServerLogs(response.logs);
+          }
+        })
+        .withFailureHandler(function(error) {
+          if (DEBUG_MODE) {
+            showDebugInfo('直接データ取得通信エラー', { error });
+          }
+          loadingDiv.style.display = 'none';
+          errorDiv.textContent = 'エラーが発生しました: ' + error;
+          tableContainer.innerHTML = '';
+        })
+        .getSpreadsheetData(location, queryType);
+    } catch (error) {
+      if (DEBUG_MODE) {
+        showDebugInfo('直接データ取得クライアントエラー', { error });
+      }
+      loadingDiv.style.display = 'none';
+      errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
+      tableContainer.innerHTML = '';
     }
   }
 
@@ -941,7 +972,7 @@
     table += '<tr>';
     // メインモードの場合のみ項番列を追加
     if (displayMode === 'main') {
-      table += '<th>#</th>'; // 項番列を追加
+    table += '<th>#</th>'; // 項番列を追加
     }
     
     data[0].forEach((cell, index) => {
@@ -977,7 +1008,7 @@
         
         // メインモードの場合のみ項番を追加
         if (displayMode === 'main') {
-          table += `<td>${rowNumber}</td>`; // 項番を追加
+        table += `<td>${rowNumber}</td>`; // 項番を追加
         }
         rowNumber++; // 項番をインクリメント
         
@@ -1139,8 +1170,8 @@
         
         // 既に編集中の場合は何もしない
         if (cell.classList.contains('editing')) {
-          return;
-        }
+      return;
+    }
         
         const currentValue = cell.textContent || '';
         startCellEdit(cell, rowIndex, columnIndex, currentValue);
