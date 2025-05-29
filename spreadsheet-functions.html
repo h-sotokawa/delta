@@ -285,7 +285,7 @@
     }
 
     showDebugInfo('テーブル作成開始', { rows: data.length, columns: data[0].length });
-    
+
     // 新しいcreateTable関数を使用
     createTable(data, queryType);
   }
@@ -467,6 +467,11 @@
 
     // 現在の代替機フォーム回答シート名を保存
     currentLocationSheetName = locationCode;
+    
+    // 表示制御変数をリセット
+    locationSheetDisplayCount = 10;
+    locationSheetAllData = null;
+    locationSheetCurrentData = null;
 
     showDebugInfo('代替機フォーム回答シート読み込み開始', { currentLocation, locationCode });
 
@@ -485,19 +490,12 @@
         if (response.success) {
           showDebugInfo('代替機フォーム回答シート読み込み成功', response);
           
-          // 戻るボタンを表示
-          const backButton = `
-            <div class="sheet-navigation">
-              <button onclick="backToMainView()" class="back-button">
-                <i class="fas fa-arrow-left"></i>
-                一覧に戻る
-              </button>
-              <h3>代替機フォーム回答シート: ${locationCode}</h3>
-            </div>
-          `;
+          // 全データを保存
+          locationSheetAllData = response.data;
           
-          // 代替機フォーム回答シート表示モードでcreateTableを呼び出し
-          createTable(response.data, 'all', backButton, 'location-sheet');
+          // データをタイムスタンプでソートして最新10件を表示
+          displayLocationSheetData(locationCode);
+          
         } else {
           errorDiv.textContent = `代替機フォーム回答シート「${locationCode}」の読み込みに失敗しました: ${response.error}`;
           showDebugInfo('代替機フォーム回答シート読み込みエラー', response);
@@ -511,13 +509,223 @@
       .getLocationSheetData(currentLocation, locationCode, 'all');
   }
 
+  // 代替機フォーム回答シートのデータをソート・制限して表示
+  function displayLocationSheetData(locationCode) {
+    if (!locationSheetAllData || locationSheetAllData.length <= 1) {
+      showDebugInfo('代替機フォーム回答シートデータが空', {});
+      const tableContainer = document.getElementById('tableContainer');
+      tableContainer.innerHTML = `
+        <div class="sheet-navigation">
+          <button onclick="backToMainView()" class="back-button">
+            <i class="fas fa-arrow-left"></i>
+            一覧に戻る
+          </button>
+          <h3>代替機フォーム回答シート: ${locationCode}</h3>
+        </div>
+        <div class="no-data-message">
+          <i class="fas fa-info-circle"></i>
+          <p>データがありません</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // タイムスタンプ列を検索（一般的なタイムスタンプ列名）
+    const headers = locationSheetAllData[0];
+    let timestampColumnIndex = -1;
+    const timestampPatterns = ['タイムスタンプ', 'timestamp', '作成日時', '更新日時', '日時'];
+    
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i].toString().toLowerCase();
+      for (const pattern of timestampPatterns) {
+        if (header.includes(pattern.toLowerCase())) {
+          timestampColumnIndex = i;
+          break;
+        }
+      }
+      if (timestampColumnIndex !== -1) break;
+    }
+    
+    showDebugInfo('タイムスタンプ列検出', { timestampColumnIndex, headers });
+    
+    // データ行をコピーしてソート
+    const dataRows = locationSheetAllData.slice(1); // ヘッダー以外をコピー
+    
+    if (timestampColumnIndex !== -1) {
+      // タイムスタンプでソート（新しい順）
+      dataRows.sort((a, b) => {
+        const timestampA = new Date(a[timestampColumnIndex] || 0);
+        const timestampB = new Date(b[timestampColumnIndex] || 0);
+        return timestampB - timestampA; // 降順（新しい順）
+      });
+    }
+    
+    // 表示件数を制限
+    const displayRows = dataRows.slice(0, locationSheetDisplayCount);
+    locationSheetCurrentData = [headers, ...displayRows];
+    
+    // 戻るボタンとタイトルを作成
+    let navigationHtml = `
+      <div class="sheet-navigation">
+        <button onclick="backToMainView()" class="back-button">
+          <i class="fas fa-arrow-left"></i>
+          一覧に戻る
+        </button>
+        <h3>代替機フォーム回答シート: ${locationCode}</h3>
+        <div class="sheet-info">
+          表示中: ${displayRows.length}件 / 全体: ${dataRows.length}件
+        </div>
+      </div>
+    `;
+    
+    // 最新エントリー情報を追加
+    if (dataRows.length > 0) {
+      const latestRow = dataRows[0];
+      navigationHtml += createLatestEntryCard(headers, latestRow, timestampColumnIndex);
+    }
+    
+    // 追加読み込みボタンを追加（10件以上ある場合）
+    if (dataRows.length > locationSheetDisplayCount) {
+      navigationHtml += `
+        <div class="load-more-container">
+          <button onclick="loadMoreLocationSheetData()" class="load-more-button">
+            <i class="fas fa-plus"></i>
+            さらに${Math.min(10, dataRows.length - locationSheetDisplayCount)}件を読み込む
+          </button>
+        </div>
+      `;
+    }
+    
+    // 代替機フォーム回答シート表示モードでcreateTableを呼び出し
+    createTable(locationSheetCurrentData, 'all', navigationHtml, 'location-sheet');
+    
+    showDebugInfo('代替機フォーム回答シート表示完了', {
+      totalRows: dataRows.length,
+      displayedRows: displayRows.length,
+      timestampColumn: timestampColumnIndex
+    });
+  }
+
+  // 最新エントリーカードを作成
+  function createLatestEntryCard(headers, latestRow, timestampColumnIndex) {
+    // ステータス列を検索
+    let statusColumnIndex = -1;
+    const statusPatterns = ['ステータス', 'status', '状態', '現在の状態'];
+    
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i].toString().toLowerCase();
+      for (const pattern of statusPatterns) {
+        if (header.includes(pattern.toLowerCase())) {
+          statusColumnIndex = i;
+          break;
+        }
+      }
+      if (statusColumnIndex !== -1) break;
+    }
+    
+    // 表示する情報を準備
+    const displayItems = [];
+    
+    // タイムスタンプ
+    if (timestampColumnIndex !== -1 && latestRow[timestampColumnIndex]) {
+      let timestampValue = latestRow[timestampColumnIndex].toString();
+      try {
+        const date = new Date(timestampValue);
+        if (!isNaN(date.getTime())) {
+          timestampValue = date.toLocaleString('ja-JP', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        }
+      } catch (e) {
+        // フォーマットに失敗した場合はそのまま使用
+      }
+      
+      displayItems.push({
+        label: '最終更新',
+        value: timestampValue,
+        type: 'timestamp'
+      });
+    }
+    
+    // ステータス
+    if (statusColumnIndex !== -1 && latestRow[statusColumnIndex]) {
+      displayItems.push({
+        label: 'ステータス',
+        value: latestRow[statusColumnIndex].toString(),
+        type: 'status'
+      });
+    }
+    
+    // 情報がない場合はカードを表示しない
+    if (displayItems.length === 0) {
+      return '';
+    }
+    
+    // フォーマルなカードHTML生成
+    let cardHtml = `
+      <div class="current-status-card">
+        <div class="status-card-header">
+          <div class="status-card-icon">
+            <i class="fas fa-info-circle"></i>
+          </div>
+          <h4>現在のステータス</h4>
+        </div>
+        <div class="status-card-content">
+    `;
+    
+    // データ項目を表示
+    displayItems.forEach((item) => {
+      cardHtml += `
+        <div class="status-card-item">
+          <span class="status-label">${item.label}</span>
+          <span class="status-value ${item.type === 'timestamp' ? 'timestamp-value' : 'status-value'}">${item.value}</span>
+        </div>
+      `;
+    });
+    
+    cardHtml += `
+        </div>
+      </div>
+    `;
+    
+    return cardHtml;
+  }
+
   // 一覧画面に戻る
   function backToMainView() {
     // 代替機フォーム回答シート名をクリア
     currentLocationSheetName = null;
     
+    // 表示制御変数をリセット
+    locationSheetDisplayCount = 10;
+    locationSheetAllData = null;
+    locationSheetCurrentData = null;
+    
     const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
     loadSpreadsheet(currentLocation, queryType);
+  }
+
+  // 代替機フォーム回答シートの追加データを読み込む
+  function loadMoreLocationSheetData() {
+    if (!currentLocationSheetName || !locationSheetAllData) {
+      showPopupMessage('データが見つかりません');
+      return;
+    }
+    
+    // 表示件数を増やす
+    locationSheetDisplayCount += 10;
+    
+    showDebugInfo('追加データ読み込み', { 
+      displayCount: locationSheetDisplayCount,
+      locationSheet: currentLocationSheetName 
+    });
+    
+    // データを再表示
+    displayLocationSheetData(currentLocationSheetName);
   }
 
   // 動的列幅調整関数
@@ -669,6 +877,32 @@
     }
     showDebugInfo('空の列を検出', { emptyColumns });
 
+    // データ統計を計算
+    const totalRows = data.length - 1; // ヘッダーを除外
+    let displayedRows = 0;
+    let lendingRows = 0;
+    
+    for (let i = 1; i < data.length; i++) {
+      const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+        (data[i][2] && data[i][2].includes('貸出')) :
+        (data[i][3] && data[i][3].includes('貸出') && data[i][9]);
+      
+      if (isLending) {
+        lendingRows++;
+      }
+      
+      // 表示されるデータをカウント
+      if (queryType === 'all' || (queryType === 'lending' && isLending)) {
+        displayedRows++;
+      }
+    }
+
+    // メインモードの場合はデータステータス情報を追加
+    let statusInfoHtml = '';
+    if (displayMode === 'main') {
+      statusInfoHtml = createDataStatusPanel(totalRows, displayedRows, lendingRows, queryType);
+    }
+
     let table = '<table>';
     
     // ヘッダー行
@@ -702,7 +936,12 @@
            ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
             (data[i][2] && data[i][2].includes('貸出')) : 
             (data[i][3] && data[i][3].includes('貸出') && data[i][9])))) {  // プリンタ以外は10列目のチェックを維持
-        table += '<tr>';
+        
+        // 代替機フォーム回答シートの場合、最新行（1行目のデータ）を強調
+        const isLatestRow = (displayMode === 'location-sheet' && i === 1);
+        const rowClass = isLatestRow ? ' class="latest-row"' : '';
+        
+        table += `<tr${rowClass}>`;
         
         // メインモードの場合のみ項番を追加
         if (displayMode === 'main') {
@@ -763,7 +1002,7 @@
     }
 
     table += '</table>';
-    tableContainer.innerHTML = prependContent + table;
+    tableContainer.innerHTML = prependContent + statusInfoHtml + table;
     
     // 代替機フォーム回答シート表示時のみセルクリック編集機能を有効化
     // mainシートは数式でデータを取得するため編集不可
@@ -780,6 +1019,58 @@
     }, 100); // DOM更新後に実行
     
     showDebugInfo('テーブル作成完了', { displayMode });
+  }
+
+  // データステータスパネルを作成（一覧画面用）
+  function createDataStatusPanel(totalRows, displayedRows, lendingRows, queryType) {
+    const locationName = currentLocation ? 
+      (LOCATION_NAMES_CLIENT[currentLocation] || currentLocation) : '未選択';
+    
+    const queryTypeLabel = queryType === 'all' ? '全データ' : '貸出中データ';
+    const currentTime = new Date().toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    return `
+      <div class="data-status-panel">
+        <div class="status-panel-header">
+          <div class="status-panel-icon">
+            <i class="fas fa-chart-bar"></i>
+          </div>
+          <h4>データ状況</h4>
+        </div>
+        <div class="status-panel-content">
+          <div class="status-panel-item">
+            <span class="status-panel-label">拠点</span>
+            <span class="status-panel-value location-value">${locationName}</span>
+          </div>
+          <div class="status-panel-item">
+            <span class="status-panel-label">表示モード</span>
+            <span class="status-panel-value mode-value">${queryTypeLabel}</span>
+          </div>
+          <div class="status-panel-item">
+            <span class="status-panel-label">表示中</span>
+            <span class="status-panel-value count-value">${displayedRows}件</span>
+          </div>
+          <div class="status-panel-item">
+            <span class="status-panel-label">全体</span>
+            <span class="status-panel-value total-value">${totalRows}件</span>
+          </div>
+          <div class="status-panel-item">
+            <span class="status-panel-label">貸出中</span>
+            <span class="status-panel-value lending-value">${lendingRows}件</span>
+          </div>
+          <div class="status-panel-item">
+            <span class="status-panel-label">最終更新</span>
+            <span class="status-panel-value time-value">${currentTime}</span>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   // セルクリック編集機能を有効化（代替機フォーム回答シート専用）
@@ -831,6 +1122,11 @@
   
   // 現在表示中の代替機フォーム回答シート名を保持する変数
   let currentLocationSheetName = null;
+  
+  // 代替機フォーム回答シートの表示制御用変数
+  let locationSheetDisplayCount = 10; // 初期表示件数
+  let locationSheetAllData = null; // 全データを保持
+  let locationSheetCurrentData = null; // 現在表示中のデータ
 
   // セル編集機能の初期化
   function initializeCellEditing() {
@@ -1037,7 +1333,44 @@
   function refreshLocationSheet() {
     const locationSheetName = getCurrentLocationSheetName();
     if (locationSheetName) {
-      loadLocationSheet(locationSheetName);
+      // 現在の表示件数を保持
+      const currentDisplayCount = locationSheetDisplayCount;
+      
+      showDebugInfo('代替機フォーム回答シート自動更新', { 
+        locationSheetName, 
+        currentDisplayCount 
+      });
+      
+      // データを再読み込み
+    const errorDiv = document.getElementById('error');
+    const loadingDiv = document.getElementById('loading');
+
+    loadingDiv.style.display = 'block';
+    errorDiv.textContent = '';
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          loadingDiv.style.display = 'none';
+          
+          if (response.success) {
+            // 全データを更新
+            locationSheetAllData = response.data;
+            // 表示件数を復元
+            locationSheetDisplayCount = currentDisplayCount;
+            
+            // データを再表示
+            displayLocationSheetData(locationSheetName);
+            
+            showDebugInfo('代替機フォーム回答シート自動更新完了', { locationSheetName });
+          } else {
+            errorDiv.textContent = `代替機フォーム回答シート「${locationSheetName}」の更新に失敗しました: ${response.error}`;
+          }
+        })
+        .withFailureHandler(function(error) {
+          loadingDiv.style.display = 'none';
+          errorDiv.textContent = `代替機フォーム回答シート「${locationSheetName}」の更新中にエラーが発生しました: ${error}`;
+        })
+        .getLocationSheetData(currentLocation, locationSheetName, 'all');
     }
   }
 
@@ -1045,9 +1378,9 @@
   function updatePreloadedData() {
     if (!currentLocation) {
       showDebugInfo('プリロードデータ更新: 拠点が選択されていません', {});
-      return;
-    }
-
+            return;
+          }
+          
     showDebugInfo('プリロードデータ更新開始', { location: currentLocation });
 
     // プリロードデータがある場合のみ更新
@@ -1057,7 +1390,7 @@
         .withSuccessHandler(function(response) {
           if (response.success) {
             // プリロードデータを更新
-            preloadedData[currentLocation] = response;
+              preloadedData[currentLocation] = response;
             showDebugInfo('プリロードデータ更新成功', { 
               location: currentLocation, 
               dataSize: response.data.length 

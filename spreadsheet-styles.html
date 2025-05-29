@@ -417,9 +417,9 @@
   }
 
   .back-button {
-    background: var(--secondary-gradient);
-    color: var(--text-primary);
-    border: 1px solid var(--border-accent);
+    background: var(--highlight-gradient);
+    color: white;
+    border: 1px solid var(--highlight-color);
     border-radius: var(--border-radius);
     padding: 12px 20px;
     cursor: pointer;
@@ -435,9 +435,9 @@
   }
 
   .back-button:hover {
-    background: var(--highlight-gradient);
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
     color: white;
-    border-color: var(--highlight-color);
+    border-color: #1d4ed8;
     transform: translateY(-1px);
     box-shadow: var(--shadow-blue);
   }
@@ -451,11 +451,8 @@
   }
 
   .sheet-navigation h3 {
-    margin: 0;
-    color: var(--text-primary);
-    font-weight: 600;
-    font-size: 1.3rem;
-    letter-spacing: 0.025em;
+    margin: 0 0 5px 0;
+    color: #1e293b;
   }
 
   /* セル編集機能のスタイル（代替機フォーム回答シート用） */
@@ -478,85 +475,163 @@
   .cell-edit-container {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px;
+    gap: 5px;
+    width: 100%;
+    min-height: 28px;
   }
 
   .cell-edit-input {
     flex: 1;
-    padding: 6px 8px;
-    border: 1px solid var(--border-accent);
+    padding: 4px 8px;
+    border: 2px solid var(--highlight-color);
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 13px;
     font-family: inherit;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    min-width: 100px;
+    outline: none;
+    box-sizing: border-box;
   }
 
   .cell-edit-input:focus {
-    outline: none;
     border-color: var(--highlight-color);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    box-shadow: var(--shadow-blue);
   }
 
   .cell-edit-buttons {
     display: flex;
-    gap: 4px;
+    gap: 2px;
   }
 
   .cell-edit-confirm,
   .cell-edit-cancel {
-    width: 28px;
-    height: 28px;
+    padding: 4px 6px;
     border: none;
-    border-radius: 4px;
+    border-radius: 3px;
     cursor: pointer;
+    font-size: 11px;
+    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
-    transition: var(--transition);
-    padding: 0;
+    min-width: 22px;
+    height: 22px;
+    transition: all 0.2s ease;
   }
 
   .cell-edit-confirm {
-    background: var(--highlight-gradient);
-    color: white;
-    border: 1px solid var(--highlight-color);
+    background: var(--highlight-color);
   }
 
   .cell-edit-confirm:hover {
-    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
-    transform: scale(1.1);
+    background: #2563eb;
+    transform: translateY(-1px);
     box-shadow: var(--shadow-blue);
   }
 
   .cell-edit-cancel {
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-accent);
+    background: #ef4444;
   }
 
   .cell-edit-cancel:hover {
-    background: var(--highlight-gradient);
-    color: white;
-    border-color: var(--highlight-color);
-    transform: scale(1.1);
-    box-shadow: var(--shadow-blue);
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.15);
   }
 
   .cell-updating {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
+    padding: 4px 8px;
     color: var(--highlight-color);
-    font-size: 13px;
-    padding: 6px 8px;
+    font-size: 12px;
   }
 
   .cell-updating i {
     animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .editable-cell:hover {
+    background-color: rgba(59, 130, 246, 0.05);
+    cursor: pointer;
+  }
+
+  .editing {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+    padding: 2px !important;
+  }
+  
+  /* 最新行の強調表示 */
+  .latest-row {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+    border-left: 4px solid var(--highlight-color);
+    animation: highlight-pulse 2s ease-in-out;
+  }
+
+  .latest-row td {
+    font-weight: 600;
+    color: #1e40af;
+  }
+
+  @keyframes highlight-pulse {
+    0% { background: rgba(59, 130, 246, 0.3); }
+    50% { background: rgba(59, 130, 246, 0.15); }
+    100% { background: rgba(59, 130, 246, 0.1); }
+  }
+
+  /* 追加読み込みボタンのコンテナ */
+  .load-more-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+    padding: 10px;
+  }
+
+  /* 追加読み込みボタン */
+  .load-more-button {
+    background: var(--highlight-gradient);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+  }
+
+  .load-more-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-blue);
+  }
+
+  .load-more-button:active {
+    transform: translateY(0);
+  }
+
+  .load-more-button i {
+    font-size: 12px;
+  }
+
+  /* シート情報表示 */
+  .sheet-info {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 5px;
+    font-weight: normal;
+  }
+
+  .sheet-navigation h3 {
+    margin: 0 0 5px 0;
+    color: #1e293b;
   }
 
   @media (max-width: 600px) {
@@ -584,5 +659,523 @@
       align-self: stretch;
       justify-content: center;
     }
+    
+    /* 最新エントリーカードのモバイル対応 */
+    .latest-entry-content {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding: 16px;
+    }
+    
+    .latest-entry-header {
+      padding: 12px 16px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    
+    .latest-entry-title {
+      width: 100%;
+      justify-content: space-between;
+    }
+    
+    .latest-entry-title h4 {
+      font-size: 16px;
+    }
+    
+    .latest-entry-item {
+      padding: 10px 12px;
+    }
+    
+    .latest-entry-item label {
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+    
+    .latest-entry-item span {
+      font-size: 13px;
+    }
+    
+    .latest-entry-item .timestamp-value {
+      font-size: 12px;
+    }
+  }
+
+  /* 最新エントリーカードのスタイル */
+  .latest-entry-card {
+    margin: 20px 0;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(29, 78, 216, 0.04) 100%);
+    border: 2px solid var(--highlight-color);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .latest-entry-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--highlight-gradient);
+  }
+
+  .latest-entry-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(59, 130, 246, 0.15);
+    border-color: #2563eb;
+  }
+
+  .latest-entry-header {
+    background: var(--highlight-gradient);
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .latest-entry-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    backdrop-filter: blur(10px);
+  }
+
+  .latest-entry-title {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .latest-entry-title h4 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+  }
+
+  .latest-entry-badge {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--highlight-color);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    animation: pulse-badge 2s infinite;
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.9; }
+  }
+
+  .latest-entry-content {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+  }
+
+  .latest-entry-item {
+    background: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    transition: all 0.2s ease;
+  }
+
+  .latest-entry-item:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  .latest-entry-item label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .latest-entry-item span {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e293b;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .latest-entry-item .timestamp-value {
+    color: var(--highlight-color);
+    font-weight: 600;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 13px;
+  }
+
+  /* 現在のステータスカードのスタイル（フォーマル） */
+  .current-status-card {
+    margin: 20px 0;
+    background: #ffffff;
+    border: 2px solid var(--highlight-color);
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .current-status-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--highlight-gradient);
+  }
+
+  .status-card-header {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(29, 78, 216, 0.04) 100%);
+    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .status-card-icon {
+    width: 28px;
+    height: 28px;
+    color: var(--highlight-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 50%;
+  }
+
+  .status-card-header h4 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: #1e293b;
+    letter-spacing: 0.025em;
+  }
+
+  .status-card-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .status-card-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #fafbfc;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+  }
+
+  .status-card-item:hover {
+    background: #f1f5f9;
+    border-color: rgba(59, 130, 246, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .status-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .status-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .status-value.timestamp-value {
+    color: var(--highlight-color);
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 14px;
+    background: rgba(59, 130, 246, 0.08);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+
+  .status-value.status-value {
+    background: var(--highlight-gradient);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  @media (max-width: 600px) {
+    .sheet-navigation {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 15px;
+    }
+    
+    .back-button {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .cell-edit-container {
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .cell-edit-input {
+      min-width: 80px;
+    }
+
+    .cell-edit-buttons {
+      align-self: stretch;
+      justify-content: center;
+    }
+    
+    /* 現在のステータスカードのモバイル対応 */
+    .status-card-content {
+      padding: 16px;
+    }
+    
+    .status-card-header {
+      padding: 14px 16px;
+    }
+    
+    .status-card-icon {
+      width: 24px;
+      height: 24px;
+      font-size: 16px;
+    }
+    
+    .status-card-header h4 {
+      font-size: 16px;
+    }
+    
+    .status-card-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px;
+    }
+    
+    .status-label {
+      font-size: 12px;
+    }
+    
+    .status-value {
+      font-size: 14px;
+      align-self: stretch;
+      text-align: left;
+    }
+    
+    .status-value.timestamp-value {
+      font-size: 13px;
+    }
+    
+    .status-value.status-value {
+      text-align: center;
+      align-self: center;
+    }
+  }
+
+  /* データステータスパネルのスタイル（一覧画面用） */
+  .data-status-panel {
+    margin: 20px 0;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 2px solid var(--highlight-color);
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .data-status-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--highlight-gradient);
+  }
+
+  .status-panel-header {
+    background: var(--highlight-gradient);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .status-panel-icon {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .status-panel-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+  }
+
+  .status-panel-content {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .status-panel-item {
+    background: #f8fafc;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: all 0.2s ease;
+  }
+
+  .status-panel-item:hover {
+    background: #f1f5f9;
+    border-color: rgba(59, 130, 246, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .status-panel-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .status-panel-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+
+  /* 各値の色分け */
+  .status-panel-value.location-value {
+    color: var(--highlight-color);
+    font-size: 15px;
+  }
+
+  .status-panel-value.mode-value {
+    background: var(--highlight-gradient);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    align-self: flex-start;
+  }
+
+  .status-panel-value.count-value {
+    color: #059669;
+    font-size: 16px;
+  }
+
+  .status-panel-value.total-value {
+    color: #374151;
+    font-size: 16px;
+  }
+
+  .status-panel-value.lending-value {
+    color: #dc2626;
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .status-panel-value.time-value {
+    color: #7c3aed;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+  }
+
+  /* データステータスパネルのモバイル対応 */
+  .status-panel-content {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 12px;
+  }
+  
+  .status-panel-header {
+    padding: 10px 12px;
+  }
+  
+  .status-panel-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+  }
+  
+  .status-panel-header h4 {
+    font-size: 15px;
+  }
+  
+  .status-panel-item {
+    padding: 8px 10px;
+  }
+  
+  .status-panel-label {
+    font-size: 10px;
+  }
+  
+  .status-panel-value {
+    font-size: 13px;
+  }
+  
+  .status-panel-value.location-value {
+    font-size: 14px;
+  }
+  
+  .status-panel-value.count-value,
+  .status-panel-value.total-value,
+  .status-panel-value.lending-value {
+    font-size: 15px;
+  }
+  
+  .status-panel-value.time-value {
+    font-size: 11px;
   }
 </style> 
