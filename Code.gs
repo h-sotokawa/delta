@@ -122,12 +122,18 @@ function doGet(e) {
 function include(filename) {
   addLog('include関数が呼び出されました', filename);
   try {
-    const content = HtmlService.createHtmlOutputFromFile(filename).getContent();
-    addLog('ファイルの読み込み成功', filename);
+    // ファイル名に拡張子がない場合は.htmlを追加
+    const fileToInclude = filename.includes('.') ? filename : filename + '.html';
+    const content = HtmlService.createHtmlOutputFromFile(fileToInclude).getContent();
+    addLog('ファイルの読み込み成功', fileToInclude);
     return content;
   } catch (error) {
-    addLog('includeでエラーが発生', error);
-    throw error;
+    addLog('includeでエラーが発生', {
+      filename: filename,
+      error: error.toString()
+    });
+    // エラーが発生した場合は、エラーメッセージを含むHTMLを返す
+    return `<!-- Error loading ${filename}: ${error.toString()} -->`;
   }
 }
 

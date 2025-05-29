@@ -1,0 +1,307 @@
+<!-- spreadsheet-functions.html - スプレッドシート関連JavaScript -->
+<script>
+  // ========================================
+  // スプレッドシート関連関数
+  // ========================================
+  
+  // 拠点一覧を取得してプルダウンメニューに設定
+  function initializeLocations() {
+    google.script.run
+      .withSuccessHandler(function(response) {
+        if (response.success) {
+          const locationSelect = document.getElementById('location');
+          Object.entries(response.locations).forEach(([key, name]) => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = name;
+            locationSelect.appendChild(option);
+          });
+        }
+        // 初期表示時はローディング非表示
+        document.getElementById('loading').style.display = 'none';
+      })
+      .withFailureHandler(function(error) {
+        const errorDiv = document.getElementById('error');
+        errorDiv.textContent = '拠点一覧の取得に失敗しました: ' + error;
+      })
+      .getLocations();
+  }
+
+  // 拠点が変更されたときの処理
+  function handleLocationChange() {
+    const locationSelect = document.getElementById('location');
+    const selectedLocation = locationSelect.value;
+    const querySelector = document.querySelector('.query-selector');
+    
+    if (selectedLocation) {
+      currentLocation = selectedLocation;
+      querySelector.style.display = 'block';
+      // 現在選択されているクエリタイプを取得して反映
+      const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
+      loadSpreadsheet(selectedLocation, queryType);
+    } else {
+      currentLocation = '';
+      querySelector.style.display = 'none';
+      const tableContainer = document.getElementById('tableContainer');
+      tableContainer.innerHTML = '';
+    }
+  }
+
+  // クエリタイプが変更されたときの処理
+  function handleQueryChange() {
+    if (currentLocation) {
+      const queryType = document.querySelector('input[name="queryType"]:checked').value;
+      loadSpreadsheet(currentLocation, queryType);
+    }
+  }
+
+  // スプレッドシートデータを読み込む
+  function loadSpreadsheet(location, queryType) {
+    showDebugInfo('データ取得開始', { location, queryType });
+    
+    const errorDiv = document.getElementById('error');
+    const tableContainer = document.getElementById('tableContainer');
+    const loadingDiv = document.getElementById('loading');
+
+    loadingDiv.style.display = 'block';
+    errorDiv.textContent = '';
+    tableContainer.innerHTML = '';
+
+    try {
+      if (!google || !google.script || !google.script.run) {
+        throw new Error('Google Apps Scriptの実行環境が正しく初期化されていません');
+      }
+
+      showDebugInfo('getSpreadsheetData関数の呼び出し開始', { location, queryType });
+      google.script.run
+        .withSuccessHandler(function(response) {
+          showDebugInfo('サーバーからの応答', response);
+          loadingDiv.style.display = 'none';
+          
+          if (!response) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = 'エラーが発生しました : スプレッドシート内の日時の表示形式を"書式なし"に変更してください';
+            tableContainer.innerHTML = '';
+            return;
+          }
+          
+          if (response.success) {
+            showDebugInfo('データ表示開始', response.data);
+            displayData(response.data, queryType);
+            errorDiv.textContent = '';
+          } else {
+            const errorMessage = response.error || '不明なエラーが発生しました';
+            const errorDetails = response.errorDetails || {};
+            showDebugInfo('エラー発生', { 
+              error: errorMessage,
+              details: errorDetails
+            });
+            errorDiv.textContent = 'エラー: ' + errorMessage;
+            tableContainer.innerHTML = '';
+          }
+
+          if (response.logs) {
+            showServerLogs(response.logs);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showDebugInfo('サーバーエラー', { 
+            error: error,
+            errorType: typeof error,
+            errorString: String(error),
+            errorStack: error.stack
+          });
+          loadingDiv.style.display = 'none';
+          errorDiv.textContent = 'エラーが発生しました: ' + error;
+          tableContainer.innerHTML = '';
+        })
+        .getSpreadsheetData(location, queryType);
+    } catch (error) {
+      showDebugInfo('クライアントサイドエラー', {
+        error: error,
+        errorType: typeof error,
+        errorString: String(error),
+        errorStack: error.stack
+      });
+      loadingDiv.style.display = 'none';
+      errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
+      tableContainer.innerHTML = '';
+    }
+  }
+
+  // データを表示する
+  function displayData(data, queryType) {
+    const tableContainer = document.getElementById('tableContainer');
+    if (!data || data.length === 0) {
+      showDebugInfo('データが空', {});
+      tableContainer.innerHTML = '<p>データがありません</p>';
+      return;
+    }
+
+    showDebugInfo('テーブル作成開始', { rows: data.length, columns: data[0].length });
+
+    // 空の列を検出する関数
+    function isColumnEmpty(columnIndex) {
+      // ヘッダーが空かチェック
+      if (!data[0][columnIndex] || data[0][columnIndex].trim() === '') {
+        return true;
+      }
+      
+      // データ行で該当する列に内容があるかチェック
+      for (let i = 1; i < data.length; i++) {
+        // 表示される行のみをチェック
+        if (queryType === 'all' || 
+            (queryType === 'lending' && 
+             ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
+              (data[i][2] && data[i][2].includes('貸出')) : 
+              (data[i][3] && data[i][3].includes('貸出') && data[i][9])))) {
+          if (data[i][columnIndex] && data[i][columnIndex].toString().trim() !== '') {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    // 空の列をログに記録
+    const emptyColumns = [];
+    for (let i = 0; i < data[0].length; i++) {
+      if (isColumnEmpty(i)) {
+        emptyColumns.push({ index: i, header: data[0][i] || '(空)' });
+      }
+    }
+    showDebugInfo('空の列を検出', { emptyColumns });
+
+    let table = '<table>';
+    
+    // ヘッダー行
+    table += '<tr>';
+    table += '<th>#</th>'; // 項番列を追加
+    data[0].forEach((cell, index) => {
+      // 一覧表示の場合はA列を非表示、貸出中(ユーザー預り機有)の場合はA列を表示
+      if (index === 0 && queryType === 'all') {
+        return;
+      }
+      
+      // 空の列は表示しない
+      if (isColumnEmpty(index)) {
+        return;
+      }
+      
+      table += `<th>${cell}</th>`;
+    });
+    table += '</tr>';
+
+    // データ行
+    let rowNumber = 1; // 項番用のカウンター
+    for (let i = 1; i < data.length; i++) {
+      // クエリタイプに応じて表示する行をフィルタリング
+      if (queryType === 'all' || 
+          (queryType === 'lending' && 
+           ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
+            (data[i][2] && data[i][2].includes('貸出')) : 
+            (data[i][3] && data[i][3].includes('貸出') && data[i][9])))) {  // プリンタ以外は10列目のチェックを維持
+        table += '<tr>';
+        table += `<td>${rowNumber}</td>`; // 項番を追加
+        rowNumber++; // 項番をインクリメント
+        data[i].forEach((cell, index) => {
+          // 一覧表示の場合はA列を非表示、貸出中(ユーザー預り機有)の場合はA列を表示
+          if (index === 0 && queryType === 'all') {
+            return;
+          }
+          
+          // 空の列は表示しない
+          if (isColumnEmpty(index)) {
+            return;
+          }
+          
+          if (index === 0) {
+            // プリンタロケーションの場合はC列、それ以外はD列の"貸出"をチェック
+            const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+              (data[i][2] && data[i][2].includes('貸出')) :
+              (data[i][3] && data[i][3].includes('貸出'));
+
+            // プリンタロケーションの場合は10列目のチェックを除外
+            const shouldShowDropdown = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+              isLending :
+              (isLending && data[i][9]);
+
+            if (!shouldShowDropdown) {
+              table += `<td>${cell || ''}</td>`;
+            } else {
+              const currentValue = cell || '';
+              table += `<td>
+                <select onchange="updateStatus(${i}, this.value)" class="status-select">
+                  <option value="" ${currentValue === '' ? 'selected' : ''}></option>
+                  <option value="1.返却可能" ${currentValue === '1.返却可能' ? 'selected' : ''}>1.返却可能</option>
+                  <option value="2.商談/金銭的な理由により返却不可" ${currentValue === '2.商談/金銭的な理由により返却不可' ? 'selected' : ''}>2.商談/金銭的な理由により返却不可</option>
+                  <option value="3.お客様にて返却拒否" ${currentValue === '3.お客様にて返却拒否' ? 'selected' : ''}>3.お客様にて返却拒否</option>
+                  <option value="4.HW延長保守にて貸出" ${currentValue === '4.HW延長保守にて貸出' ? 'selected' : ''}>4.HW延長保守にて貸出</option>
+                </select>
+              </td>`;
+            }
+          } else {
+            table += `<td>${cell || ''}</td>`;
+          }
+        });
+        table += '</tr>';
+      }
+    }
+
+    table += '</table>';
+    tableContainer.innerHTML = table;
+    
+    // ドラッグ&ドロップ機能を有効化
+    setupColumnDragAndDrop();
+    
+    showDebugInfo('テーブル作成完了', {});
+  }
+
+  // ステータス更新関数
+  function updateStatus(rowIndex, newStatus) {
+    showDebugInfo('ステータス更新開始', { rowIndex, newStatus });
+    
+    // 空文字列の場合はnullに変換
+    const statusToUpdate = newStatus === '' ? null : newStatus;
+    
+    // ステータス変更の確認ダイアログ
+    let label = '';
+    switch (statusToUpdate) {
+      case null:
+      case '':
+        label = '空欄'; break;
+      case '1.返却可能':
+        label = '1.返却可能'; break;
+      case '2.商談/金銭的な理由により返却不可':
+        label = '2.商談/金銭的な理由により返却不可'; break;
+      case '3.お客様にて返却拒否':
+        label = '3.お客様にて返却拒否'; break;
+      case '4.HW延長保守にて貸出':
+        label = '4.HW延長保守にて貸出'; break;
+      default:
+        label = statusToUpdate;
+    }
+    if (!window.confirm(`${label}に変更しますか？`)) {
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(response) {
+        showDebugInfo('ステータス更新成功', response);
+        if (response.success) {
+          showPopupMessage('ステータスを更新しました');
+          // 更新成功時の処理
+          loadSpreadsheet(currentLocation, document.querySelector('input[name="queryType"]:checked').value);
+        } else {
+          // エラー時の処理
+          const errorDiv = document.getElementById('error');
+          errorDiv.textContent = 'ステータスの更新に失敗しました: ' + (response.error || '不明なエラー');
+        }
+      })
+      .withFailureHandler(function(error) {
+        showDebugInfo('ステータス更新エラー', { error });
+        const errorDiv = document.getElementById('error');
+        errorDiv.textContent = 'エラーが発生しました: ' + error;
+      })
+      .updateMachineStatus(rowIndex, statusToUpdate, currentLocation);
+  }
+</script> 

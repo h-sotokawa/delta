@@ -1,0 +1,45 @@
+<!-- spreadsheet.html - スプレッドシートビューアーページコンポーネント -->
+<div id="spreadsheet" class="page-content">
+  <div class="container">
+    <h1>スプレッドシートビューアー</h1>
+    <div id="popupMessage" class="popup-message" style="display:none;"></div>
+    
+    <div class="location-selector">
+      <label for="location">拠点を選択：</label>
+      <select id="location" onchange="handleLocationChange()">
+        <option value="">拠点を選択してください</option>
+      </select>
+    </div>
+    
+    <div class="query-selector" style="display: none;">
+      <label>表示内容：</label>
+      <div class="radio-group">
+        <label>
+          <input type="radio" name="queryType" value="all" checked onchange="handleQueryChange()">
+          一覧
+        </label>
+        <label>
+          <input type="radio" name="queryType" value="lending" onchange="handleQueryChange()">
+          貸出中(ユーザー預り機有)
+        </label>
+      </div>
+    </div>
+    
+    <div id="loading" class="loading" style="display:none;">データを読み込み中...</div>
+    <div id="error" class="error"></div>
+    
+    <div class="table-responsive">
+      <div id="tableContainer"></div>
+    </div>
+    
+    <div id="debug" class="debug">
+      <h3>デバッグ情報 <span style="color: var(--success-color); font-size: 0.8em;">(デバッグモード: ON)</span></h3>
+      <div class="debug-controls">
+        <button onclick="clearDebugInfo()">ログをクリア</button>
+        <button onclick="exportDebugInfo()">ログをエクスポート</button>
+        <button onclick="toggleDebugMode()">デバッグモード切替</button>
+      </div>
+      <pre id="debugInfo"></pre>
+    </div>
+  </div>
+</div> 

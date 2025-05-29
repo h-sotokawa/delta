@@ -1,0 +1,126 @@
+<!-- dashboard-styles.html - ダッシュボード専用スタイル -->
+<style>
+  /* ========================================
+     ダッシュボード専用スタイル
+     ======================================== */
+  .dashboard {
+    max-width: 1400px;
+    margin: 40px auto;
+    padding: 0 24px;
+  }
+
+  .dashboard-header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 16px;
+    letter-spacing: -0.025em;
+  }
+
+  .dashboard-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin-bottom: 48px;
+  }
+
+  .dashboard-card {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius-lg);
+    padding: 32px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dashboard-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--highlight-gradient);
+  }
+
+  .dashboard-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+  }
+
+  .card-button {
+    background: var(--highlight-gradient);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    font-size: 14px;
+  }
+
+  .card-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-blue);
+  }
+
+  /* 準備中のカード用スタイル */
+  .dashboard-card.coming-soon {
+    opacity: 0.8;
+  }
+
+  .dashboard-card.coming-soon::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+  }
+
+  .coming-soon-badge {
+    display: inline-block;
+    background: var(--warning-gradient);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  /* レスポンシブデザイン */
+  @media (max-width: 768px) {
+    .dashboard {
+      padding: 0 16px;
+    }
+
+    .dashboard-title {
+      font-size: 2rem;
+    }
+
+    .dashboard-cards {
+      grid-template-columns: 1fr;
+    }
+  }
+</style> 

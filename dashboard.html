@@ -1,0 +1,106 @@
+<!-- dashboard.html - ダッシュボードページコンポーネント -->
+<div id="dashboard" class="page-content active">
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">代替機管理システムダッシュボード</h1>
+      <p class="dashboard-subtitle">関西フィールドサービス課</p>
+    </div>
+    
+    <div class="dashboard-cards">
+      <!-- スプレッドシートビューアー -->
+      <div class="dashboard-card">
+        <div class="card-icon">
+          <i class="fas fa-table"></i>
+        </div>
+        <h3 class="card-title">スプレッドシートビューアー</h3>
+        <p class="card-description">
+          各拠点のスプレッドシートデータを閲覧・編集できます。リアルタイムでステータスの更新も可能です。
+        </p>
+        <button class="card-button" onclick="showPage('spreadsheet')">
+          <i class="fas fa-arrow-right"></i>
+          開く
+        </button>
+      </div>
+      
+      <!-- フォーム作成ツール（準備中） -->
+      <div class="dashboard-card coming-soon">
+        <div class="card-icon">
+          <i class="fas fa-edit"></i>
+        </div>
+        <span class="coming-soon-badge">準備中</span>
+        <h3 class="card-title">フォーム作成ツール</h3>
+        <p class="card-description">
+          代替機管理用のフォームを作成できます。この機能は現在開発中です。
+        </p>
+        <button class="card-button btn-disabled" disabled>
+          <i class="fas fa-clock"></i>
+          準備中
+        </button>
+      </div>
+      
+      <!-- レポート機能（準備中） -->
+      <div class="dashboard-card coming-soon">
+        <div class="card-icon">
+          <i class="fas fa-chart-bar"></i>
+        </div>
+        <span class="coming-soon-badge">準備中</span>
+        <h3 class="card-title">レポート機能</h3>
+        <p class="card-description">
+          データの分析やレポート生成機能です。グラフやチャートでデータを可視化できます。
+        </p>
+        <button class="card-button btn-disabled" disabled>
+          <i class="fas fa-clock"></i>
+          準備中
+        </button>
+      </div>
+      
+      <!-- 設定機能（準備中） -->
+      <div class="dashboard-card coming-soon">
+        <div class="card-icon">
+          <i class="fas fa-cog"></i>
+        </div>
+        <span class="coming-soon-badge">準備中</span>
+        <h3 class="card-title">システム設定</h3>
+        <p class="card-description">
+          システムの各種設定を管理できます。ユーザー管理や権限設定などの機能を提供予定です。
+        </p>
+        <button class="card-button btn-disabled" disabled>
+          <i class="fas fa-clock"></i>
+          準備中
+        </button>
+      </div>
+      
+      <!-- データインポート（準備中） -->
+      <div class="dashboard-card coming-soon">
+        <div class="card-icon">
+          <i class="fas fa-file-import"></i>
+        </div>
+        <span class="coming-soon-badge">準備中</span>
+        <h3 class="card-title">データインポート</h3>
+        <p class="card-description">
+          CSVやExcelファイルからデータを一括インポートできます。データ移行を簡単に行えます。
+        </p>
+        <button class="card-button btn-disabled" disabled>
+          <i class="fas fa-clock"></i>
+          準備中
+        </button>
+      </div>
+      
+      <!-- データエクスポート（準備中） -->
+      <div class="dashboard-card coming-soon">
+        <div class="card-icon">
+          <i class="fas fa-file-export"></i>
+        </div>
+        <span class="coming-soon-badge">準備中</span>
+        <h3 class="card-title">データエクスポート</h3>
+        <p class="card-description">
+          システムのデータをCSVやExcel形式でエクスポートできます。バックアップや分析に活用できます。
+        </p>
+        <button class="card-button btn-disabled" disabled>
+          <i class="fas fa-clock"></i>
+          準備中
+        </button>
+      </div>
+    </div>
+  </div>
+</div> 

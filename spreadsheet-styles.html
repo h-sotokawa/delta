@@ -1,0 +1,247 @@
+<!-- spreadsheet-styles.html - スプレッドシートビューアー専用スタイル -->
+<style>
+  /* ========================================
+     スプレッドシートビューアー専用スタイル
+     ======================================== */
+  .location-selector, .query-selector {
+    margin: 24px 0;
+    padding: 20px 24px;
+    background: var(--bg-accent);
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    position: relative;
+  }
+
+  .location-selector::before, .query-selector::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--highlight-color);
+  }
+
+  .location-selector:hover, .query-selector:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+
+  .location-selector label, .query-selector label {
+    font-weight: 500;
+    margin-right: 12px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    letter-spacing: 0.025em;
+  }
+
+  .location-selector select, .query-selector select {
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px solid var(--border-accent);
+    border-radius: var(--border-radius);
+    min-width: 200px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: var(--transition);
+    font-weight: 500;
+  }
+
+  .location-selector select:focus, .query-selector select:focus {
+    outline: none;
+    border-color: var(--highlight-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .radio-group label {
+    font-weight: 400;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: var(--transition);
+    background: transparent;
+    border: 1px solid transparent;
+    letter-spacing: 0.025em;
+  }
+
+  .radio-group label:hover {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: var(--highlight-color);
+  }
+
+  .radio-group input[type="radio"] {
+    margin-right: 8px;
+    accent-color: var(--highlight-color);
+    transform: scale(1.1);
+  }
+
+  /* テーブルの列幅設定 */
+  th:nth-child(1), td:nth-child(1) { min-width: 60px; text-align: center; font-weight: 600; }
+  th:nth-child(2), td:nth-child(2) { min-width: 180px; }
+  th:nth-child(3), td:nth-child(3) { min-width: 160px; }
+  th:nth-child(4), td:nth-child(4) { min-width: 160px; }
+  th:nth-child(5), td:nth-child(5) { min-width: 120px; }
+  th:nth-child(6), td:nth-child(6) { min-width: 120px; }
+  th:nth-child(7), td:nth-child(7) { min-width: 120px; }
+  th:nth-child(8), td:nth-child(8) { min-width: 120px; }
+  th:nth-child(9), td:nth-child(9) { min-width: 120px; }
+  th:nth-child(10), td:nth-child(10) { min-width: 120px; }
+  th:nth-child(11), td:nth-child(11) { min-width: 120px; }
+  th:nth-child(12), td:nth-child(12) { min-width: 120px; }
+
+  .status-select {
+    padding: 8px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    transition: var(--transition);
+    cursor: pointer;
+  }
+
+  .status-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  /* デバッグ情報 */
+  .debug {
+    margin-top: 32px;
+    padding: 24px;
+    background: linear-gradient(135deg, rgba(113, 128, 150, 0.05) 0%, rgba(113, 128, 150, 0.02) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .debug h3 {
+    margin-top: 0;
+    color: var(--text-primary);
+    font-weight: 500;
+    letter-spacing: 0.025em;
+  }
+
+  .debug pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 400px;
+    overflow-y: auto;
+    background: var(--bg-primary);
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .debug-controls {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .debug-controls button {
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: 500;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 13px;
+  }
+
+  .debug-controls button:hover {
+    background: var(--highlight-color);
+    color: white;
+    border-color: var(--highlight-color);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .debug-controls button:active {
+    transform: translateY(0);
+  }
+
+  /* ドラッグ&ドロップ用のスタイル */
+  th {
+    cursor: move;
+    user-select: none;
+    position: relative;
+    touch-action: none;
+  }
+  
+  th.dragging {
+    opacity: 0.7;
+    background: var(--secondary-gradient);
+    transform: scale(1.05);
+    z-index: 1000;
+  }
+  
+  th.drag-over {
+    background: var(--warning-gradient);
+    border-left: 4px solid var(--primary-color);
+    transform: scale(1.02);
+  }
+  
+  .drag-indicator {
+    position: absolute;
+    top: 0;
+    left: -2px;
+    width: 4px;
+    height: 100%;
+    background: var(--primary-gradient);
+    display: none;
+    border-radius: 2px;
+  }
+
+  /* レスポンシブデザイン */
+  @media (max-width: 900px) {
+    .location-selector, .query-selector {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    
+    .location-selector select, .query-selector select {
+      min-width: 100%;
+    }
+    
+    .radio-group {
+      flex-direction: column;
+      gap: 12px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    td select.status-select {
+      font-size: 16px !important;
+      padding: 10px 8px;
+    }
+    
+    td select.status-select option {
+      font-size: 16px !important;
+    }
+  }
+</style> 

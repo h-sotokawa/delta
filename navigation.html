@@ -1,0 +1,41 @@
+<!-- navigation.html - ナビゲーションバーコンポーネント -->
+<nav class="navbar">
+  <div class="navbar-content">
+    <a href="#dashboard" class="navbar-brand" onclick="showPage('dashboard'); return false;">
+      <i class="fas fa-cogs"></i>
+      代替機管理システム
+    </a>
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a href="#dashboard" class="nav-link active" onclick="showPage('dashboard'); return false;">
+          <i class="fas fa-home"></i>
+          ダッシュボード
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#spreadsheet" class="nav-link" onclick="showPage('spreadsheet'); return false;">
+          <i class="fas fa-table"></i>
+          スプレッドシート
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#form-creator" class="nav-link" onclick="showPage('form-creator'); return false;">
+          <i class="fas fa-edit"></i>
+          フォーム作成
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#reports" class="nav-link" onclick="showPage('reports'); return false;">
+          <i class="fas fa-chart-bar"></i>
+          レポート
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#settings" class="nav-link" onclick="showPage('settings'); return false;">
+          <i class="fas fa-cog"></i>
+          設定
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav> 

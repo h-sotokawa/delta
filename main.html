@@ -1,0 +1,136 @@
+<!-- main.html - メインJavaScriptコード -->
+<script>
+  // ========================================
+  // グローバル変数
+  // ========================================
+  const DEBUG_MODE = true; // 本番環境では false に設定
+  let currentLocation = '';
+  let columnOrder = [];
+  let draggedColumnIndex = -1;
+
+  // ========================================
+  // 初期化
+  // ========================================
+  window.onload = function() {
+    showDebugInfo('ページ読み込み完了', {});
+    initializeLocations();
+    
+    // デバッグモードがオフの場合はデバッグセクションを非表示
+    if (!DEBUG_MODE) {
+      const debugSection = document.getElementById('debug');
+      if (debugSection) {
+        debugSection.style.display = 'none';
+      }
+    }
+  };
+
+  // ========================================
+  // ページ遷移機能
+  // ========================================
+  function showPage(pageId) {
+    // 全てのページを非表示
+    document.querySelectorAll('.page-content').forEach(page => {
+      page.classList.remove('active');
+    });
+    
+    // 全てのナビリンクからactiveクラスを削除
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.classList.remove('active');
+    });
+    
+    // 指定されたページを表示
+    const targetPage = document.getElementById(pageId);
+    if (targetPage) {
+      targetPage.classList.add('active');
+    }
+    
+    // 対応するナビリンクにactiveクラスを追加
+    const targetLink = document.querySelector(`[onclick="showPage('${pageId}'); return false;"]`);
+    if (targetLink) {
+      targetLink.classList.add('active');
+    }
+    
+    // スクロール位置をトップに
+    window.scrollTo(0, 0);
+  }
+
+  // ========================================
+  // デバッグ関連
+  // ========================================
+  function showDebugInfo(message, data) {
+    if (!DEBUG_MODE) return;
+    
+    const debugInfo = document.getElementById('debugInfo');
+    const timestamp = new Date().toISOString();
+    const debugMessage = `[${timestamp}] ${message}\n${JSON.stringify(data, null, 2)}\n\n`;
+    debugInfo.textContent = (debugInfo.textContent || '') + debugMessage;
+  }
+
+  function showServerLogs(logs) {
+    if (!DEBUG_MODE) return;
+    if (!logs || !Array.isArray(logs)) return;
+    
+    const debugInfo = document.getElementById('debugInfo');
+    logs.forEach(log => {
+      const debugMessage = `[SERVER ${log.timestamp}] ${log.message}\n${JSON.stringify(log.data, null, 2)}\n\n`;
+      debugInfo.textContent = (debugInfo.textContent || '') + debugMessage;
+    });
+  }
+
+  function clearDebugInfo() {
+    if (!DEBUG_MODE) return;
+    
+    const debugInfo = document.getElementById('debugInfo');
+    debugInfo.textContent = '';
+  }
+
+  function toggleDebugMode() {
+    if (!DEBUG_MODE) return;
+    
+    const debugInfo = document.getElementById('debugInfo');
+    debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function exportDebugInfo() {
+    if (!DEBUG_MODE) return;
+    
+    const debugInfo = document.getElementById('debugInfo').textContent;
+    const blob = new Blob([debugInfo], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `debug_log_${new Date().getTime()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ========================================
+  // ユーティリティ関数
+  // ========================================
+  function convertSerialToDate(serial) {
+    if (!serial || isNaN(serial)) return '';
+    
+    // 1900年1月1日からの経過日数を計算
+    const date = new Date((serial - 25569) * 86400 * 1000);
+    
+    // 日付をフォーマット
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}/${month}/${day}`;
+  }
+
+  function showPopupMessage(message) {
+    const popup = document.getElementById('popupMessage');
+    popup.textContent = message;
+    popup.classList.add('show');
+    popup.style.display = 'block';
+    setTimeout(() => {
+      popup.classList.remove('show');
+      setTimeout(() => {
+        popup.style.display = 'none';
+      }, 600);
+    }, 1800);
+  }
+</script> 
