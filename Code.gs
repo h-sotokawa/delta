@@ -647,7 +647,7 @@ function systemHealthCheck() {
   }
 }
 
-// 拠点管理番号シートのデータを取得する関数（新機能）
+// 代替機フォーム回答シートのデータを取得する関数（新機能）
 function getLocationSheetData(location, locationSheetName, queryType) {
   const startTime = startPerformanceTimer();
   addLog('getLocationSheetData関数が呼び出されました', { location, locationSheetName, queryType });
@@ -666,7 +666,7 @@ function getLocationSheetData(location, locationSheetName, queryType) {
     const sheet = spreadsheet.getSheetByName(locationSheetName);
     
     if (!sheet) {
-      throw new Error('シート「' + locationSheetName + '」が見つかりません。');
+      throw new Error('代替機フォーム回答シート「' + locationSheetName + '」が見つかりません。');
     }
 
     // データを取得
@@ -674,7 +674,7 @@ function getLocationSheetData(location, locationSheetName, queryType) {
     const lastColumn = sheet.getLastColumn();
     
     if (lastRow === 0) {
-      throw new Error('シートにデータがありません。');
+      throw new Error('代替機フォーム回答シートにデータがありません。');
     }
     
     const range = sheet.getRange(1, 1, lastRow, lastColumn);
@@ -693,7 +693,7 @@ function getLocationSheetData(location, locationSheetName, queryType) {
     const dateProcessingTime = Date.now() - dateProcessingStart;
     addLog('日付処理時間', dateProcessingTime + 'ms');
     
-    const responseTime = endPerformanceTimer(startTime, '拠点シート取得');
+    const responseTime = endPerformanceTimer(startTime, '代替機フォーム回答シート取得');
     
     const response = {
       success: true,
@@ -734,6 +734,84 @@ function getLocationSheetData(location, locationSheetName, queryType) {
         name: error.name
       },
       logs: DEBUG ? serverLogs : []
+    };
+  }
+}
+
+// 代替機フォーム回答シートの特定セルを更新する関数（新機能）
+function updateLocationSheetCell(location, locationSheetName, rowIndex, columnIndex, newValue) {
+  const startTime = startPerformanceTimer();
+  addLog('updateLocationSheetCell関数が呼び出されました', { location, locationSheetName, rowIndex, columnIndex, newValue });
+  
+  try {
+    // 選択された拠点のスプレッドシートIDをスクリプトプロパティから取得
+    const spreadsheetId = getSpreadsheetIdFromProperty(location);
+    if (!spreadsheetId) {
+      throw new Error('スクリプトプロパティにスプレッドシートIDが設定されていません: ' + location);
+    }
+
+    addLog('使用するスプレッドシートID', spreadsheetId);
+    
+    // スプレッドシートを開く
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(locationSheetName);
+    
+    if (!sheet) {
+      throw new Error('代替機フォーム回答シート「' + locationSheetName + '」が見つかりません。');
+    }
+
+    // 行インデックスを1から始まる形式に変換（ヘッダー行を考慮）
+    const actualRow = rowIndex + 1;
+    const actualColumn = columnIndex + 1;
+    
+    // 更新前の値を取得（変更履歴用）
+    const targetRange = sheet.getRange(actualRow, actualColumn);
+    const oldValue = targetRange.getValue();
+    
+    // セルを更新
+    targetRange.setValue(newValue);
+    
+    const updateTime = endPerformanceTimer(startTime, 'セル更新');
+    
+    addLog('セル更新成功', {
+      cell: `${String.fromCharCode(64 + actualColumn)}${actualRow}`,
+      oldValue: oldValue,
+      newValue: newValue
+    });
+    
+    return {
+      success: true,
+      message: 'セルを更新しました',
+      data: {
+        location: location,
+        locationSheetName: locationSheetName,
+        rowIndex: rowIndex,
+        columnIndex: columnIndex,
+        cell: `${String.fromCharCode(64 + actualColumn)}${actualRow}`,
+        oldValue: oldValue,
+        newValue: newValue,
+        spreadsheetId: spreadsheetId,
+        updateTime: updateTime
+      }
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, 'セル更新エラー');
+    addLog('セル更新でエラーが発生', {
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    return {
+      success: false,
+      error: error.toString(),
+      errorDetails: {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      }
     };
   }
 } 

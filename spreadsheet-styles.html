@@ -458,6 +458,107 @@
     letter-spacing: 0.025em;
   }
 
+  /* セル編集機能のスタイル（代替機フォーム回答シート用） */
+  .editable-cell {
+    position: relative;
+    transition: var(--transition);
+  }
+
+  .editable-cell:hover {
+    background: rgba(59, 130, 246, 0.05);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+
+  .editable-cell.editing {
+    background: var(--bg-accent);
+    border: 2px solid var(--highlight-color);
+    padding: 0 !important;
+  }
+
+  .cell-edit-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px;
+  }
+
+  .cell-edit-input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--border-accent);
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    min-width: 100px;
+  }
+
+  .cell-edit-input:focus {
+    outline: none;
+    border-color: var(--highlight-color);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  }
+
+  .cell-edit-buttons {
+    display: flex;
+    gap: 4px;
+  }
+
+  .cell-edit-confirm,
+  .cell-edit-cancel {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: var(--transition);
+    padding: 0;
+  }
+
+  .cell-edit-confirm {
+    background: var(--highlight-gradient);
+    color: white;
+    border: 1px solid var(--highlight-color);
+  }
+
+  .cell-edit-confirm:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    transform: scale(1.1);
+    box-shadow: var(--shadow-blue);
+  }
+
+  .cell-edit-cancel {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-accent);
+  }
+
+  .cell-edit-cancel:hover {
+    background: var(--highlight-gradient);
+    color: white;
+    border-color: var(--highlight-color);
+    transform: scale(1.1);
+    box-shadow: var(--shadow-blue);
+  }
+
+  .cell-updating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--highlight-color);
+    font-size: 13px;
+    padding: 6px 8px;
+  }
+
+  .cell-updating i {
+    animation: spin 1s linear infinite;
+  }
+
   @media (max-width: 600px) {
     .sheet-navigation {
       flex-direction: column;
@@ -467,6 +568,20 @@
     
     .back-button {
       width: 100%;
+      justify-content: center;
+    }
+
+    .cell-edit-container {
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .cell-edit-input {
+      min-width: 80px;
+    }
+
+    .cell-edit-buttons {
+      align-self: stretch;
       justify-content: center;
     }
   }

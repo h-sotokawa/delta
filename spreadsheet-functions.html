@@ -458,14 +458,17 @@
     return -1; // 見つからない場合
   }
 
-  // 拠点管理番号シートのデータを読み込む
+  // 代替機フォーム回答シートのデータを読み込む
   function loadLocationSheet(locationCode) {
     if (!currentLocation) {
       showPopupMessage('拠点が選択されていません');
       return;
     }
 
-    showDebugInfo('拠点管理番号シート読み込み開始', { currentLocation, locationCode });
+    // 現在の代替機フォーム回答シート名を保存
+    currentLocationSheetName = locationCode;
+
+    showDebugInfo('代替機フォーム回答シート読み込み開始', { currentLocation, locationCode });
 
     const errorDiv = document.getElementById('error');
     const tableContainer = document.getElementById('tableContainer');
@@ -480,7 +483,7 @@
         loadingDiv.style.display = 'none';
         
         if (response.success) {
-          showDebugInfo('拠点管理番号シート読み込み成功', response);
+          showDebugInfo('代替機フォーム回答シート読み込み成功', response);
           
           // 戻るボタンを表示
           const backButton = `
@@ -497,19 +500,22 @@
           createTable(response.data, 'all', backButton, 'location-sheet');
         } else {
           errorDiv.textContent = `代替機フォーム回答シート「${locationCode}」の読み込みに失敗しました: ${response.error}`;
-          showDebugInfo('拠点管理番号シート読み込みエラー', response);
+          showDebugInfo('代替機フォーム回答シート読み込みエラー', response);
         }
       })
       .withFailureHandler(function(error) {
         loadingDiv.style.display = 'none';
         errorDiv.textContent = `代替機フォーム回答シート「${locationCode}」の読み込み中にエラーが発生しました: ${error}`;
-        showDebugInfo('拠点管理番号シート読み込み通信エラー', { error });
+        showDebugInfo('代替機フォーム回答シート読み込み通信エラー', { error });
       })
       .getLocationSheetData(currentLocation, locationCode, 'all');
   }
 
   // 一覧画面に戻る
   function backToMainView() {
+    // 代替機フォーム回答シート名をクリア
+    currentLocationSheetName = null;
+    
     const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
     loadSpreadsheet(currentLocation, queryType);
   }
@@ -759,6 +765,12 @@
     table += '</table>';
     tableContainer.innerHTML = prependContent + table;
     
+    // 代替機フォーム回答シート表示時のみセルクリック編集機能を有効化
+    // mainシートは数式でデータを取得するため編集不可
+    if (displayMode === 'location-sheet') {
+      enableCellEditing(data);
+    }
+    
     // ドラッグ&ドロップ機能を有効化
     setupColumnDragAndDrop();
     
@@ -768,5 +780,307 @@
     }, 100); // DOM更新後に実行
     
     showDebugInfo('テーブル作成完了', { displayMode });
+  }
+
+  // セルクリック編集機能を有効化（代替機フォーム回答シート専用）
+  function enableCellEditing(data) {
+    // 編集機能の初期化
+    initializeCellEditing();
+    
+    const table = document.querySelector('#tableContainer table');
+    if (!table) return;
+    
+    // データセル（ヘッダー以外）にクリックイベントを追加
+    // mainシートは数式でデータを取得するため、代替機フォーム回答シートのみ編集可能
+    const dataCells = table.querySelectorAll('td');
+    dataCells.forEach((cell, index) => {
+      const table = cell.closest('table');
+      const headerCells = table.querySelectorAll('th');
+      const columnCount = headerCells.length;
+      
+      const rowIndex = Math.floor(index / columnCount) + 1; // データ行番号（1から開始）
+      const columnIndex = index % columnCount; // 列番号（0から開始）
+      
+      // セルをクリック可能にする
+      cell.style.cursor = 'pointer';
+      cell.title = 'クリックして編集';
+      cell.classList.add('editable-cell');
+      
+      cell.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // 既に編集中の場合は何もしない
+        if (cell.classList.contains('editing')) {
+          return;
+        }
+        
+        const currentValue = cell.textContent || '';
+        startCellEdit(cell, rowIndex, columnIndex, currentValue);
+      });
+    });
+    
+    showDebugInfo('代替機フォーム回答シートのセル編集機能有効化完了', { 
+      totalCells: dataCells.length,
+      dataRows: data.length - 1 
+    });
+  }
+
+  // 現在編集中のセル情報を格納する変数
+  let currentEditingCell = null;
+  
+  // 現在表示中の代替機フォーム回答シート名を保持する変数
+  let currentLocationSheetName = null;
+
+  // セル編集機能の初期化
+  function initializeCellEditing() {
+    // 編集中の場合は既存の編集をキャンセル
+    if (currentEditingCell) {
+      cancelCellEdit();
+    }
+  }
+
+  // セル編集開始
+  function startCellEdit(cell, rowIndex, columnIndex, currentValue) {
+    // 他の編集中セルがあればキャンセル
+    if (currentEditingCell) {
+      cancelCellEdit();
+    }
+    
+    showDebugInfo('セル編集開始', { rowIndex, columnIndex, currentValue });
+    
+    // 元のセル内容を保存
+    const originalContent = cell.innerHTML;
+    const originalValue = currentValue || '';
+    
+    // 編集状態の情報を保存
+    currentEditingCell = {
+      cell: cell,
+      rowIndex: rowIndex,
+      columnIndex: columnIndex,
+      originalContent: originalContent,
+      originalValue: originalValue
+    };
+    
+    // 編集UIを作成
+    const editContainer = document.createElement('div');
+    editContainer.className = 'cell-edit-container';
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'cell-edit-input';
+    input.value = originalValue;
+    
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'cell-edit-buttons';
+    
+    const confirmButton = document.createElement('button');
+    confirmButton.className = 'cell-edit-confirm';
+    confirmButton.innerHTML = '<i class="fas fa-check"></i>';
+    confirmButton.title = '確定';
+    confirmButton.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      confirmCellEdit(input.value);
+    };
+    
+    const cancelButton = document.createElement('button');
+    cancelButton.className = 'cell-edit-cancel';
+    cancelButton.innerHTML = '<i class="fas fa-times"></i>';
+    cancelButton.title = 'キャンセル';
+    cancelButton.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelCellEdit();
+    };
+    
+    buttonContainer.appendChild(confirmButton);
+    buttonContainer.appendChild(cancelButton);
+    editContainer.appendChild(input);
+    editContainer.appendChild(buttonContainer);
+    
+    // セルの内容を編集UIに置き換え
+    cell.innerHTML = '';
+    cell.appendChild(editContainer);
+    cell.classList.add('editing');
+    
+    // 入力フィールドにフォーカス
+    input.focus();
+    input.select();
+    
+    // Enterキーで確定、Escapeキーでキャンセル
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmCellEdit(input.value);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelCellEdit();
+      }
+    });
+  }
+
+  // セル編集の確認
+  function confirmCellEdit(newValue) {
+    if (!currentEditingCell) return;
+    
+    const { rowIndex, columnIndex, originalValue } = currentEditingCell;
+    
+    // 値に変更がない場合はキャンセル
+    if (newValue === originalValue) {
+      cancelCellEdit();
+      return;
+    }
+    
+    // 確認ダイアログを表示
+    const confirmMessage = `
+      セルの内容を変更しますか？
+      
+      変更前: "${originalValue}"
+      変更後: "${newValue}"
+    `;
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    
+    showDebugInfo('セル更新開始', { rowIndex, columnIndex, originalValue, newValue });
+    
+    // ローディング状態に変更
+    const { cell } = currentEditingCell;
+    cell.innerHTML = '<div class="cell-updating"><i class="fas fa-spinner fa-spin"></i> 更新中...</div>';
+    
+    // 現在の代替機フォーム回答シート名を取得
+    const locationSheetName = getCurrentLocationSheetName();
+    if (!locationSheetName) {
+      showDebugInfo('代替機フォーム回答シート名が取得できません', { currentLocationSheetName });
+      cancelCellEdit();
+      const errorDiv = document.getElementById('error');
+      errorDiv.textContent = '代替機フォーム回答シート名を取得できませんでした。画面を再読み込みしてください。';
+      return;
+    }
+    
+    showDebugInfo('セル更新実行', { 
+      location: currentLocation, 
+      locationSheetName: locationSheetName,
+      rowIndex, 
+      columnIndex, 
+      originalValue, 
+      newValue 
+    });
+    
+    // サーバーにセル更新を送信
+    google.script.run
+      .withSuccessHandler(function(response) {
+        showDebugInfo('セル更新成功', response);
+        
+        if (response.success) {
+          // 成功時は新しい値を表示
+          cell.innerHTML = newValue || '';
+          cell.classList.remove('editing');
+          showPopupMessage('セルを更新しました');
+          
+          // 編集状態をクリア
+          currentEditingCell = null;
+          
+          // プリロードデータ（メインシート）を更新
+          updatePreloadedData();
+          
+          // 代替機フォーム回答シートの自動更新を実行（少し遅延させて）
+          setTimeout(() => {
+            refreshLocationSheet();
+          }, 1000);
+          
+        } else {
+          // エラー時は元の値に戻す
+          const errorMessage = response.error || '不明なエラーが発生しました';
+          showDebugInfo('セル更新エラー', { error: errorMessage });
+          cancelCellEdit();
+          
+          const errorDiv = document.getElementById('error');
+          errorDiv.textContent = 'セルの更新に失敗しました: ' + errorMessage;
+        }
+      })
+      .withFailureHandler(function(error) {
+        showDebugInfo('セル更新通信エラー', { error });
+        cancelCellEdit();
+        
+        const errorDiv = document.getElementById('error');
+        errorDiv.textContent = 'セルの更新中にエラーが発生しました: ' + error;
+      })
+      .updateLocationSheetCell(currentLocation, locationSheetName, rowIndex, columnIndex, newValue);
+  }
+
+  // セル編集のキャンセル
+  function cancelCellEdit() {
+    if (!currentEditingCell) return;
+    
+    const { cell, originalContent } = currentEditingCell;
+    
+    // 元の内容に戻す
+    cell.innerHTML = originalContent;
+    cell.classList.remove('editing');
+    
+    // 編集状態をクリア
+    currentEditingCell = null;
+    
+    showDebugInfo('セル編集キャンセル', {});
+  }
+
+  // 現在の代替機フォーム回答シート名を取得
+  function getCurrentLocationSheetName() {
+    // グローバル変数から代替機フォーム回答シート名を取得
+    return currentLocationSheetName;
+  }
+
+  // 代替機フォーム回答シートの自動更新
+  function refreshLocationSheet() {
+    const locationSheetName = getCurrentLocationSheetName();
+    if (locationSheetName) {
+      loadLocationSheet(locationSheetName);
+    }
+  }
+
+  // プリロードデータ（メインシート）を更新する関数
+  function updatePreloadedData() {
+    if (!currentLocation) {
+      showDebugInfo('プリロードデータ更新: 拠点が選択されていません', {});
+      return;
+    }
+
+    showDebugInfo('プリロードデータ更新開始', { location: currentLocation });
+
+    // プリロードデータがある場合のみ更新
+    if (typeof preloadedData !== 'undefined' && preloadedData[currentLocation]) {
+      // メインシートの最新データを取得
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (response.success) {
+            // プリロードデータを更新
+            preloadedData[currentLocation] = response;
+            showDebugInfo('プリロードデータ更新成功', { 
+              location: currentLocation, 
+              dataSize: response.data.length 
+            });
+          } else {
+            showDebugInfo('プリロードデータ更新エラー', { 
+              location: currentLocation, 
+              error: response.error 
+            });
+          }
+        })
+        .withFailureHandler(function(error) {
+          showDebugInfo('プリロードデータ更新通信エラー', { 
+            location: currentLocation, 
+            error: error 
+          });
+        })
+        .getSpreadsheetData(currentLocation, 'all');
+    } else {
+      showDebugInfo('プリロードデータ更新スキップ', { 
+        location: currentLocation,
+        reason: 'プリロードデータが存在しません'
+      });
+    }
   }
 </script> 
