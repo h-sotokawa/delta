@@ -881,18 +881,39 @@
     const totalRows = data.length - 1; // ヘッダーを除外
     let displayedRows = 0;
     let lendingRows = 0;
+    let userKeepingRows = 0; // 預り台数（ユーザー預り機有）
+    
+    // ステータス列のインデックスを特定
+    let statusColumnIndex = -1;
+    if (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') {
+      statusColumnIndex = 2; // プリンタの場合はC列（インデックス2）
+    } else {
+      statusColumnIndex = 3; // プリンタ以外の場合はD列（インデックス3）
+    }
     
     for (let i = 1; i < data.length; i++) {
-      const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+      // 貸出中(ユーザー預り機有)の判定（既存のロジック）
+      const isLendingWithUser = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
         (data[i][2] && data[i][2].includes('貸出')) :
         (data[i][3] && data[i][3].includes('貸出') && data[i][9]);
+      
+      // 貸出中の判定（新しいロジック：ステータス列に「貸出」が含まれていればカウント）
+      const isLending = data[i][statusColumnIndex] && 
+                       data[i][statusColumnIndex].toString().includes('貸出');
+      
+      // 預り台数の判定（10列目にデータがあるもの）
+      const isUserKeeping = data[i][9] && data[i][9].toString().trim() !== '';
       
       if (isLending) {
         lendingRows++;
       }
       
-      // 表示されるデータをカウント
-      if (queryType === 'all' || (queryType === 'lending' && isLending)) {
+      if (isUserKeeping) {
+        userKeepingRows++;
+      }
+      
+      // 表示されるデータをカウント（既存のロジックを維持）
+      if (queryType === 'all' || (queryType === 'lending' && isLendingWithUser)) {
         displayedRows++;
       }
     }
@@ -900,7 +921,18 @@
     // メインモードの場合はデータステータス情報を追加
     let statusInfoHtml = '';
     if (displayMode === 'main') {
-      statusInfoHtml = createDataStatusPanel(totalRows, displayedRows, lendingRows, queryType);
+      statusInfoHtml = createDataStatusPanel(totalRows, displayedRows, lendingRows, userKeepingRows, queryType);
+      
+      // デバッグ情報を追加
+      showDebugInfo('データ統計計算完了', {
+        totalRows,
+        displayedRows,
+        lendingRows,
+        userKeepingRows,
+        queryType,
+        statusColumnIndex,
+        location: currentLocation
+      });
     }
 
     let table = '<table>';
@@ -1022,11 +1054,11 @@
   }
 
   // データステータスパネルを作成（一覧画面用）
-  function createDataStatusPanel(totalRows, displayedRows, lendingRows, queryType) {
+  function createDataStatusPanel(totalRows, displayedRows, lendingRows, userKeepingRows, queryType) {
     const locationName = currentLocation ? 
       (LOCATION_NAMES_CLIENT[currentLocation] || currentLocation) : '未選択';
     
-    const queryTypeLabel = queryType === 'all' ? '全データ' : '貸出中データ';
+    const queryTypeLabel = queryType === 'all' ? '全データ' : '貸出中データ(ユーザー預り機有)';
     const currentTime = new Date().toLocaleString('ja-JP', {
       year: 'numeric',
       month: '2-digit',
@@ -1044,27 +1076,31 @@
           <h4>データ状況</h4>
         </div>
         <div class="status-panel-content">
-          <div class="status-panel-item">
+          <div class="status-panel-item" title="現在選択中の拠点名">
             <span class="status-panel-label">拠点</span>
             <span class="status-panel-value location-value">${locationName}</span>
           </div>
-          <div class="status-panel-item">
+          <div class="status-panel-item" title="現在の表示フィルタ設定">
             <span class="status-panel-label">表示モード</span>
             <span class="status-panel-value mode-value">${queryTypeLabel}</span>
           </div>
-          <div class="status-panel-item">
+          <div class="status-panel-item" title="現在のフィルタ条件で表示されている件数">
             <span class="status-panel-label">表示中</span>
             <span class="status-panel-value count-value">${displayedRows}件</span>
           </div>
-          <div class="status-panel-item">
+          <div class="status-panel-item" title="拠点の全データ件数（フィルタ前）">
             <span class="status-panel-label">全体</span>
             <span class="status-panel-value total-value">${totalRows}件</span>
           </div>
-          <div class="status-panel-item">
+          <div class="status-panel-item" title="ステータス列に「貸出」が含まれている件数">
             <span class="status-panel-label">貸出中</span>
             <span class="status-panel-value lending-value">${lendingRows}件</span>
           </div>
-          <div class="status-panel-item">
+          <div class="status-panel-item" title="預り台数（ユーザー預り機有）">
+            <span class="status-panel-label">預り台数</span>
+            <span class="status-panel-value user-keeping-value">${userKeepingRows}台</span>
+          </div>
+          <div class="status-panel-item" title="データが最後に取得された時刻">
             <span class="status-panel-label">最終更新</span>
             <span class="status-panel-value time-value">${currentTime}</span>
           </div>
