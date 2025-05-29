@@ -9,6 +9,10 @@
       <select id="location" onchange="handleLocationChange()">
         <option value="">拠点を選択してください</option>
       </select>
+      <button id="refreshButton" class="refresh-button" onclick="refreshCurrentLocation()" disabled>
+        <i class="fas fa-sync-alt"></i>
+        更新
+      </button>
     </div>
     
     <div class="query-selector" style="display: none;">

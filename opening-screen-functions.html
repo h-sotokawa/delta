@@ -1,0 +1,253 @@
+<!-- opening-screen-functions.html - オープニング画面関連JavaScript -->
+<script>
+  // ========================================
+  // オープニング画面関連関数
+  // ========================================
+  
+  // グローバル変数
+  let preloadedData = {};
+  let loadingProgress = 0;
+  let totalLocations = 0;
+  let completedLocations = 0;
+  
+  // LOCATION_NAMES の定義（Code.gsと同じ）
+  const LOCATION_NAMES_CLIENT = {
+    'osaka_desktop': '大阪(デスクトップ)',
+    'osaka_notebook': '大阪(ノート、サーバー)',
+    'kobe': '神戸(端末)',
+    'himeji': '姫路(端末)',
+    'osaka_printer': '大阪(プリンタ、その他)',
+    'hyogo_printer': '兵庫(プリンタ、その他)'
+  };
+
+  // オープニング画面を表示してデータを一括読み込み
+  function showOpeningScreenAndPreload() {
+    const openingScreen = document.getElementById('opening-screen');
+    if (!openingScreen) {
+      console.error('オープニング画面が見つかりません');
+      return;
+    }
+    
+    openingScreen.style.display = 'flex';
+    
+    // プログレス初期化
+    const locations = Object.keys(LOCATION_NAMES_CLIENT);
+    totalLocations = locations.length;
+    completedLocations = 0;
+    preloadedData = {};
+    
+    updateProgress();
+    
+    // 各拠点のデータを順次読み込み
+    loadAllLocationsData();
+  }
+
+  // 全拠点のデータを読み込み
+  async function loadAllLocationsData() {
+    const locations = Object.keys(LOCATION_NAMES_CLIENT);
+    const notifications = document.getElementById('notifications');
+    
+    // 並列読み込みではなく順次読み込みで負荷を軽減
+    for (const location of locations) {
+      try {
+        await loadLocationData(location);
+      } catch (error) {
+        console.error(`${location}のデータ読み込みエラー:`, error);
+        updateLocationStatus(location, 'error');
+        addNotification(`${LOCATION_NAMES_CLIENT[location]}のデータ読み込みに失敗しました`, 'error');
+      }
+    }
+    
+    // 少し待ってからオープニング画面を閉じる
+    setTimeout(() => {
+      closeOpeningScreen();
+    }, 800);
+  }
+
+  // 特定拠点のデータを読み込み
+  function loadLocationData(location) {
+    return new Promise((resolve, reject) => {
+      updateLocationStatus(location, 'loading');
+      
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (response.success) {
+            preloadedData[location] = response;
+            updateLocationStatus(location, 'success');
+            completedLocations++;
+            updateProgress();
+            resolve(response);
+          } else {
+            // スプレッドシートIDが設定されていない場合は警告として扱う
+            if (response.error && response.error.includes('スプレッドシートIDが設定されていません')) {
+              updateLocationStatus(location, 'warning');
+              addNotification(`${LOCATION_NAMES_CLIENT[location]}のスプレッドシートIDが設定されていません`, 'warning');
+              completedLocations++;
+              updateProgress();
+              resolve(null); // エラーを無視して続行
+            } else {
+              updateLocationStatus(location, 'error');
+              addNotification(`${LOCATION_NAMES_CLIENT[location]}: ${response.error}`, 'error');
+              completedLocations++;
+              updateProgress();
+              reject(new Error(response.error));
+            }
+          }
+        })
+        .withFailureHandler(function(error) {
+          updateLocationStatus(location, 'error');
+          addNotification(`${LOCATION_NAMES_CLIENT[location]}で通信エラーが発生しました`, 'error');
+          completedLocations++;
+          updateProgress();
+          reject(error);
+        })
+        .getSpreadsheetData(location, 'all');
+    });
+  }
+
+  // プログレスバーと進捗テキストを更新
+  function updateProgress() {
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    
+    const percentage = totalLocations > 0 ? (completedLocations / totalLocations) * 100 : 0;
+    
+    if (progressFill) {
+      progressFill.style.width = percentage + '%';
+    }
+    
+    if (progressText) {
+      progressText.textContent = `${completedLocations} / ${totalLocations} 拠点完了`;
+    }
+  }
+
+  // 拠点のステータスを更新
+  function updateLocationStatus(location, status) {
+    const statusElement = document.getElementById(`status-${location}`);
+    if (!statusElement) return;
+    
+    // 既存のステータスクラスを削除
+    statusElement.classList.remove('loading', 'success', 'error', 'warning');
+    
+    // 新しいステータスクラスを追加
+    statusElement.classList.add(status);
+  }
+
+  // 通知を追加
+  function addNotification(message, type = 'info') {
+    const notifications = document.getElementById('notifications');
+    if (!notifications) return;
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    notifications.appendChild(notification);
+    
+    // 自動削除（長時間表示の場合）
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.remove();
+      }
+    }, 10000);
+  }
+
+  // オープニング画面を閉じる
+  function closeOpeningScreen() {
+    const openingScreen = document.getElementById('opening-screen');
+    if (!openingScreen) return;
+    
+    openingScreen.classList.add('fade-out');
+    
+    setTimeout(() => {
+      openingScreen.style.display = 'none';
+      openingScreen.classList.remove('fade-out');
+    }, 500);
+  }
+
+  // プリロードされたデータを取得する関数
+  function getPreloadedData(location) {
+    return preloadedData[location] || null;
+  }
+
+  // データが既にロードされているかチェック
+  function isDataPreloaded(location) {
+    return preloadedData.hasOwnProperty(location) && preloadedData[location];
+  }
+
+  // スプレッドシートビューアーでプリロードデータを使用するように更新
+  function loadSpreadsheetWithPreload(location, queryType) {
+    // プリロードされたデータがある場合はそれを使用
+    if (isDataPreloaded(location)) {
+      const preloadedResponse = getPreloadedData(location);
+      const loadingDiv = document.getElementById('loading');
+      const errorDiv = document.getElementById('error');
+      
+      if (loadingDiv) loadingDiv.style.display = 'none';
+      if (errorDiv) errorDiv.textContent = '';
+      
+      if (preloadedResponse && preloadedResponse.success) {
+        displayData(preloadedResponse.data, queryType);
+        if (typeof showPopupMessage === 'function') {
+          showPopupMessage('プリロードされたデータを表示しました');
+        }
+        if (DEBUG_MODE && typeof showDebugInfo === 'function') {
+          showDebugInfo('プリロードデータ使用', { location, queryType, dataSize: preloadedResponse.data.length });
+        }
+        return;
+      }
+    }
+    
+    // プリロード中にスプレッドシートIDが設定されていない拠点として識別された場合
+    if (preloadedData.hasOwnProperty(location) && preloadedData[location] === null) {
+      const errorDiv = document.getElementById('error');
+      const tableContainer = document.getElementById('tableContainer');
+      const loadingDiv = document.getElementById('loading');
+      
+      if (loadingDiv) loadingDiv.style.display = 'none';
+      
+      const locationName = LOCATION_NAMES_CLIENT[location] || location;
+      if (errorDiv) {
+        errorDiv.textContent = `${locationName}のスプレッドシートIDが設定されていません。システム管理者にお問い合わせください。`;
+      }
+      
+      if (tableContainer) {
+        tableContainer.innerHTML = `
+          <div class="error-message">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>設定エラー</h3>
+            <p>${locationName}のスプレッドシートIDが設定されていません。</p>
+            <p class="error-detail">この拠点のデータを表示するには、システム管理者にスプレッドシートIDの設定を依頼してください。</p>
+          </div>
+        `;
+      }
+      
+      if (DEBUG_MODE && typeof showDebugInfo === 'function') {
+        showDebugInfo('プリロード時スプレッドシートID未設定', { location, locationName });
+      }
+      return;
+    }
+    
+    // プリロードされたデータがない場合は通常の読み込み
+    if (DEBUG_MODE && typeof showDebugInfo === 'function') {
+      showDebugInfo('プリロードデータなし、通常読み込みにフォールバック', { location, queryType });
+    }
+    
+    if (typeof loadSpreadsheet === 'function') {
+      loadSpreadsheet(location, queryType);
+    } else {
+      console.error('loadSpreadsheet function is not available');
+    }
+  }
+
+  // デバッグ用：プリロードデータの状況を表示
+  function showPreloadStatus() {
+    if (!DEBUG_MODE) return;
+    
+    console.log('プリロードデータの状況:');
+    Object.keys(LOCATION_NAMES_CLIENT).forEach(location => {
+      const status = isDataPreloaded(location) ? '✓ ロード済み' : '✗ 未ロード';
+      console.log(`${LOCATION_NAMES_CLIENT[location]}: ${status}`);
+    });
+  }
+</script> 

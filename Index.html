@@ -16,8 +16,12 @@
     <?!= include('styles'); ?>
     <?!= include('dashboard-styles'); ?>
     <?!= include('spreadsheet-styles'); ?>
+    <?!= include('opening-screen-styles'); ?>
   </head>
   <body>
+    <!-- オープニング画面 -->
+    <?!= include('opening-screen'); ?>
+    
     <!-- ナビゲーションバー -->
     <?!= include('navigation'); ?>
     
@@ -44,6 +48,7 @@
     
     <!-- JavaScript -->
     <?!= include('main'); ?>
+    <?!= include('opening-screen-functions'); ?>
     <?!= include('spreadsheet-functions'); ?>
     <?!= include('drag-drop-functions'); ?>
   </body>

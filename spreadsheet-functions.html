@@ -32,18 +32,143 @@
     const locationSelect = document.getElementById('location');
     const selectedLocation = locationSelect.value;
     const querySelector = document.querySelector('.query-selector');
+    const refreshButton = document.getElementById('refreshButton');
+    const errorDiv = document.getElementById('error');
+    const tableContainer = document.getElementById('tableContainer');
+    const loadingDiv = document.getElementById('loading');
+    
+    // エラーとテーブルを初期クリア
+    errorDiv.textContent = '';
+    tableContainer.innerHTML = '';
+    loadingDiv.style.display = 'none';
     
     if (selectedLocation) {
-      currentLocation = selectedLocation;
-      querySelector.style.display = 'block';
-      // 現在選択されているクエリタイプを取得して反映
-      const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
-      loadSpreadsheet(selectedLocation, queryType);
+      // プリロードデータがある場合は直接表示（高速化）
+      if (typeof isDataPreloaded === 'function' && isDataPreloaded(selectedLocation)) {
+        currentLocation = selectedLocation;
+        querySelector.style.display = 'block';
+        
+        // 更新ボタンを有効化
+        if (refreshButton) {
+          refreshButton.disabled = false;
+        }
+        
+        // 現在選択されているクエリタイプを取得して反映
+        const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
+        loadSpreadsheet(selectedLocation, queryType);
+        return;
+      }
+      
+      // プリロードデータがない場合、またはプリロード中にエラーだった場合はスプレッドシートIDをチェック
+      if (typeof preloadedData !== 'undefined' && 
+          preloadedData.hasOwnProperty(selectedLocation) && 
+          preloadedData[selectedLocation] === null) {
+        // プリロード時にスプレッドシートIDが未設定だった場合
+        currentLocation = '';
+        querySelector.style.display = 'none';
+        
+        if (refreshButton) {
+          refreshButton.disabled = true;
+        }
+        
+        const locationName = (typeof LOCATION_NAMES_CLIENT !== 'undefined' ? 
+          LOCATION_NAMES_CLIENT[selectedLocation] : selectedLocation) || selectedLocation;
+        
+        errorDiv.textContent = `${locationName}のスプレッドシートIDが設定されていません。システム管理者にお問い合わせください。`;
+        tableContainer.innerHTML = `
+          <div class="error-message">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>設定エラー</h3>
+            <p>${locationName}のスプレッドシートIDが設定されていません。</p>
+            <p class="error-detail">この拠点のデータを表示するには、システム管理者にスプレッドシートIDの設定を依頼してください。</p>
+          </div>
+        `;
+        
+        // 拠点選択をリセット
+        locationSelect.value = '';
+        return;
+      }
+      
+      // プリロードデータがない場合のみスプレッドシートIDをチェック
+      loadingDiv.style.display = 'block';
+      
+      google.script.run
+        .withSuccessHandler(function(response) {
+          loadingDiv.style.display = 'none';
+          
+          if (response.success && response.exists) {
+            // スプレッドシートIDが設定されている場合
+            currentLocation = selectedLocation;
+            querySelector.style.display = 'block';
+            
+            // 更新ボタンを有効化
+            if (refreshButton) {
+              refreshButton.disabled = false;
+            }
+            
+            // 現在選択されているクエリタイプを取得して反映
+            const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
+            loadSpreadsheet(selectedLocation, queryType);
+            
+          } else if (response.success && !response.exists) {
+            // スプレッドシートIDが設定されていない場合
+            currentLocation = '';
+            querySelector.style.display = 'none';
+            
+            // 更新ボタンを無効化
+            if (refreshButton) {
+              refreshButton.disabled = true;
+            }
+            
+            errorDiv.textContent = `${response.locationName}のスプレッドシートIDが設定されていません。システム管理者にお問い合わせください。`;
+            tableContainer.innerHTML = `
+              <div class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>設定エラー</h3>
+                <p>${response.locationName}のスプレッドシートIDが設定されていません。</p>
+                <p class="error-detail">この拠点のデータを表示するには、システム管理者にスプレッドシートIDの設定を依頼してください。</p>
+              </div>
+            `;
+            
+            // 拠点選択をリセット
+            locationSelect.value = '';
+            
+          } else {
+            // チェック処理でエラーが発生した場合
+            currentLocation = '';
+            querySelector.style.display = 'none';
+            
+            if (refreshButton) {
+              refreshButton.disabled = true;
+            }
+            
+            errorDiv.textContent = `拠点設定の確認に失敗しました: ${response.error}`;
+            locationSelect.value = '';
+          }
+        })
+        .withFailureHandler(function(error) {
+          loadingDiv.style.display = 'none';
+          currentLocation = '';
+          querySelector.style.display = 'none';
+          
+          if (refreshButton) {
+            refreshButton.disabled = true;
+          }
+          
+          errorDiv.textContent = `拠点設定の確認に失敗しました: ${error}`;
+          locationSelect.value = '';
+        })
+        .checkSpreadsheetIdExists(selectedLocation);
+        
     } else {
+      // 拠点が選択されていない場合
       currentLocation = '';
       querySelector.style.display = 'none';
-      const tableContainer = document.getElementById('tableContainer');
-      tableContainer.innerHTML = '';
+      
+      // 更新ボタンを無効化
+      if (refreshButton) {
+        refreshButton.disabled = true;
+      }
     }
   }
 
@@ -57,7 +182,16 @@
 
   // スプレッドシートデータを読み込む
   function loadSpreadsheet(location, queryType) {
-    showDebugInfo('データ取得開始', { location, queryType });
+    // プリロードされたデータがある場合はそれを使用
+    if (typeof loadSpreadsheetWithPreload === 'function') {
+      loadSpreadsheetWithPreload(location, queryType);
+      return;
+    }
+    
+    // 以下は既存のロジック（プリロード機能がない場合のフォールバック）
+    if (DEBUG_MODE) {
+      showDebugInfo('データ取得開始（フォールバック）', { location, queryType });
+    }
     
     const errorDiv = document.getElementById('error');
     const tableContainer = document.getElementById('tableContainer');
@@ -72,10 +206,14 @@
         throw new Error('Google Apps Scriptの実行環境が正しく初期化されていません');
       }
 
-      showDebugInfo('getSpreadsheetData関数の呼び出し開始', { location, queryType });
+      if (DEBUG_MODE) {
+        showDebugInfo('getSpreadsheetData関数の呼び出し開始', { location, queryType });
+      }
       google.script.run
         .withSuccessHandler(function(response) {
-          showDebugInfo('サーバーからの応答', response);
+          if (DEBUG_MODE) {
+            showDebugInfo('サーバーからの応答', response);
+          }
           loadingDiv.style.display = 'none';
           
           if (!response) {
@@ -86,43 +224,51 @@
           }
           
           if (response.success) {
-            showDebugInfo('データ表示開始', response.data);
+            if (DEBUG_MODE) {
+              showDebugInfo('データ表示開始', response.data);
+            }
             displayData(response.data, queryType);
             errorDiv.textContent = '';
           } else {
             const errorMessage = response.error || '不明なエラーが発生しました';
             const errorDetails = response.errorDetails || {};
-            showDebugInfo('エラー発生', { 
-              error: errorMessage,
-              details: errorDetails
-            });
+            if (DEBUG_MODE) {
+              showDebugInfo('エラー発生', { 
+                error: errorMessage,
+                details: errorDetails
+              });
+            }
             errorDiv.textContent = 'エラー: ' + errorMessage;
             tableContainer.innerHTML = '';
           }
 
-          if (response.logs) {
+          if (response.logs && DEBUG_MODE) {
             showServerLogs(response.logs);
           }
         })
         .withFailureHandler(function(error) {
-          showDebugInfo('サーバーエラー', { 
-            error: error,
-            errorType: typeof error,
-            errorString: String(error),
-            errorStack: error.stack
-          });
+          if (DEBUG_MODE) {
+            showDebugInfo('サーバーエラー', { 
+              error: error,
+              errorType: typeof error,
+              errorString: String(error),
+              errorStack: error.stack
+            });
+          }
           loadingDiv.style.display = 'none';
           errorDiv.textContent = 'エラーが発生しました: ' + error;
           tableContainer.innerHTML = '';
         })
         .getSpreadsheetData(location, queryType);
     } catch (error) {
-      showDebugInfo('クライアントサイドエラー', {
-        error: error,
-        errorType: typeof error,
-        errorString: String(error),
-        errorStack: error.stack
-      });
+      if (DEBUG_MODE) {
+        showDebugInfo('クライアントサイドエラー', {
+          error: error,
+          errorType: typeof error,
+          errorString: String(error),
+          errorStack: error.stack
+        });
+      }
       loadingDiv.style.display = 'none';
       errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
       tableContainer.innerHTML = '';
@@ -161,6 +307,33 @@
         }
       }
       return true;
+    }
+
+    // 貸出中フィルタリング時のデータ存在チェック
+    let hasLendingData = false;
+    if (queryType === 'lending') {
+      for (let i = 1; i < data.length; i++) {
+        const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+          (data[i][2] && data[i][2].includes('貸出')) :
+          (data[i][3] && data[i][3].includes('貸出') && data[i][9]);
+        
+        if (isLending) {
+          hasLendingData = true;
+          break;
+        }
+      }
+      
+      // 貸出中データがない場合
+      if (!hasLendingData) {
+        showDebugInfo('貸出中データなし', {});
+        tableContainer.innerHTML = `
+          <div class="no-data-message">
+            <i class="fas fa-info-circle"></i>
+            <p>貸出中（ユーザー預り機有）のデータはありません</p>
+          </div>
+        `;
+        return;
+      }
     }
 
     // 空の列をログに記録
@@ -303,5 +476,110 @@
         errorDiv.textContent = 'エラーが発生しました: ' + error;
       })
       .updateMachineStatus(rowIndex, statusToUpdate, currentLocation);
+  }
+
+  // 現在選択されている拠点のデータを更新
+  function refreshCurrentLocation() {
+    if (!currentLocation) {
+      showPopupMessage('拠点が選択されていません');
+      return;
+    }
+
+    const refreshButton = document.getElementById('refreshButton');
+    const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
+    
+    // ボタンのローディング状態を設定
+    if (refreshButton) {
+      refreshButton.classList.add('loading');
+      refreshButton.disabled = true;
+    }
+
+    showDebugInfo('手動更新開始', { location: currentLocation, queryType });
+    
+    // プリロードデータをクリア（強制的に最新データを取得）
+    if (preloadedData && preloadedData[currentLocation]) {
+      delete preloadedData[currentLocation];
+      showDebugInfo('プリロードデータをクリア', { location: currentLocation });
+    }
+
+    const errorDiv = document.getElementById('error');
+    const tableContainer = document.getElementById('tableContainer');
+    const loadingDiv = document.getElementById('loading');
+
+    loadingDiv.style.display = 'block';
+    errorDiv.textContent = '';
+    tableContainer.innerHTML = '';
+
+    try {
+      if (!google || !google.script || !google.script.run) {
+        throw new Error('Google Apps Scriptの実行環境が正しく初期化されていません');
+      }
+
+      showDebugInfo('最新データ取得開始', { location: currentLocation, queryType });
+      google.script.run
+        .withSuccessHandler(function(response) {
+          showDebugInfo('更新データ取得成功', response);
+          loadingDiv.style.display = 'none';
+          
+          // ボタンのローディング状態を解除
+          if (refreshButton) {
+            refreshButton.classList.remove('loading');
+            refreshButton.disabled = false;
+          }
+          
+          if (!response) {
+            errorDiv.textContent = 'エラーが発生しました : スプレッドシート内の日時の表示形式を"書式なし"に変更してください';
+            tableContainer.innerHTML = '';
+            return;
+          }
+          
+          if (response.success) {
+            // プリロードデータも更新
+            if (typeof preloadedData !== 'undefined') {
+              preloadedData[currentLocation] = response;
+            }
+            
+            showDebugInfo('最新データ表示開始', response.data);
+            displayData(response.data, queryType);
+            errorDiv.textContent = '';
+            showPopupMessage('データを更新しました');
+          } else {
+            const errorMessage = response.error || '不明なエラーが発生しました';
+            showDebugInfo('更新エラー発生', { error: errorMessage });
+            errorDiv.textContent = 'エラー: ' + errorMessage;
+            tableContainer.innerHTML = '';
+          }
+
+          if (response.logs) {
+            showServerLogs(response.logs);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showDebugInfo('更新通信エラー', { error });
+          loadingDiv.style.display = 'none';
+          
+          // ボタンのローディング状態を解除
+          if (refreshButton) {
+            refreshButton.classList.remove('loading');
+            refreshButton.disabled = false;
+          }
+          
+          errorDiv.textContent = 'エラーが発生しました: ' + error;
+          tableContainer.innerHTML = '';
+        })
+        .getSpreadsheetData(currentLocation, queryType);
+    } catch (error) {
+      showDebugInfo('更新処理エラー', { error });
+      loadingDiv.style.display = 'none';
+      
+      // ボタンのローディング状態を解除
+      if (refreshButton) {
+        refreshButton.classList.remove('loading');
+        refreshButton.disabled = false;
+      }
+      
+      errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
+      tableContainer.innerHTML = '';
+    }
   }
 </script> 

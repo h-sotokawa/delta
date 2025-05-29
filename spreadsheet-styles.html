@@ -58,6 +58,55 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
+  /* 更新ボタンのスタイル */
+  .refresh-button {
+    padding: 10px 16px;
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .refresh-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #5a67d8 0%, #667eea 100%);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+
+  .refresh-button:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .refresh-button:disabled {
+    background: var(--border-color);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .refresh-button i {
+    font-size: 12px;
+  }
+
+  .refresh-button.loading i {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
   .radio-group {
     display: flex;
     gap: 24px;
@@ -243,5 +292,68 @@
     td select.status-select option {
       font-size: 16px !important;
     }
+  }
+
+  /* データなしメッセージのスタイル */
+  .no-data-message {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--bg-accent);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    margin: 20px 0;
+  }
+
+  .no-data-message i {
+    font-size: 3rem;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    opacity: 0.6;
+  }
+
+  .no-data-message p {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin: 0;
+    font-weight: 500;
+  }
+
+  /* エラーメッセージのスタイル */
+  .error-message {
+    text-align: center;
+    padding: 60px 20px;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.05) 0%, rgba(239, 68, 68, 0.02) 100%);
+    border-radius: var(--border-radius);
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    margin: 20px 0;
+  }
+
+  .error-message i {
+    font-size: 3rem;
+    color: #dc2626;
+    margin-bottom: 20px;
+    opacity: 0.8;
+  }
+
+  .error-message h3 {
+    font-size: 1.5rem;
+    color: #dc2626;
+    margin: 0 0 15px 0;
+    font-weight: 600;
+  }
+
+  .error-message p {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin: 0 0 10px 0;
+    font-weight: 500;
+  }
+
+  .error-message .error-detail {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin: 15px 0 0 0;
+    font-weight: 400;
+    font-style: italic;
   }
 </style> 

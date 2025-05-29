@@ -267,6 +267,27 @@ function getLocations() {
   };
 }
 
+// スプレッドシートIDが設定されているかチェックする関数
+function checkSpreadsheetIdExists(location) {
+  try {
+    const spreadsheetId = getSpreadsheetIdFromProperty(location);
+    return {
+      success: true,
+      exists: !!spreadsheetId,
+      location: location,
+      locationName: LOCATION_NAMES[location] || location,
+      spreadsheetId: spreadsheetId
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString(),
+      location: location,
+      locationName: LOCATION_NAMES[location] || location
+    };
+  }
+}
+
 // 部分データ取得機能（ページネーション対応）
 function getSpreadsheetDataPaginated(location, queryType, startRow = 1, maxRows = 100) {
   addLog('getSpreadsheetDataPaginated関数が呼び出されました', { location, queryType, startRow, maxRows });
