@@ -8,6 +8,7 @@ const LOCATION_NAMES = {
   'hyogo_printer': '兵庫(プリンタ、その他)'
 };
 
+// メインの代替機一覧シート名
 const TARGET_SHEET_NAME = 'main';
 
 // デバッグモード（本番環境ではfalseに設定）
@@ -643,5 +644,96 @@ function systemHealthCheck() {
     results.error = error.toString();
     results.executionTime = Date.now() - startTime + 'ms';
     return results;
+  }
+}
+
+// 拠点管理番号シートのデータを取得する関数（新機能）
+function getLocationSheetData(location, locationSheetName, queryType) {
+  const startTime = startPerformanceTimer();
+  addLog('getLocationSheetData関数が呼び出されました', { location, locationSheetName, queryType });
+  
+  try {
+    // 選択された拠点のスプレッドシートIDをスクリプトプロパティから取得
+    const spreadsheetId = getSpreadsheetIdFromProperty(location);
+    if (!spreadsheetId) {
+      throw new Error('スクリプトプロパティにスプレッドシートIDが設定されていません: ' + location);
+    }
+
+    addLog('使用するスプレッドシートID', spreadsheetId);
+    
+    // スプレッドシートを開く
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(locationSheetName);
+    
+    if (!sheet) {
+      throw new Error('シート「' + locationSheetName + '」が見つかりません。');
+    }
+
+    // データを取得
+    const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    
+    if (lastRow === 0) {
+      throw new Error('シートにデータがありません。');
+    }
+    
+    const range = sheet.getRange(1, 1, lastRow, lastColumn);
+    const data = range.getValues();
+    
+    // 日付データの処理
+    const dateProcessingStart = Date.now();
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      for (let j = 0; j < row.length; j++) {
+        if (row[j] instanceof Date) {
+          row[j] = formatDateFast(row[j]);
+        }
+      }
+    }
+    const dateProcessingTime = Date.now() - dateProcessingStart;
+    addLog('日付処理時間', dateProcessingTime + 'ms');
+    
+    const responseTime = endPerformanceTimer(startTime, '拠点シート取得');
+    
+    const response = {
+      success: true,
+      data: data,
+      logs: DEBUG ? serverLogs : [],
+      metadata: {
+        location: LOCATION_NAMES[location],
+        locationSheetName: locationSheetName,
+        queryType: queryType,
+        spreadsheetName: spreadsheet.getName(),
+        sheetName: sheet.getName(),
+        lastRow: lastRow,
+        lastColumn: lastColumn,
+        responseTime: responseTime,
+        dateProcessingTime: dateProcessingTime,
+        dataSize: data.length
+      }
+    };
+    
+    addLog('返却するレスポンス準備完了');
+    return response;
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, 'エラー処理');
+    addLog('エラーが発生', {
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    return {
+      success: false,
+      error: error.toString(),
+      errorDetails: {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      },
+      logs: DEBUG ? serverLogs : []
+    };
   }
 } 

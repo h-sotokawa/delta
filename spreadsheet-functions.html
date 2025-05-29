@@ -277,157 +277,17 @@
 
   // データを表示する
   function displayData(data, queryType) {
-    const tableContainer = document.getElementById('tableContainer');
     if (!data || data.length === 0) {
       showDebugInfo('データが空', {});
+      const tableContainer = document.getElementById('tableContainer');
       tableContainer.innerHTML = '<p>データがありません</p>';
       return;
     }
 
     showDebugInfo('テーブル作成開始', { rows: data.length, columns: data[0].length });
-
-    // 空の列を検出する関数
-    function isColumnEmpty(columnIndex) {
-      // ヘッダーが空かチェック
-      if (!data[0][columnIndex] || data[0][columnIndex].trim() === '') {
-        return true;
-      }
-      
-      // データ行で該当する列に内容があるかチェック
-      for (let i = 1; i < data.length; i++) {
-        // 表示される行のみをチェック
-        if (queryType === 'all' || 
-            (queryType === 'lending' && 
-             ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
-              (data[i][2] && data[i][2].includes('貸出')) : 
-              (data[i][3] && data[i][3].includes('貸出') && data[i][9])))) {
-          if (data[i][columnIndex] && data[i][columnIndex].toString().trim() !== '') {
-            return false;
-          }
-        }
-      }
-      return true;
-    }
-
-    // 貸出中フィルタリング時のデータ存在チェック
-    let hasLendingData = false;
-    if (queryType === 'lending') {
-      for (let i = 1; i < data.length; i++) {
-        const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
-          (data[i][2] && data[i][2].includes('貸出')) :
-          (data[i][3] && data[i][3].includes('貸出') && data[i][9]);
-        
-        if (isLending) {
-          hasLendingData = true;
-          break;
-        }
-      }
-      
-      // 貸出中データがない場合
-      if (!hasLendingData) {
-        showDebugInfo('貸出中データなし', {});
-        tableContainer.innerHTML = `
-          <div class="no-data-message">
-            <i class="fas fa-info-circle"></i>
-            <p>貸出中（ユーザー預り機有）のデータはありません</p>
-          </div>
-        `;
-        return;
-      }
-    }
-
-    // 空の列をログに記録
-    const emptyColumns = [];
-    for (let i = 0; i < data[0].length; i++) {
-      if (isColumnEmpty(i)) {
-        emptyColumns.push({ index: i, header: data[0][i] || '(空)' });
-      }
-    }
-    showDebugInfo('空の列を検出', { emptyColumns });
-
-    let table = '<table>';
     
-    // ヘッダー行
-    table += '<tr>';
-    table += '<th>#</th>'; // 項番列を追加
-    data[0].forEach((cell, index) => {
-      // 一覧表示の場合はA列を非表示、貸出中(ユーザー預り機有)の場合はA列を表示
-      if (index === 0 && queryType === 'all') {
-        return;
-      }
-      
-      // 空の列は表示しない
-      if (isColumnEmpty(index)) {
-        return;
-      }
-      
-      table += `<th>${cell}</th>`;
-    });
-    table += '</tr>';
-
-    // データ行
-    let rowNumber = 1; // 項番用のカウンター
-    for (let i = 1; i < data.length; i++) {
-      // クエリタイプに応じて表示する行をフィルタリング
-      if (queryType === 'all' || 
-          (queryType === 'lending' && 
-           ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
-            (data[i][2] && data[i][2].includes('貸出')) : 
-            (data[i][3] && data[i][3].includes('貸出') && data[i][9])))) {  // プリンタ以外は10列目のチェックを維持
-        table += '<tr>';
-        table += `<td>${rowNumber}</td>`; // 項番を追加
-        rowNumber++; // 項番をインクリメント
-        data[i].forEach((cell, index) => {
-          // 一覧表示の場合はA列を非表示、貸出中(ユーザー預り機有)の場合はA列を表示
-          if (index === 0 && queryType === 'all') {
-            return;
-          }
-          
-          // 空の列は表示しない
-          if (isColumnEmpty(index)) {
-            return;
-          }
-          
-          if (index === 0) {
-            // プリンタロケーションの場合はC列、それ以外はD列の"貸出"をチェック
-            const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
-              (data[i][2] && data[i][2].includes('貸出')) :
-              (data[i][3] && data[i][3].includes('貸出'));
-
-            // プリンタロケーションの場合は10列目のチェックを除外
-            const shouldShowDropdown = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
-              isLending :
-              (isLending && data[i][9]);
-
-            if (!shouldShowDropdown) {
-              table += `<td>${cell || ''}</td>`;
-            } else {
-              const currentValue = cell || '';
-              table += `<td>
-                <select onchange="updateStatus(${i}, this.value)" class="status-select">
-                  <option value="" ${currentValue === '' ? 'selected' : ''}></option>
-                  <option value="1.返却可能" ${currentValue === '1.返却可能' ? 'selected' : ''}>1.返却可能</option>
-                  <option value="2.商談/金銭的な理由により返却不可" ${currentValue === '2.商談/金銭的な理由により返却不可' ? 'selected' : ''}>2.商談/金銭的な理由により返却不可</option>
-                  <option value="3.お客様にて返却拒否" ${currentValue === '3.お客様にて返却拒否' ? 'selected' : ''}>3.お客様にて返却拒否</option>
-                  <option value="4.HW延長保守にて貸出" ${currentValue === '4.HW延長保守にて貸出' ? 'selected' : ''}>4.HW延長保守にて貸出</option>
-                </select>
-              </td>`;
-            }
-          } else {
-            table += `<td>${cell || ''}</td>`;
-          }
-        });
-        table += '</tr>';
-      }
-    }
-
-    table += '</table>';
-    tableContainer.innerHTML = table;
-    
-    // ドラッグ&ドロップ機能を有効化
-    setupColumnDragAndDrop();
-    
-    showDebugInfo('テーブル作成完了', {});
+    // 新しいcreateTable関数を使用
+    createTable(data, queryType);
   }
 
   // ステータス更新関数
@@ -581,5 +441,332 @@
       errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
       tableContainer.innerHTML = '';
     }
+  }
+
+  // 拠点管理番号の列インデックスを推定する関数
+  function findLocationCodeColumnIndex(headers) {
+    // 一般的な拠点管理番号列名のパターンを検索
+    const locationColumnNames = ['拠点管理番号', '拠点コード', '拠点', 'location', 'site_code'];
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i].toString().toLowerCase();
+      for (const pattern of locationColumnNames) {
+        if (header.includes(pattern.toLowerCase())) {
+          return i;
+        }
+      }
+    }
+    return -1; // 見つからない場合
+  }
+
+  // 拠点管理番号シートのデータを読み込む
+  function loadLocationSheet(locationCode) {
+    if (!currentLocation) {
+      showPopupMessage('拠点が選択されていません');
+      return;
+    }
+
+    showDebugInfo('拠点管理番号シート読み込み開始', { currentLocation, locationCode });
+
+    const errorDiv = document.getElementById('error');
+    const tableContainer = document.getElementById('tableContainer');
+    const loadingDiv = document.getElementById('loading');
+
+    loadingDiv.style.display = 'block';
+    errorDiv.textContent = '';
+    tableContainer.innerHTML = '';
+
+    google.script.run
+      .withSuccessHandler(function(response) {
+        loadingDiv.style.display = 'none';
+        
+        if (response.success) {
+          showDebugInfo('拠点管理番号シート読み込み成功', response);
+          
+          // 戻るボタンを表示
+          const backButton = `
+            <div class="sheet-navigation">
+              <button onclick="backToMainView()" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                一覧に戻る
+              </button>
+              <h3>拠点シート: ${locationCode}</h3>
+            </div>
+          `;
+          
+          // 拠点シート表示モードでcreateTableを呼び出し
+          createTable(response.data, 'all', backButton, 'location-sheet');
+        } else {
+          errorDiv.textContent = `拠点シート「${locationCode}」の読み込みに失敗しました: ${response.error}`;
+          showDebugInfo('拠点管理番号シート読み込みエラー', response);
+        }
+      })
+      .withFailureHandler(function(error) {
+        loadingDiv.style.display = 'none';
+        errorDiv.textContent = `拠点シート「${locationCode}」の読み込み中にエラーが発生しました: ${error}`;
+        showDebugInfo('拠点管理番号シート読み込み通信エラー', { error });
+      })
+      .getLocationSheetData(currentLocation, locationCode, 'all');
+  }
+
+  // 一覧画面に戻る
+  function backToMainView() {
+    const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
+    loadSpreadsheet(currentLocation, queryType);
+  }
+
+  // 動的列幅調整関数
+  function adjustColumnWidths(data, displayMode = 'main') {
+    if (!data || data.length === 0) return;
+    
+    // 各列の最大文字数を計算
+    const columnWidths = [];
+    const minWidth = 60;  // 最小幅
+    const maxWidth = 400; // 最大幅
+    const charWidthFactor = 8; // 1文字あたりのピクセル数（目安）
+    
+    // ヘッダー行を含む全データをチェック
+    for (let colIndex = 0; colIndex < data[0].length; colIndex++) {
+      let maxLength = 0;
+      
+      // ヘッダー行の文字数をチェック
+      const headerText = data[0][colIndex]?.toString() || '';
+      maxLength = Math.max(maxLength, headerText.length);
+      
+      // データ行の文字数をチェック
+      for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+        const cellText = data[rowIndex][colIndex]?.toString() || '';
+        maxLength = Math.max(maxLength, cellText.length);
+      }
+      
+      // 文字数から推定幅を計算（最小値・最大値の制限あり）
+      let estimatedWidth = Math.max(minWidth, maxLength * charWidthFactor);
+      estimatedWidth = Math.min(maxWidth, estimatedWidth);
+      
+      // 特別な調整
+      if (colIndex === 0 && displayMode === 'main') {
+        // 項番列は固定幅
+        estimatedWidth = 60;
+      } else if (colIndex === 0) {
+        // A列（ステータス列など）
+        estimatedWidth = Math.max(120, estimatedWidth);
+      }
+      
+      columnWidths.push(estimatedWidth);
+    }
+    
+    showDebugInfo('動的列幅計算結果', { columnWidths });
+    
+    // CSSスタイルを動的に適用
+    const table = document.querySelector('#tableContainer table');
+    if (table) {
+      // 項番列がある場合の調整
+      let columnOffset = displayMode === 'main' ? 1 : 0;
+      
+      // ヘッダー行に幅を適用
+      const headerCells = table.querySelectorAll('th');
+      headerCells.forEach((th, index) => {
+        if (index === 0 && displayMode === 'main') {
+          // 項番列
+          th.style.width = '60px';
+          th.style.minWidth = '60px';
+        } else {
+          // データ列
+          const dataColumnIndex = index - columnOffset;
+          if (dataColumnIndex >= 0 && dataColumnIndex < columnWidths.length) {
+            th.style.width = columnWidths[dataColumnIndex] + 'px';
+            th.style.minWidth = columnWidths[dataColumnIndex] + 'px';
+          }
+        }
+      });
+      
+      // データ行に幅を適用
+      const dataCells = table.querySelectorAll('td');
+      dataCells.forEach((td, index) => {
+        const columnIndex = index % headerCells.length;
+        if (columnIndex === 0 && displayMode === 'main') {
+          // 項番列
+          td.style.width = '60px';
+          td.style.minWidth = '60px';
+        } else {
+          // データ列
+          const dataColumnIndex = columnIndex - columnOffset;
+          if (dataColumnIndex >= 0 && dataColumnIndex < columnWidths.length) {
+            td.style.width = columnWidths[dataColumnIndex] + 'px';
+            td.style.minWidth = columnWidths[dataColumnIndex] + 'px';
+          }
+        }
+      });
+    }
+  }
+
+  function createTable(data, queryType, prependContent = '', displayMode = 'main') {
+    const tableContainer = document.getElementById('tableContainer');
+    
+    // 拠点管理番号の列インデックスを取得
+    const locationCodeColumnIndex = findLocationCodeColumnIndex(data[0]);
+    
+    // 空の列をチェックする関数
+    function isColumnEmpty(columnIndex) {
+      // 拠点シート表示モードの場合は空列チェックを無効化
+      if (displayMode === 'location-sheet') {
+        return false;
+      }
+      
+      for (let i = 1; i < data.length; i++) {
+        // クエリタイプに応じてフィルタリング
+        if (queryType === 'all' || 
+            (queryType === 'lending' && 
+             ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
+              (data[i][2] && data[i][2].includes('貸出')) : 
+              (data[i][3] && data[i][3].includes('貸出') && data[i][9])))) {
+          if (data[i][columnIndex] && data[i][columnIndex].toString().trim() !== '') {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    // 貸出中フィルタリング時のデータ存在チェック
+    let hasLendingData = false;
+    if (queryType === 'lending') {
+      for (let i = 1; i < data.length; i++) {
+        const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+          (data[i][2] && data[i][2].includes('貸出')) :
+          (data[i][3] && data[i][3].includes('貸出') && data[i][9]);
+        
+        if (isLending) {
+          hasLendingData = true;
+          break;
+        }
+      }
+      
+      // 貸出中データがない場合
+      if (!hasLendingData) {
+        showDebugInfo('貸出中データなし', {});
+        tableContainer.innerHTML = prependContent + `
+          <div class="no-data-message">
+            <i class="fas fa-info-circle"></i>
+            <p>貸出中（ユーザー預り機有）のデータはありません</p>
+          </div>
+        `;
+        return;
+      }
+    }
+
+    // 空の列をログに記録
+    const emptyColumns = [];
+    for (let i = 0; i < data[0].length; i++) {
+      if (isColumnEmpty(i)) {
+        emptyColumns.push({ index: i, header: data[0][i] || '(空)' });
+      }
+    }
+    showDebugInfo('空の列を検出', { emptyColumns });
+
+    let table = '<table>';
+    
+    // ヘッダー行
+    table += '<tr>';
+    // メインモードの場合のみ項番列を追加
+    if (displayMode === 'main') {
+      table += '<th>#</th>'; // 項番列を追加
+    }
+    
+    data[0].forEach((cell, index) => {
+      // 一覧表示の場合はA列を非表示、貸出中(ユーザー預り機有)の場合はA列を表示
+      if (index === 0 && queryType === 'all' && displayMode === 'main') {
+        return;
+      }
+      
+      // 空の列は表示しない（拠点シートモードでは全て表示）
+      if (isColumnEmpty(index)) {
+        return;
+      }
+      
+      table += `<th>${cell}</th>`;
+    });
+    table += '</tr>';
+
+    // データ行
+    let rowNumber = 1; // 項番用のカウンター
+    for (let i = 1; i < data.length; i++) {
+      // クエリタイプに応じて表示する行をフィルタリング
+      if (queryType === 'all' || 
+          (queryType === 'lending' && 
+           ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
+            (data[i][2] && data[i][2].includes('貸出')) : 
+            (data[i][3] && data[i][3].includes('貸出') && data[i][9])))) {  // プリンタ以外は10列目のチェックを維持
+        table += '<tr>';
+        
+        // メインモードの場合のみ項番を追加
+        if (displayMode === 'main') {
+          table += `<td>${rowNumber}</td>`; // 項番を追加
+        }
+        rowNumber++; // 項番をインクリメント
+        
+        data[i].forEach((cell, index) => {
+          // 一覧表示の場合はA列を非表示、貸出中(ユーザー預り機有)の場合はA列を表示
+          if (index === 0 && queryType === 'all' && displayMode === 'main') {
+            return;
+          }
+          
+          // 空の列は表示しない（拠点シートモードでは全て表示）
+          if (isColumnEmpty(index)) {
+            return;
+          }
+          
+          if (index === 0 && displayMode === 'main') {
+            // プリンタロケーションの場合はC列、それ以外はD列の"貸出"をチェック
+            const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+              (data[i][2] && data[i][2].includes('貸出')) :
+              (data[i][3] && data[i][3].includes('貸出'));
+
+            // プリンタロケーションの場合は10列目のチェックを除外
+            const shouldShowDropdown = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+              isLending :
+              (isLending && data[i][9]);
+
+            if (!shouldShowDropdown) {
+              table += `<td>${cell || ''}</td>`;
+            } else {
+              const currentValue = cell || '';
+              table += `<td>
+                <select onchange="updateStatus(${i}, this.value)" class="status-select">
+                  <option value="" ${currentValue === '' ? 'selected' : ''}></option>
+                  <option value="1.返却可能" ${currentValue === '1.返却可能' ? 'selected' : ''}>1.返却可能</option>
+                  <option value="2.商談/金銭的な理由により返却不可" ${currentValue === '2.商談/金銭的な理由により返却不可' ? 'selected' : ''}>2.商談/金銭的な理由により返却不可</option>
+                  <option value="3.お客様にて返却拒否" ${currentValue === '3.お客様にて返却拒否' ? 'selected' : ''}>3.お客様にて返却拒否</option>
+                  <option value="4.HW延長保守にて貸出" ${currentValue === '4.HW延長保守にて貸出' ? 'selected' : ''}>4.HW延長保守にて貸出</option>
+                </select>
+              </td>`;
+            }
+          } else if (index === locationCodeColumnIndex && locationCodeColumnIndex !== -1 && displayMode === 'main') {
+            // 拠点管理番号列をクリック可能にする（メインモードのみ）
+            const cellValue = cell || '';
+            if (cellValue.toString().trim() !== '') {
+              table += `<td><a href="#" onclick="loadLocationSheet('${cellValue}'); return false;" class="location-link">${cellValue}</a></td>`;
+            } else {
+              table += `<td>${cellValue}</td>`;
+            }
+          } else {
+            table += `<td>${cell || ''}</td>`;
+          }
+        });
+        table += '</tr>';
+      }
+    }
+
+    table += '</table>';
+    tableContainer.innerHTML = prependContent + table;
+    
+    // ドラッグ&ドロップ機能を有効化
+    setupColumnDragAndDrop();
+    
+    // 動的列幅調整を実行
+    setTimeout(() => {
+      adjustColumnWidths(data, displayMode);
+    }, 100); // DOM更新後に実行
+    
+    showDebugInfo('テーブル作成完了', { displayMode });
   }
 </script> 
