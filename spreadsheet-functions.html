@@ -489,20 +489,20 @@
                 <i class="fas fa-arrow-left"></i>
                 一覧に戻る
               </button>
-              <h3>拠点シート: ${locationCode}</h3>
+              <h3>代替機フォーム回答シート: ${locationCode}</h3>
             </div>
           `;
           
-          // 拠点シート表示モードでcreateTableを呼び出し
+          // 代替機フォーム回答シート表示モードでcreateTableを呼び出し
           createTable(response.data, 'all', backButton, 'location-sheet');
         } else {
-          errorDiv.textContent = `拠点シート「${locationCode}」の読み込みに失敗しました: ${response.error}`;
+          errorDiv.textContent = `代替機フォーム回答シート「${locationCode}」の読み込みに失敗しました: ${response.error}`;
           showDebugInfo('拠点管理番号シート読み込みエラー', response);
         }
       })
       .withFailureHandler(function(error) {
         loadingDiv.style.display = 'none';
-        errorDiv.textContent = `拠点シート「${locationCode}」の読み込み中にエラーが発生しました: ${error}`;
+        errorDiv.textContent = `代替機フォーム回答シート「${locationCode}」の読み込み中にエラーが発生しました: ${error}`;
         showDebugInfo('拠点管理番号シート読み込み通信エラー', { error });
       })
       .getLocationSheetData(currentLocation, locationCode, 'all');
@@ -607,7 +607,7 @@
     
     // 空の列をチェックする関数
     function isColumnEmpty(columnIndex) {
-      // 拠点シート表示モードの場合は空列チェックを無効化
+      // 代替機フォーム回答シート表示モードの場合は空列チェックを無効化
       if (displayMode === 'location-sheet') {
         return false;
       }
@@ -678,7 +678,7 @@
         return;
       }
       
-      // 空の列は表示しない（拠点シートモードでは全て表示）
+      // 空の列は表示しない（代替機フォーム回答シートモードでは全て表示）
       if (isColumnEmpty(index)) {
         return;
       }
@@ -710,7 +710,7 @@
             return;
           }
           
-          // 空の列は表示しない（拠点シートモードでは全て表示）
+          // 空の列は表示しない（代替機フォーム回答シートモードでは全て表示）
           if (isColumnEmpty(index)) {
             return;
           }
