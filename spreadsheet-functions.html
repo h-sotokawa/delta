@@ -512,6 +512,14 @@
     const patterns = [
       '1-8.預りユーザー機のシリアルno.(製造番号)',
       '1-6.預りユーザー機のシリアルno.(製造番号)',
+      '預りユーザー機のシリアルno',
+      '預りユーザー機のシリアル',
+      '預りユーザー機',
+      'シリアルno',
+      'シリアル番号',
+      '製造番号',
+      'ユーザー機シリアル',
+      '預り機シリアル'
     ];
     return findColumnIndex(headers, patterns);
   }
@@ -527,45 +535,30 @@
   // 新しい貸出中(ユーザー預り機有)の判定関数
   function isLendingWithUserMachine(data, rowIndex, headers) {
     const serialColumnIndex = findUserMachineSerialColumnIndex(headers);
-    const depositColumnIndex = findUserMachineDepositColumnIndex(headers);
     
     // デバッグ情報
     if (DEBUG_MODE && rowIndex === 1) { // 最初のデータ行でのみログ出力
       showDebugInfo('貸出中(ユーザー預り機有)判定列情報', {
         serialColumnIndex: serialColumnIndex,
-        depositColumnIndex: depositColumnIndex,
-        serialHeader: serialColumnIndex !== -1 ? headers[serialColumnIndex] : 'なし',
-        depositHeader: depositColumnIndex !== -1 ? headers[depositColumnIndex] : 'なし'
+        serialHeader: serialColumnIndex !== -1 ? headers[serialColumnIndex] : 'なし'
       });
     }
     
-    // 1-8.預りユーザー機のシリアルNo.(製造番号)列に内容が存在している
+    // 預りユーザー機のシリアルNo.(製造番号)列に内容が存在している
     const hasSerial = serialColumnIndex !== -1 && 
                      data[rowIndex][serialColumnIndex] && 
                      data[rowIndex][serialColumnIndex].toString().trim() !== '';
-    
-    // 1-4.ユーザー機の預り有無列の内容が「有り」の場合
-    const hasDeposit = depositColumnIndex !== -1 && 
-                      data[rowIndex][depositColumnIndex] && 
-                      (data[rowIndex][depositColumnIndex].toString().includes('有り') || 
-                       data[rowIndex][depositColumnIndex].toString().includes('有') ||
-                       data[rowIndex][depositColumnIndex].toString().includes('あり'));
-    
-    // どちらかの条件を満たせばtrue
-    const result = hasSerial || hasDeposit;
     
     // デバッグ情報（最初の数行のみ）
     if (DEBUG_MODE && rowIndex <= 5) {
       showDebugInfo(`行${rowIndex}の貸出中判定`, {
         hasSerial: hasSerial,
-        hasDeposit: hasDeposit,
-        result: result,
-        serialValue: serialColumnIndex !== -1 ? data[rowIndex][serialColumnIndex] : 'N/A',
-        depositValue: depositColumnIndex !== -1 ? data[rowIndex][depositColumnIndex] : 'N/A'
+        result: hasSerial,
+        serialValue: serialColumnIndex !== -1 ? data[rowIndex][serialColumnIndex] : 'N/A'
       });
     }
     
-    return result;
+    return hasSerial;
   }
 
   // 既存の貸出中判定も維持（フォールバック）
@@ -1052,8 +1045,7 @@
         statusColumnIndex,
         location: currentLocation,
         serialColumnIndex: findUserMachineSerialColumnIndex(data[0]),
-        depositColumnIndex: findUserMachineDepositColumnIndex(data[0]),
-        newCondition: '「預りユーザー機のシリアルNo.」に内容がある または「ユーザー機の預り有無」が「有り」'
+        newCondition: '「預りユーザー機のシリアルNo.」に内容がある（ユーザー機の預り有無条件は除外）'
       });
     }
 
@@ -1240,7 +1232,7 @@
             <span class="status-panel-label">貸出中</span>
             <span class="status-panel-value lending-value">${lendingRows}件</span>
           </div>
-          <div class="status-panel-item" title="預り台数（ユーザー預り機有）：「預りユーザー機のシリアルNo.」に内容がある または「ユーザー機の預り有無」が「有り」の件数">
+          <div class="status-panel-item" title="預り台数（ユーザー預り機有）：「預りユーザー機のシリアルNo.」に内容がある件数">
             <span class="status-panel-label">預り台数</span>
             <span class="status-panel-value user-keeping-value">${userKeepingRows}台</span>
           </div>
