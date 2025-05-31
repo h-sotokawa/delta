@@ -1113,7 +1113,19 @@
           
           if (index === 0 && displayMode === 'main') {
             // 新しい条件でドロップダウン表示判定
-            const shouldShowDropdown = isLendingWithUserMachine(data, i, data[0]);
+            let shouldShowDropdown = isLendingWithUserMachine(data, i, data[0]);
+            
+            // 新しい条件で判定できない場合は既存のロジックをフォールバックとして使用
+            if (!shouldShowDropdown) {
+              shouldShowDropdown = isLendingWithUserMachineLegacy(data, i, currentLocation);
+              
+              if (DEBUG_MODE && shouldShowDropdown) {
+                showDebugInfo(`行${i}でレガシー判定使用`, {
+                  newConditionResult: isLendingWithUserMachine(data, i, data[0]),
+                  legacyConditionResult: shouldShowDropdown
+                });
+              }
+            }
 
             if (!shouldShowDropdown) {
               table += `<td>${cell || ''}</td>`;
