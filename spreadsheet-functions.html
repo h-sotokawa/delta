@@ -353,13 +353,52 @@
     if (!window.confirm(`${label}に変更しますか？`)) {
       return;
     }
+    
+    const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
+    
     google.script.run
       .withSuccessHandler(function(response) {
         showDebugInfo('ステータス更新成功', response);
         if (response.success) {
           showPopupMessage('ステータスを更新しました');
-          // 更新成功時の処理
-          loadSpreadsheet(currentLocation, document.querySelector('input[name="queryType"]:checked').value);
+          
+          // プリロードデータをクリア（更新ボタンと同じ挙動）
+          if (typeof preloadedData !== 'undefined' && preloadedData[currentLocation]) {
+            delete preloadedData[currentLocation];
+            showDebugInfo('ステータス更新後プリロードデータクリア', { location: currentLocation });
+          }
+          
+          // 最新データを取得して表示（更新ボタンと同じ挙動）
+          const errorDiv = document.getElementById('error');
+          const tableContainer = document.getElementById('tableContainer');
+          const loadingDiv = document.getElementById('loading');
+
+          loadingDiv.style.display = 'block';
+          errorDiv.textContent = '';
+          tableContainer.innerHTML = '';
+          
+          google.script.run
+            .withSuccessHandler(function(refreshResponse) {
+              loadingDiv.style.display = 'none';
+              
+              if (refreshResponse.success) {
+                // プリロードデータも更新
+                if (typeof preloadedData !== 'undefined') {
+                  preloadedData[currentLocation] = refreshResponse;
+                }
+                
+                displayData(refreshResponse.data, queryType);
+                errorDiv.textContent = '';
+              } else {
+                errorDiv.textContent = 'データ再読み込みに失敗しました: ' + (refreshResponse.error || '不明なエラー');
+              }
+            })
+            .withFailureHandler(function(error) {
+              loadingDiv.style.display = 'none';
+              errorDiv.textContent = 'データ再読み込み中にエラーが発生しました: ' + error;
+            })
+            .getSpreadsheetData(currentLocation, queryType);
+            
         } else {
           // エラー時の処理
           const errorDiv = document.getElementById('error');
