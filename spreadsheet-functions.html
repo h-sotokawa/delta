@@ -1059,6 +1059,18 @@
     }
     
     data[0].forEach((cell, index) => {
+      // *** デバッグ：A列の処理状況を出力 ***
+      if (DEBUG_MODE && index === 0) {
+        showDebugInfo('ヘッダーA列処理', {
+          index: index,
+          queryType: queryType,
+          displayMode: displayMode,
+          cellValue: cell,
+          shouldSkip: (index === 0 && queryType === 'all' && displayMode === 'main'),
+          isEmpty: isColumnEmpty(index)
+        });
+      }
+      
       // 一覧表示の場合はA列を非表示、貸出中(ユーザー預り機有)の場合はA列を表示
       if (index === 0 && queryType === 'all' && displayMode === 'main') {
         return;
@@ -1093,6 +1105,18 @@
         rowNumber++; // 項番をインクリメント
         
         data[i].forEach((cell, index) => {
+          // *** デバッグ：A列の処理状況を出力 ***
+          if (DEBUG_MODE && index === 0) {
+            showDebugInfo('ヘッダーA列処理', {
+              index: index,
+              queryType: queryType,
+              displayMode: displayMode,
+              cellValue: cell,
+              shouldSkip: (index === 0 && queryType === 'all' && displayMode === 'main'),
+              isEmpty: isColumnEmpty(index)
+            });
+          }
+          
           // 一覧表示の場合はA列を非表示、貸出中(ユーザー預り機有)の場合はA列を表示
           if (index === 0 && queryType === 'all' && displayMode === 'main') {
             return;
