@@ -1112,15 +1112,36 @@
           }
           
           if (index === 0 && displayMode === 'main') {
-            // *** テスト版：プルダウンを常に表示 ***
-            const shouldShowDropdown = true; // 一時的に常にtrue
+            // 貸出中(ユーザー預り機有)モードの場合は常にプルダウンを表示
+            let shouldShowDropdown = false;
             
-            // デバッグ情報
-            if (DEBUG_MODE && i <= 3) {
-              showDebugInfo(`行${i}プルダウン常時表示テスト`, {
-                forcedDropdown: true,
-                cellValue: cell || 'なし'
-              });
+            if (queryType === 'lending') {
+              // 貸出中(ユーザー預り機有)モードでは常にプルダウン表示
+              shouldShowDropdown = true;
+              
+              if (DEBUG_MODE && i <= 3) {
+                showDebugInfo(`行${i}貸出中モードプルダウン表示`, {
+                  queryType: queryType,
+                  forcedDropdown: true,
+                  cellValue: cell || 'なし'
+                });
+              }
+            } else {
+              // 一覧モードの場合は従来の条件で判定
+              shouldShowDropdown = isLendingWithUserMachine(data, i, data[0]);
+              
+              // 新しい条件で判定できない場合は既存のロジックをフォールバックとして使用
+              if (!shouldShowDropdown) {
+                shouldShowDropdown = isLendingWithUserMachineLegacy(data, i, currentLocation);
+              }
+              
+              if (DEBUG_MODE && i <= 3) {
+                showDebugInfo(`行${i}一覧モードプルダウン判定`, {
+                  queryType: queryType,
+                  shouldShowDropdown: shouldShowDropdown,
+                  cellValue: cell || 'なし'
+                });
+              }
             }
 
             if (!shouldShowDropdown) {
