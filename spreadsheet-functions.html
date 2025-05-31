@@ -1112,19 +1112,15 @@
           }
           
           if (index === 0 && displayMode === 'main') {
-            // 新しい条件でドロップダウン表示判定
-            let shouldShowDropdown = isLendingWithUserMachine(data, i, data[0]);
+            // *** テスト版：プルダウンを常に表示 ***
+            const shouldShowDropdown = true; // 一時的に常にtrue
             
-            // 新しい条件で判定できない場合は既存のロジックをフォールバックとして使用
-            if (!shouldShowDropdown) {
-              shouldShowDropdown = isLendingWithUserMachineLegacy(data, i, currentLocation);
-              
-              if (DEBUG_MODE && shouldShowDropdown) {
-                showDebugInfo(`行${i}でレガシー判定使用`, {
-                  newConditionResult: isLendingWithUserMachine(data, i, data[0]),
-                  legacyConditionResult: shouldShowDropdown
-                });
-              }
+            // デバッグ情報
+            if (DEBUG_MODE && i <= 3) {
+              showDebugInfo(`行${i}プルダウン常時表示テスト`, {
+                forcedDropdown: true,
+                cellValue: cell || 'なし'
+              });
             }
 
             if (!shouldShowDropdown) {
