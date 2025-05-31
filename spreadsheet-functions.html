@@ -319,6 +319,11 @@
 
     // 新しいcreateTable関数を使用
     createTable(data, queryType);
+    
+    // フロート横スクロールバーの状態を更新（少し遅延して実行）
+    setTimeout(() => {
+      updateFloatScrollbarAfterTableLoad();
+    }, 200);
   }
 
   // ステータス更新関数
@@ -1079,6 +1084,9 @@
     // 動的列幅調整を実行
     setTimeout(() => {
       adjustColumnWidths(data, displayMode);
+      
+      // フロート横スクロールバーの状態を更新
+      updateFloatScrollbarAfterTableLoad();
     }, 100); // DOM更新後に実行
     
     showDebugInfo('テーブル作成完了', { displayMode });
@@ -1483,4 +1491,223 @@
       });
     }
   }
+
+  // ========================================
+  // フロート横スクロールバー機能
+  // ========================================
+  
+  let floatScrollbarInitialized = false;
+  let tableScrollElement = null;
+  let floatScrollElement = null;
+  let isFloatScrolling = false;
+  let isTableScrolling = false;
+
+  // フロート横スクロールバーの初期化
+  function initializeFloatScrollbar() {
+    if (floatScrollbarInitialized) return;
+    
+    tableScrollElement = document.querySelector('.table-responsive');
+    floatScrollElement = document.querySelector('.float-scrollbar-inner');
+    const floatScrollbar = document.getElementById('floatScrollbar');
+    
+    if (!tableScrollElement || !floatScrollElement || !floatScrollbar) return;
+    
+    // アニメーション用スタイルを追加
+    addFloatScrollbarAnimations();
+    
+    // フロートスクロールバーのコンテンツ幅を設定する関数
+    function updateFloatScrollbarWidth() {
+      const table = document.querySelector('#tableContainer table');
+      if (table) {
+        const tableWidth = table.scrollWidth;
+        const containerWidth = tableScrollElement.clientWidth;
+        
+        // テーブルがコンテナより幅広い場合のみフロートスクロールバーを表示
+        if (tableWidth > containerWidth) {
+          const floatContent = floatScrollElement.querySelector('.float-scrollbar-content');
+          floatContent.style.width = tableWidth + 'px';
+          
+          if (!floatScrollbar.classList.contains('visible')) {
+            floatScrollbar.classList.add('visible');
+            tableScrollElement.classList.add('has-float-scrollbar');
+          }
+        } else {
+          if (floatScrollbar.classList.contains('visible')) {
+            floatScrollbar.classList.remove('visible');
+            tableScrollElement.classList.remove('has-float-scrollbar');
+          }
+        }
+      }
+    }
+    
+    // テーブルスクロールとフロートスクロールの同期
+    function syncScrollPosition() {
+      if (!isFloatScrolling && !isTableScrolling) {
+        const scrollLeft = tableScrollElement.scrollLeft;
+        floatScrollElement.scrollLeft = scrollLeft;
+      }
+    }
+    
+    // テーブルスクロール時のイベントハンドラ
+    tableScrollElement.addEventListener('scroll', function() {
+      if (!isFloatScrolling) {
+        isTableScrolling = true;
+        floatScrollbar.classList.add('scrolling');
+        syncScrollPosition();
+        requestAnimationFrame(() => {
+          isTableScrolling = false;
+          setTimeout(() => {
+            floatScrollbar.classList.remove('scrolling');
+          }, 200);
+        });
+      }
+    });
+    
+    // フロートスクロール時のイベントハンドラ
+    floatScrollElement.addEventListener('scroll', function() {
+      if (!isTableScrolling) {
+        isFloatScrolling = true;
+        floatScrollbar.classList.add('scrolling');
+        const scrollLeft = floatScrollElement.scrollLeft;
+        tableScrollElement.scrollLeft = scrollLeft;
+        requestAnimationFrame(() => {
+          isFloatScrolling = false;
+          setTimeout(() => {
+            floatScrollbar.classList.remove('scrolling');
+          }, 200);
+        });
+      }
+    });
+    
+    // ウィンドウリサイズ時にフロートスクロールバーの表示を更新
+    window.addEventListener('resize', updateFloatScrollbarWidth);
+    
+    // MutationObserverでテーブルの変更を監視
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList' || mutation.type === 'subtree') {
+          // テーブルが追加/変更された場合、少し遅延してから幅を更新
+          setTimeout(updateFloatScrollbarWidth, 100);
+        }
+      });
+    });
+    
+    // テーブルコンテナを監視
+    const tableContainer = document.getElementById('tableContainer');
+    if (tableContainer) {
+      observer.observe(tableContainer, {
+        childList: true,
+        subtree: true
+      });
+    }
+    
+    // スクロール位置の同期を定期的にチェック（フォールバック）
+    setInterval(() => {
+      if (!isFloatScrolling && !isTableScrolling) {
+        const tableScrollLeft = tableScrollElement.scrollLeft;
+        const floatScrollLeft = floatScrollElement.scrollLeft;
+        
+        if (Math.abs(tableScrollLeft - floatScrollLeft) > 1) {
+          floatScrollElement.scrollLeft = tableScrollLeft;
+        }
+      }
+    }, 100);
+    
+    floatScrollbarInitialized = true;
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('フロート横スクロールバー初期化完了', {
+        tableScrollElement: !!tableScrollElement,
+        floatScrollElement: !!floatScrollElement,
+        floatScrollbar: !!floatScrollbar
+      });
+    }
+  }
+
+  // ページ読み込み時にフロートスクロールバーを初期化
+  document.addEventListener('DOMContentLoaded', function() {
+    // 少し遅延してから初期化（他の初期化処理の後）
+    setTimeout(initializeFloatScrollbar, 500);
+  });
+
+  // テーブル表示後にもフロートスクロールバーの状態を更新
+  function updateFloatScrollbarAfterTableLoad() {
+    if (floatScrollbarInitialized) {
+      const floatScrollbar = document.getElementById('floatScrollbar');
+      const table = document.querySelector('#tableContainer table');
+      
+      if (table && tableScrollElement) {
+        const tableWidth = table.scrollWidth;
+        const containerWidth = tableScrollElement.clientWidth;
+        
+        if (tableWidth > containerWidth) {
+          const floatContent = document.querySelector('.float-scrollbar-content');
+          if (floatContent) {
+            floatContent.style.width = tableWidth + 'px';
+          }
+          
+          // アニメーション付きで表示
+          if (!floatScrollbar.classList.contains('visible')) {
+            floatScrollbar.classList.add('visible');
+            tableScrollElement.classList.add('has-float-scrollbar');
+            
+            // 少し遅延してからスクロール位置をリセット（アニメーション後）
+            setTimeout(() => {
+              tableScrollElement.scrollLeft = 0;
+              floatScrollElement.scrollLeft = 0;
+            }, 400);
+          }
+          
+          if (DEBUG_MODE) {
+            showDebugInfo('フロートスクロールバー表示', {
+              tableWidth: tableWidth,
+              containerWidth: containerWidth,
+              scrollDifference: tableWidth - containerWidth
+            });
+          }
+        } else {
+          // アニメーション付きで非表示
+          if (floatScrollbar.classList.contains('visible')) {
+            floatScrollbar.style.animation = 'floatScrollbarSlideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            
+            setTimeout(() => {
+              floatScrollbar.classList.remove('visible');
+              tableScrollElement.classList.remove('has-float-scrollbar');
+              floatScrollbar.style.animation = '';
+            }, 300);
+          }
+          
+          if (DEBUG_MODE) {
+            showDebugInfo('フロートスクロールバー非表示', {
+              tableWidth: tableWidth,
+              containerWidth: containerWidth
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // スクロールバーの非表示アニメーション用のスタイルを動的に追加
+  function addFloatScrollbarAnimations() {
+    // 既にスタイルが追加されているかチェック
+    if (document.getElementById('float-scrollbar-animations')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'float-scrollbar-animations';
+    style.textContent = `
+      @keyframes floatScrollbarSlideDown {
+        from {
+          transform: translateY(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateY(100%);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
 </script> 

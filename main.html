@@ -57,6 +57,15 @@
       targetLink.classList.add('active');
     }
     
+    // スプレッドシートページの場合、フロート横スクロールバーを初期化
+    if (pageId === 'spreadsheet') {
+      setTimeout(() => {
+        if (typeof initializeFloatScrollbar === 'function') {
+          initializeFloatScrollbar();
+        }
+      }, 100);
+    }
+    
     // スクロール位置をトップに
     window.scrollTo(0, 0);
   }
