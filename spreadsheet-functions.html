@@ -494,6 +494,94 @@
     return -1; // 見つからない場合
   }
 
+  // ヘッダー名から列インデックスを取得する汎用関数
+  function findColumnIndex(headers, patterns) {
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i].toString().toLowerCase();
+      for (const pattern of patterns) {
+        if (header.includes(pattern.toLowerCase())) {
+          return i;
+        }
+      }
+    }
+    return -1; // 見つからない場合
+  }
+
+  // 預りユーザー機のシリアルNo.列インデックスを取得
+  function findUserMachineSerialColumnIndex(headers) {
+    const patterns = [
+      '1-8.預りユーザー機のシリアルno.(製造番号)',
+    ];
+    return findColumnIndex(headers, patterns);
+  }
+
+  // ユーザー機の預り有無列インデックスを取得
+  function findUserMachineDepositColumnIndex(headers) {
+    const patterns = [
+      '1-4.ユーザー機の預り有無',
+    ];
+    return findColumnIndex(headers, patterns);
+  }
+
+  // 新しい貸出中(ユーザー預り機有)の判定関数
+  function isLendingWithUserMachine(data, rowIndex, headers) {
+    const serialColumnIndex = findUserMachineSerialColumnIndex(headers);
+    const depositColumnIndex = findUserMachineDepositColumnIndex(headers);
+    
+    // デバッグ情報
+    if (DEBUG_MODE && rowIndex === 1) { // 最初のデータ行でのみログ出力
+      showDebugInfo('貸出中(ユーザー預り機有)判定列情報', {
+        serialColumnIndex: serialColumnIndex,
+        depositColumnIndex: depositColumnIndex,
+        serialHeader: serialColumnIndex !== -1 ? headers[serialColumnIndex] : 'なし',
+        depositHeader: depositColumnIndex !== -1 ? headers[depositColumnIndex] : 'なし'
+      });
+    }
+    
+    // 1-8.預りユーザー機のシリアルNo.(製造番号)列に内容が存在している
+    const hasSerial = serialColumnIndex !== -1 && 
+                     data[rowIndex][serialColumnIndex] && 
+                     data[rowIndex][serialColumnIndex].toString().trim() !== '';
+    
+    // 1-4.ユーザー機の預り有無列の内容が「有り」の場合
+    const hasDeposit = depositColumnIndex !== -1 && 
+                      data[rowIndex][depositColumnIndex] && 
+                      (data[rowIndex][depositColumnIndex].toString().includes('有り') || 
+                       data[rowIndex][depositColumnIndex].toString().includes('有') ||
+                       data[rowIndex][depositColumnIndex].toString().includes('あり'));
+    
+    // どちらかの条件を満たせばtrue
+    const result = hasSerial || hasDeposit;
+    
+    // デバッグ情報（最初の数行のみ）
+    if (DEBUG_MODE && rowIndex <= 5) {
+      showDebugInfo(`行${rowIndex}の貸出中判定`, {
+        hasSerial: hasSerial,
+        hasDeposit: hasDeposit,
+        result: result,
+        serialValue: serialColumnIndex !== -1 ? data[rowIndex][serialColumnIndex] : 'N/A',
+        depositValue: depositColumnIndex !== -1 ? data[rowIndex][depositColumnIndex] : 'N/A'
+      });
+    }
+    
+    return result;
+  }
+
+  // 既存の貸出中判定も維持（フォールバック）
+  function isLendingWithUserMachineLegacy(data, rowIndex, currentLocation) {
+    // プリンタロケーションの場合はC列、それ以外はD列の"貸出"をチェック
+    const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+      (data[rowIndex][2] && data[rowIndex][2].includes('貸出')) :
+      (data[rowIndex][3] && data[rowIndex][3].includes('貸出'));
+
+    // プリンタロケーションの場合は10列目のチェックを除外
+    const shouldShowDropdown = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
+      isLending :
+      (isLending && data[rowIndex][9]);
+    
+    return shouldShowDropdown;
+  }
+
   // 代替機フォーム回答シートのデータを読み込む
   function loadLocationSheet(locationCode) {
     if (!currentLocation) {
@@ -865,10 +953,7 @@
       for (let i = 1; i < data.length; i++) {
         // クエリタイプに応じてフィルタリング
         if (queryType === 'all' || 
-            (queryType === 'lending' && 
-             ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
-              (data[i][2] && data[i][2].includes('貸出')) : 
-              (data[i][3] && data[i][3].includes('貸出') && data[i][9])))) {
+            (queryType === 'lending' && isLendingWithUserMachine(data, i, data[0]))) {
           if (data[i][columnIndex] && data[i][columnIndex].toString().trim() !== '') {
             return false;
           }
@@ -881,11 +966,7 @@
     let hasLendingData = false;
     if (queryType === 'lending') {
       for (let i = 1; i < data.length; i++) {
-        const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
-          (data[i][2] && data[i][2].includes('貸出')) :
-          (data[i][3] && data[i][3].includes('貸出') && data[i][9]);
-        
-        if (isLending) {
+        if (isLendingWithUserMachine(data, i, data[0])) {
           hasLendingData = true;
           break;
         }
@@ -893,11 +974,14 @@
       
       // 貸出中データがない場合
       if (!hasLendingData) {
-        showDebugInfo('貸出中データなし', {});
+        showDebugInfo('貸出中データなし（新条件）', {});
         tableContainer.innerHTML = prependContent + `
           <div class="no-data-message">
             <i class="fas fa-info-circle"></i>
             <p>貸出中（ユーザー預り機有）のデータはありません</p>
+            <p style="font-size: 0.9em; color: var(--text-secondary); margin-top: 8px;">
+              条件：「預りユーザー機のシリアルNo.」に内容がある または「ユーザー機の預り有無」が「有り」
+            </p>
           </div>
         `;
         return;
@@ -928,17 +1012,15 @@
     }
     
     for (let i = 1; i < data.length; i++) {
-      // 貸出中(ユーザー預り機有)の判定（既存のロジック）
-      const isLendingWithUser = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
-        (data[i][2] && data[i][2].includes('貸出')) :
-        (data[i][3] && data[i][3].includes('貸出') && data[i][9]);
+      // 新しい貸出中(ユーザー預り機有)の判定
+      const isLendingWithUser = isLendingWithUserMachine(data, i, data[0]);
       
-      // 貸出中の判定（新しいロジック：ステータス列に「貸出」が含まれていればカウント）
+      // 貸出中の判定（ステータス列に「貸出」が含まれていればカウント）
       const isLending = data[i][statusColumnIndex] && 
                        data[i][statusColumnIndex].toString().includes('貸出');
       
-      // 預り台数の判定（10列目にデータがあるもの）
-      const isUserKeeping = data[i][9] && data[i][9].toString().trim() !== '';
+      // 預り台数の判定（新しい条件でカウント）
+      const isUserKeeping = isLendingWithUserMachine(data, i, data[0]);
       
       if (isLending) {
         lendingRows++;
@@ -948,7 +1030,7 @@
         userKeepingRows++;
       }
       
-      // 表示されるデータをカウント（既存のロジックを維持）
+      // 表示されるデータをカウント（新しいロジックを使用）
       if (queryType === 'all' || (queryType === 'lending' && isLendingWithUser)) {
         displayedRows++;
       }
@@ -967,7 +1049,10 @@
         userKeepingRows,
         queryType,
         statusColumnIndex,
-        location: currentLocation
+        location: currentLocation,
+        serialColumnIndex: findUserMachineSerialColumnIndex(data[0]),
+        depositColumnIndex: findUserMachineDepositColumnIndex(data[0]),
+        newCondition: '「預りユーザー機のシリアルNo.」に内容がある または「ユーザー機の預り有無」が「有り」'
       });
     }
 
@@ -998,12 +1083,9 @@
     // データ行
     let rowNumber = 1; // 項番用のカウンター
     for (let i = 1; i < data.length; i++) {
-      // クエリタイプに応じて表示する行をフィルタリング
+      // クエリタイプに応じて表示する行をフィルタリング（新しい条件を使用）
       if (queryType === 'all' || 
-          (queryType === 'lending' && 
-           ((currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ? 
-            (data[i][2] && data[i][2].includes('貸出')) : 
-            (data[i][3] && data[i][3].includes('貸出') && data[i][9])))) {  // プリンタ以外は10列目のチェックを維持
+          (queryType === 'lending' && isLendingWithUserMachine(data, i, data[0]))) {
         
         // 代替機フォーム回答シートの場合、最新行（1行目のデータ）を強調
         const isLatestRow = (displayMode === 'location-sheet' && i === 1);
@@ -1029,15 +1111,8 @@
           }
           
           if (index === 0 && displayMode === 'main') {
-            // プリンタロケーションの場合はC列、それ以外はD列の"貸出"をチェック
-            const isLending = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
-              (data[i][2] && data[i][2].includes('貸出')) :
-              (data[i][3] && data[i][3].includes('貸出'));
-
-            // プリンタロケーションの場合は10列目のチェックを除外
-            const shouldShowDropdown = (currentLocation === 'osaka_printer' || currentLocation === 'hyogo_printer') ?
-              isLending :
-              (isLending && data[i][9]);
+            // 新しい条件でドロップダウン表示判定
+            const shouldShowDropdown = isLendingWithUserMachine(data, i, data[0]);
 
             if (!shouldShowDropdown) {
               table += `<td>${cell || ''}</td>`;
@@ -1135,7 +1210,7 @@
             <span class="status-panel-label">貸出中</span>
             <span class="status-panel-value lending-value">${lendingRows}件</span>
           </div>
-          <div class="status-panel-item" title="預り台数（ユーザー預り機有）">
+          <div class="status-panel-item" title="預り台数（ユーザー預り機有）：「預りユーザー機のシリアルNo.」に内容がある または「ユーザー機の預り有無」が「有り」の件数">
             <span class="status-panel-label">預り台数</span>
             <span class="status-panel-value user-keeping-value">${userKeepingRows}台</span>
           </div>
