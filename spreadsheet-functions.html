@@ -944,6 +944,11 @@
         return false;
       }
       
+      // A列（ステータス列）は空でも表示する
+      if (columnIndex === 0) {
+        return false;
+      }
+      
       for (let i = 1; i < data.length; i++) {
         // クエリタイプに応じてフィルタリング
         if (queryType === 'all' || 
