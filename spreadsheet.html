@@ -4,7 +4,19 @@
     <h1>スプレッドシートビューアー</h1>
     <div id="popupMessage" class="popup-message" style="display:none;"></div>
     
-    <div class="location-selector">
+    <!-- シートタイプ選択（最初に表示） -->
+    <div class="sheet-type-selector">
+      <label for="sheetType">シートタイプを選択：</label>
+      <select id="sheetType" onchange="handleSheetTypeChange()">
+        <option value="">選択してください</option>
+        <option value="normal">通常データ</option>
+        <option value="audit">監査データ</option>
+        <option value="summary">サマリー</option>
+      </select>
+    </div>
+    
+    <!-- 拠点選択（通常データ選択時のみ表示） -->
+    <div class="location-selector" style="display: none;">
       <label for="location">拠点を選択：</label>
       <select id="location" onchange="handleLocationChange()">
         <option value="">拠点を選択してください</option>
@@ -13,6 +25,17 @@
         <i class="fas fa-sync-alt"></i>
         更新
       </button>
+    </div>
+    
+    <!-- 監査データ用の詳細選択 -->
+    <div class="audit-sheet-selector" style="display: none;">
+      <label for="auditSheet">監査シートを選択：</label>
+      <select id="auditSheet" onchange="handleAuditSheetChange()">
+        <option value="">選択してください</option>
+        <option value="大阪">大阪</option>
+        <option value="神戸">神戸</option>
+        <option value="姫路">姫路</option>
+      </select>
     </div>
     
     <div class="query-selector" style="display: none;">

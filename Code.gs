@@ -814,4 +814,410 @@ function updateLocationSheetCell(location, locationSheetName, rowIndex, columnIn
       }
     };
   }
+}
+
+// 監査・サマリー用スプレッドシートのデータを取得する関数
+function getDestinationSheetData(sheetName, queryType) {
+  const startTime = startPerformanceTimer();
+  addLog('getDestinationSheetData関数が呼び出されました', { sheetName, queryType });
+  
+  // 関数の開始を明確にマーク
+  addLog('=== getDestinationSheetData開始 ===', {
+    sheetName: sheetName,
+    queryType: queryType,
+    timestamp: new Date().toISOString()
+  });
+  
+  try {
+    // SPREADSHEET_ID_DESTINATIONをスクリプトプロパティから取得
+    addLog('スクリプトプロパティ取得開始');
+    const properties = PropertiesService.getScriptProperties();
+    const spreadsheetId = properties.getProperty('SPREADSHEET_ID_DESTINATION');
+    
+    addLog('スクリプトプロパティ取得結果', {
+      spreadsheetId: spreadsheetId,
+      spreadsheetIdType: typeof spreadsheetId,
+      spreadsheetIdNull: spreadsheetId === null,
+      spreadsheetIdUndefined: spreadsheetId === undefined
+    });
+    
+    if (!spreadsheetId) {
+      addLog('エラー: スプレッドシートIDが未設定');
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません');
+    }
+
+    addLog('使用するスプレッドシートID', spreadsheetId);
+    
+    // スプレッドシートを開く
+    addLog('スプレッドシートを開いています...');
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    addLog('スプレッドシート取得成功', {
+      spreadsheetName: spreadsheet.getName(),
+      spreadsheetId: spreadsheet.getId()
+    });
+    
+    // 利用可能なシート一覧を取得
+    const allSheets = spreadsheet.getSheets();
+    const sheetNames = allSheets.map(s => s.getName());
+    addLog('利用可能なシート一覧', {
+      sheetNames: sheetNames,
+      totalSheets: allSheets.length,
+      targetSheet: sheetName
+    });
+    
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      addLog('エラー: 指定されたシートが見つかりません', {
+        requestedSheet: sheetName,
+        availableSheets: sheetNames
+      });
+      throw new Error('シート「' + sheetName + '」が見つかりません。利用可能なシート: ' + sheetNames.join(', '));
+    }
+
+    addLog('シート取得成功', {
+      sheetName: sheet.getName(),
+      sheetId: sheet.getSheetId()
+    });
+
+    // データを取得
+    addLog('データ範囲情報を取得中...');
+    const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    
+    addLog('データ範囲情報', {
+      lastRow: lastRow,
+      lastColumn: lastColumn,
+      isEmpty: lastRow === 0
+    });
+    
+    if (lastRow === 0) {
+      addLog('エラー: シートにデータがありません');
+      throw new Error('シートにデータがありません。');
+    }
+    
+    addLog('データ読み込み開始', {
+      range: `A1:${String.fromCharCode(64 + lastColumn)}${lastRow}`,
+      totalCells: lastRow * lastColumn
+    });
+    
+    const range = sheet.getRange(1, 1, lastRow, lastColumn);
+    const data = range.getValues();
+    
+    addLog('データ読み込み完了', {
+      dataLength: data.length,
+      firstRowLength: data[0] ? data[0].length : 0,
+      sampleData: data.length > 0 ? data[0].slice(0, 3) : []
+    });
+    
+    // データの構造をチェック
+    let dateColumnCount = 0;
+    let errorCellCount = 0;
+    
+    // 日付データの処理とエラーチェック
+    const dateProcessingStart = Date.now();
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      for (let j = 0; j < row.length; j++) {
+        try {
+          if (row[j] instanceof Date) {
+            row[j] = formatDateFast(row[j]);
+            dateColumnCount++;
+          } else if (row[j] && typeof row[j] === 'object' && row[j].toString().startsWith('#')) {
+            // エラー値を検出
+            errorCellCount++;
+            addLog('エラーセル検出', {
+              row: i + 1,
+              column: j + 1,
+              cellValue: row[j].toString(),
+              cellType: typeof row[j]
+            });
+          }
+        } catch (cellError) {
+          errorCellCount++;
+          addLog('セル処理エラー', {
+            row: i + 1,
+            column: j + 1,
+            cellValue: String(row[j]),
+            error: cellError.toString()
+          });
+        }
+      }
+    }
+    const dateProcessingTime = Date.now() - dateProcessingStart;
+    
+    addLog('データ処理完了', {
+      dateProcessingTime: dateProcessingTime + 'ms',
+      dateColumnCount: dateColumnCount,
+      errorCellCount: errorCellCount
+    });
+    
+    const responseTime = endPerformanceTimer(startTime, '監査・サマリーシート取得');
+    
+    const response = {
+      success: true,
+      data: data,
+      logs: DEBUG ? serverLogs : [],
+      metadata: {
+        sheetType: getSheetTypeFromName(sheetName),
+        sheetName: sheetName,
+        queryType: queryType,
+        spreadsheetName: spreadsheet.getName(),
+        lastRow: lastRow,
+        lastColumn: lastColumn,
+        responseTime: responseTime,
+        dateProcessingTime: dateProcessingTime,
+        dataSize: data.length,
+        dateColumnCount: dateColumnCount,
+        errorCellCount: errorCellCount,
+        availableSheets: sheetNames
+      }
+    };
+    
+    addLog('返却するレスポンス準備完了', {
+      responseSuccess: response.success,
+      responseDataLength: response.data.length,
+      metadataKeys: Object.keys(response.metadata)
+    });
+    
+    return response;
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, 'エラー処理');
+    addLog('エラーが発生', {
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      sheetName: sheetName,
+      queryType: queryType
+    });
+    
+    return {
+      success: false,
+      error: error.toString(),
+      errorDetails: {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        sheetName: sheetName,
+        queryType: queryType
+      },
+      logs: DEBUG ? serverLogs : []
+    };
+  }
+}
+
+// シート名からシートタイプを判定するヘルパー関数
+function getSheetTypeFromName(sheetName) {
+  if (sheetName === 'サマリー' || sheetName === 'summary') {
+    return 'サマリーデータ';
+  } else if (sheetName === '大阪' || sheetName === 'osaka') {
+    return '大阪監査データ';
+  } else if (sheetName === '神戸' || sheetName === 'kobe') {
+    return '神戸監査データ';
+  } else if (sheetName === '姫路' || sheetName === 'himeji') {
+    return '姫路監査データ';
+  } else {
+    return '監査・サマリーデータ';
+  }
+}
+
+// 監査・サマリー用のシート一覧を取得する関数
+function getDestinationSheets() {
+  try {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+    if (!spreadsheetId) {
+      return {
+        success: false,
+        error: 'SPREADSHEET_ID_DESTINATIONが設定されていません'
+      };
+    }
+    
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const sheets = spreadsheet.getSheets();
+    
+    const sheetList = {};
+    sheets.forEach(sheet => {
+      const name = sheet.getName();
+      sheetList[name] = getSheetTypeFromName(name);
+    });
+    
+    return {
+      success: true,
+      sheets: sheetList,
+      spreadsheetName: spreadsheet.getName()
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+// サマリーシートの詳細診断を行う関数
+function diagnoseSummarySheet() {
+  const startTime = Date.now();
+  const diagnosticLogs = [];
+  
+  function addDiagnosticLog(message, data = {}) {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      message: message,
+      data: data
+    };
+    diagnosticLogs.push(logEntry);
+    console.log(`[DIAGNOSTIC] ${message}`, data);
+  }
+  
+  try {
+    addDiagnosticLog('サマリーシート診断開始');
+    
+    // スプレッドシートID取得
+    const properties = PropertiesService.getScriptProperties();
+    const spreadsheetId = properties.getProperty('SPREADSHEET_ID_DESTINATION');
+    
+    addDiagnosticLog('スプレッドシートID確認', {
+      spreadsheetId: spreadsheetId ? '設定済み' : '未設定',
+      idLength: spreadsheetId ? spreadsheetId.length : 0
+    });
+    
+    if (!spreadsheetId) {
+      throw new Error('SPREADSHEET_ID_DESTINATIONが設定されていません');
+    }
+    
+    // スプレッドシートを開く
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    addDiagnosticLog('スプレッドシート取得成功', {
+      name: spreadsheet.getName(),
+      url: spreadsheet.getUrl()
+    });
+    
+    // 全シート取得
+    const allSheets = spreadsheet.getSheets();
+    const sheetInfo = allSheets.map(sheet => ({
+      name: sheet.getName(),
+      id: sheet.getSheetId(),
+      lastRow: sheet.getLastRow(),
+      lastColumn: sheet.getLastColumn(),
+      hidden: sheet.isSheetHidden()
+    }));
+    
+    addDiagnosticLog('全シート情報', {
+      totalSheets: allSheets.length,
+      sheets: sheetInfo
+    });
+    
+    // サマリーシート特定
+    const summarySheet = spreadsheet.getSheetByName('サマリー');
+    if (!summarySheet) {
+      addDiagnosticLog('エラー: サマリーシートが見つかりません', {
+        availableSheets: sheetInfo.map(s => s.name)
+      });
+      throw new Error('「サマリー」シートが見つかりません');
+    }
+    
+    addDiagnosticLog('サマリーシート取得成功', {
+      name: summarySheet.getName(),
+      id: summarySheet.getSheetId(),
+      isHidden: summarySheet.isSheetHidden()
+    });
+    
+    // データ範囲確認
+    const lastRow = summarySheet.getLastRow();
+    const lastColumn = summarySheet.getLastColumn();
+    
+    addDiagnosticLog('データ範囲確認', {
+      lastRow: lastRow,
+      lastColumn: lastColumn,
+      isEmpty: lastRow === 0,
+      totalCells: lastRow * lastColumn
+    });
+    
+    if (lastRow === 0) {
+      addDiagnosticLog('警告: サマリーシートにデータがありません');
+      return {
+        success: false,
+        error: 'サマリーシートにデータがありません',
+        diagnostics: diagnosticLogs,
+        executionTime: Date.now() - startTime + 'ms'
+      };
+    }
+    
+    // 実際のデータを少し取得してみる
+    const sampleRange = summarySheet.getRange(1, 1, Math.min(lastRow, 5), Math.min(lastColumn, 5));
+    const sampleData = sampleRange.getValues();
+    
+    addDiagnosticLog('サンプルデータ取得成功', {
+      sampleRows: sampleData.length,
+      sampleCols: sampleData[0] ? sampleData[0].length : 0,
+      firstRow: sampleData[0] || [],
+      secondRow: sampleData[1] || []
+    });
+    
+    // セルの型チェック
+    let dateCount = 0;
+    let errorCount = 0;
+    let nullCount = 0;
+    
+    for (let i = 0; i < sampleData.length; i++) {
+      for (let j = 0; j < sampleData[i].length; j++) {
+        const cell = sampleData[i][j];
+        if (cell instanceof Date) {
+          dateCount++;
+        } else if (cell === null || cell === undefined) {
+          nullCount++;
+        } else if (cell && typeof cell === 'object' && cell.toString().startsWith('#')) {
+          errorCount++;
+        }
+      }
+    }
+    
+    addDiagnosticLog('セル型統計', {
+      dateCount: dateCount,
+      errorCount: errorCount,
+      nullCount: nullCount
+    });
+    
+    // 実際のgetDestinationSheetDataを呼び出し
+    addDiagnosticLog('実際の関数呼び出しテスト開始');
+    const result = getDestinationSheetData('サマリー', 'diagnostic');
+    
+    addDiagnosticLog('実際の関数呼び出し結果', {
+      success: result.success,
+      hasData: result.data ? true : false,
+      dataLength: result.data ? result.data.length : 0,
+      error: result.error || 'なし'
+    });
+    
+    return {
+      success: true,
+      message: 'サマリーシート診断完了',
+      diagnostics: diagnosticLogs,
+      sheetInfo: {
+        name: summarySheet.getName(),
+        lastRow: lastRow,
+        lastColumn: lastColumn,
+        sampleData: sampleData
+      },
+      functionResult: result,
+      executionTime: Date.now() - startTime + 'ms'
+    };
+    
+  } catch (error) {
+    addDiagnosticLog('診断中にエラー発生', {
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack
+    });
+    
+    return {
+      success: false,
+      error: error.toString(),
+      diagnostics: diagnosticLogs,
+      executionTime: Date.now() - startTime + 'ms'
+    };
+  }
 } 

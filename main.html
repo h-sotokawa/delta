@@ -59,9 +59,19 @@
     
     // スプレッドシートページの場合、フロート横スクロールバーを初期化
     if (pageId === 'spreadsheet') {
+      if (DEBUG_MODE) {
+        showDebugInfo('showPage: スプレッドシートページ表示', { pageId });
+      }
       setTimeout(() => {
         if (typeof initializeFloatScrollbar === 'function') {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage遅延実行: フロートスクロールバー初期化', {});
+          }
           initializeFloatScrollbar();
+        } else {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage: initializeFloatScrollbar関数が見つからない', {});
+          }
         }
       }, 100);
     }

@@ -3,7 +3,7 @@
   /* ========================================
      スプレッドシートビューアー専用スタイル
      ======================================== */
-  .location-selector, .query-selector {
+  .location-selector, .query-selector, .sheet-type-selector, .audit-sheet-selector {
     margin: 24px 0;
     padding: 20px 24px;
     background: var(--bg-accent);
@@ -17,7 +17,7 @@
     position: relative;
   }
 
-  .location-selector::before, .query-selector::before {
+  .location-selector::before, .query-selector::before, .sheet-type-selector::before, .audit-sheet-selector::before {
     content: '';
     position: absolute;
     top: 0;
@@ -27,12 +27,12 @@
     background: var(--highlight-color);
   }
 
-  .location-selector:hover, .query-selector:hover {
+  .location-selector:hover, .query-selector:hover, .sheet-type-selector:hover, .audit-sheet-selector:hover {
     box-shadow: var(--shadow-md);
     transform: translateY(-1px);
   }
 
-  .location-selector label, .query-selector label {
+  .location-selector label, .query-selector label, .sheet-type-selector label, .audit-sheet-selector label {
     font-weight: 500;
     margin-right: 12px;
     color: var(--text-primary);
@@ -40,7 +40,7 @@
     letter-spacing: 0.025em;
   }
 
-  .location-selector select, .query-selector select {
+  .location-selector select, .query-selector select, .sheet-type-selector select, .audit-sheet-selector select {
     padding: 10px 14px;
     font-size: 14px;
     border: 1px solid var(--border-accent);
@@ -52,7 +52,7 @@
     font-weight: 500;
   }
 
-  .location-selector select:focus, .query-selector select:focus {
+  .location-selector select:focus, .query-selector select:focus, .sheet-type-selector select:focus, .audit-sheet-selector select:focus {
     outline: none;
     border-color: var(--highlight-color);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
