@@ -5,10 +5,6 @@
 
 // フォーム作成用の定数
 const FORM_FOLDER_NAME = '代替機管理システム_自動生成フォーム';
-const FORM_TEMPLATE_CONFIG = {
-  backgroundColor: '#1f4e79',
-  confirmationMessage: 'ご回答ありがとうございました。内容を確認次第、担当者よりご連絡いたします。'
-};
 
 // 拠点別フォルダーID管理
 const LOCATION_FOLDER_KEYS = {
@@ -20,11 +16,66 @@ const LOCATION_FOLDER_KEYS = {
   'hyogo-printer': 'HYOGO_PRINTER_FOLDER_ID'
 };
 
+// デバイスタイプ別URL管理
+const FORM_BASE_DEVICE_URL_KEYS = {
+  'form_base_terminal': 'FORM_BASE_TERMINAL_DESCRIPTION_URL',
+  'form_base_printer': 'FORM_BASE_PRINTER_DESCRIPTION_URL'
+};
+
 // デバッグ用ログ関数（form-creation専用）
 function addFormLog(message, data = null) {
   if (DEBUG) {
     const timestamp = new Date().toISOString();
     console.log(`[FORM-CREATION ${timestamp}] ${message}`, data);
+  }
+}
+
+/**
+ * デバイスタイプ別のURL付きフォーム説明を生成
+ * @param {string} baseDescription - 基本説明文
+ * @param {string} deviceType - デバイスタイプ ('terminal' または 'printer')
+ * @param {string} locationNumber - 拠点管理番号
+ */
+function generateFormDescription(baseDescription, deviceType, locationNumber) {
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    
+    // deviceTypeを対応するキーに変換
+    const deviceKey = `form_base_${deviceType}`;
+    const urlKey = FORM_BASE_DEVICE_URL_KEYS[deviceKey];
+    
+    if (!urlKey) {
+      addFormLog('未知のデバイスタイプ', { deviceType, deviceKey });
+      return baseDescription || '';
+    }
+    
+    const deviceUrl = properties.getProperty(urlKey);
+    
+    if (deviceUrl) {
+      // URLの後ろに拠点管理番号を追加
+      const fullUrl = `${deviceUrl}${locationNumber || ''}`;
+      const urlSection = `\n\n詳細情報: ${fullUrl}`;
+      const fullDescription = (baseDescription || '') + urlSection;
+      addFormLog('URL付きフォーム説明を生成', { 
+        deviceType, 
+        baseUrl: deviceUrl, 
+        locationNumber, 
+        fullUrl 
+      });
+      return fullDescription;
+    } else {
+      addFormLog('デバイス用URLが設定されていません', { deviceType, urlKey });
+      return baseDescription || '';
+    }
+    
+  } catch (error) {
+    addFormLog('フォーム説明生成エラー', {
+      error: error.toString(),
+      deviceType,
+      baseDescription,
+      locationNumber
+    });
+    return baseDescription || '';
   }
 }
 
@@ -55,8 +106,11 @@ function createGoogleForm(formConfig) {
     // フォームを作成
     const form = FormApp.create(formConfig.title);
     
+    // デバイスタイプ別のURL付き説明文を生成（拠点管理番号付き）
+    const formDescription = generateFormDescription(formConfig.description, formConfig.deviceType, formConfig.locationNumber);
+    
     // フォームの基本設定
-    form.setDescription(formConfig.description || '');
+    form.setDescription(formDescription);
     form.setCollectEmail(false);  // メールアドレスを収集しない
     form.setAllowResponseEdits(false);
     form.setShowLinkToRespondAgain(false);
@@ -107,164 +161,9 @@ function createGoogleForm(formConfig) {
   }
 }
 
-/**
- * フォームに質問を追加する関数
- * @param {GoogleAppsScript.Forms.Form} form - フォームオブジェクト
- * @param {Object} questionConfig - 質問設定
- * @param {number} index - 質問のインデックス
- */
-function addQuestionToForm(form, questionConfig, index) {
-  addFormLog('質問を追加', { questionConfig, index });
-  
-  try {
-    const { type, title, required = false, options = [], validation = null, defaultValue = '' } = questionConfig;
-    
-    let item;
-    
-    switch (type) {
-      case 'TEXT':
-        item = form.addTextItem()
-          .setTitle(title)
-          .setRequired(required);
-        if (defaultValue) {
-          item.setHelpText('デフォルト値: ' + defaultValue);
-        }
-        if (validation) {
-          applyTextValidation(item, validation);
-        }
-        break;
-        
-      case 'PARAGRAPH':
-        item = form.addParagraphTextItem()
-          .setTitle(title)
-          .setRequired(required);
-        break;
-        
-      case 'MULTIPLE_CHOICE':
-        item = form.addMultipleChoiceItem()
-          .setTitle(title)
-          .setRequired(required);
-        if (options.length > 0) {
-          item.setChoices(options.map(opt => item.createChoice(opt)));
-        }
-        break;
-        
-      case 'CHECKBOX':
-        item = form.addCheckboxItem()
-          .setTitle(title)
-          .setRequired(required);
-        if (options.length > 0) {
-          item.setChoices(options.map(opt => item.createChoice(opt)));
-        }
-        break;
-        
-      case 'DROPDOWN':
-        item = form.addListItem()
-          .setTitle(title)
-          .setRequired(required);
-        if (options.length > 0) {
-          const choices = options.map(opt => item.createChoice(opt));
-          item.setChoices(choices);
-          
-          // デフォルト値が設定されている場合は先頭に配置
-          if (defaultValue && options.includes(defaultValue)) {
-            const defaultChoices = [
-              item.createChoice(defaultValue),
-              ...choices.filter(choice => choice.getValue() !== defaultValue)
-            ];
-            item.setChoices(defaultChoices);
-          }
-        }
-        break;
-        
-      case 'SCALE':
-        item = form.addScaleItem()
-          .setTitle(title)
-          .setRequired(required)
-          .setBounds(1, 5);
-        break;
-        
-      case 'DATE':
-        item = form.addDateItem()
-          .setTitle(title)
-          .setRequired(required);
-        break;
-        
-      case 'TIME':
-        item = form.addTimeItem()
-          .setTitle(title)
-          .setRequired(required);
-        break;
-        
-      default:
-        addFormLog('未知の質問タイプ', { type, title });
-        return;
-    }
-    
-    addFormLog('質問追加成功', { type, title, index });
-    
-  } catch (error) {
-    addFormLog('質問追加エラー', {
-      error: error.toString(),
-      questionConfig,
-      index
-    });
-  }
-}
 
-/**
- * テキスト項目にバリデーションを適用
- * @param {GoogleAppsScript.Forms.TextItem} item - テキスト項目
- * @param {Object} validation - バリデーション設定
- */
-function applyTextValidation(item, validation) {
-  try {
-    // FormApp.createTextValidation()を使用（正しいAPI）
-    const builder = FormApp.createTextValidation();
-    
-    switch (validation.type) {
-      case 'EMAIL':
-        builder.requireTextIsEmail();
-        break;
-      case 'URL':
-        builder.requireTextIsUrl();
-        break;
-      case 'PATTERN':
-        if (validation.pattern) {
-          builder.requireTextMatchesPattern(validation.pattern);
-        }
-        break;
-      case 'LENGTH':
-        if (validation.minLength !== undefined && validation.maxLength !== undefined) {
-          builder.requireTextLengthRange(validation.minLength, validation.maxLength);
-        }
-        break;
-      case 'NUMBER':
-        builder.requireTextIsNumber();
-        break;
-    }
-    
-    if (validation.errorMessage) {
-      builder.setHelpText(validation.errorMessage);
-    }
-    
-    item.setValidation(builder.build());
-    
-  } catch (error) {
-    addFormLog('バリデーション適用エラー', {
-      error: error.toString(),
-      validation
-    });
-    // バリデーション適用に失敗した場合は、ヘルプテキストのみ設定
-    if (validation.errorMessage) {
-      try {
-        item.setHelpText(validation.errorMessage);
-      } catch (helpError) {
-        addFormLog('ヘルプテキスト設定エラー', helpError);
-      }
-    }
-  }
-}
+
+
 
 /**
  * 拠点別フォルダーを取得する関数
@@ -331,56 +230,7 @@ function getOrCreateFormFolder() {
   }
 }
 
-/**
- * フォーム回答用スプレッドシートを作成
- * @param {GoogleAppsScript.Forms.Form} form - フォームオブジェクト
- * @param {Object} formConfig - フォーム設定
- */
-function createResponseSpreadsheet(form, formConfig) {
-  try {
-    const spreadsheetName = `${form.getTitle()}_回答データ`;
-    const spreadsheet = SpreadsheetApp.create(spreadsheetName);
-    
-    // フォームと回答シートを関連付け
-    form.setDestination(FormApp.DestinationType.SPREADSHEET, spreadsheet.getId());
-    
-    // スプレッドシートファイルを適切なフォルダに移動
-    const folder = getLocationFolder(formConfig.location);
-    const spreadsheetFile = DriveApp.getFileById(spreadsheet.getId());
-    folder.addFile(spreadsheetFile);
-    DriveApp.getRootFolder().removeFile(spreadsheetFile);
-    
-    // 管理用シートを追加
-    const managementSheet = spreadsheet.insertSheet('管理情報');
-    managementSheet.getRange('A1:B11').setValues([
-      ['項目', '値'],
-      ['フォーム名', form.getTitle()],
-      ['フォームID', form.getId()],
-      ['作成日時', new Date()],
-      ['作成者', Session.getActiveUser().getEmail()],
-      ['拠点管理番号', formConfig.locationNumber],
-      ['拠点', formConfig.location],
-      ['フォーム編集URL', form.getEditUrl()],
-      ['フォーム回答URL', form.getPublishedUrl()],
-      ['', ''],
-      ['', '']
-    ]);
-    
-    addFormLog('回答スプレッドシート作成成功', {
-      spreadsheetId: spreadsheet.getId(),
-      spreadsheetUrl: spreadsheet.getUrl()
-    });
-    
-    return spreadsheet;
-    
-  } catch (error) {
-    addFormLog('回答スプレッドシート作成エラー', {
-      error: error.toString(),
-      formTitle: form.getTitle()
-    });
-    throw error;
-  }
-}
+
 
 /**
  * 作成済みフォーム一覧を取得
@@ -565,6 +415,76 @@ function getLocationFolderSettings() {
 }
 
 /**
+ * デバイスタイプ別のURL設定を管理する関数
+ * @param {Object} urls - デバイスタイプ別URLのオブジェクト
+ */
+function setDeviceUrls(urls) {
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    
+    Object.keys(urls).forEach(deviceType => {
+      // deviceTypeを対応するキーに変換
+      const deviceKey = `form_base_${deviceType}`;
+      const urlKey = FORM_BASE_DEVICE_URL_KEYS[deviceKey];
+      if (urlKey && urls[deviceType]) {
+        properties.setProperty(urlKey, urls[deviceType]);
+        addFormLog('デバイス用URL設定', { deviceType, url: urls[deviceType] });
+      }
+    });
+    
+    return {
+      success: true,
+      message: 'デバイス別URLを設定しました',
+      setUrls: Object.keys(urls).length
+    };
+    
+  } catch (error) {
+    addFormLog('デバイス用URL設定エラー', {
+      error: error.toString(),
+      urls
+    });
+    
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * 現在のデバイス別URL設定を取得する関数
+ */
+function getDeviceUrlSettings() {
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    const settings = {};
+    
+    Object.keys(FORM_BASE_DEVICE_URL_KEYS).forEach(deviceKey => {
+      const urlKey = FORM_BASE_DEVICE_URL_KEYS[deviceKey];
+      const url = properties.getProperty(urlKey);
+      // form_base_terminal -> terminal に変換
+      const deviceType = deviceKey.replace('form_base_', '');
+      settings[deviceType] = url || null;
+    });
+    
+    return {
+      success: true,
+      settings: settings
+    };
+    
+  } catch (error) {
+    addFormLog('デバイス用URL設定取得エラー', {
+      error: error.toString()
+    });
+    
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
  * フォームの詳細情報を取得
  * @param {string} formId - フォームID
  */
@@ -639,12 +559,12 @@ function validateLocationNumber(locationNumber) {
     return { valid: false, error: '拠点管理番号が無効です' };
   }
   
-  // 拠点管理番号の形式チェック（例：LOC-001）
-  const pattern = /^[A-Z]{3}-\d{3}$/;
+  // 拠点管理番号の形式チェック（例：Osaka_001、Hime_123）
+  const pattern = /^[A-Za-z]+_[A-Za-z0-9]+$/;
   if (!pattern.test(locationNumber)) {
     return { 
       valid: false, 
-      error: '拠点管理番号は「AAA-000」の形式で入力してください（例：OSA-001）' 
+      error: '拠点管理番号は「プレフィックス_サフィックス」の形式で入力してください（例：Osaka_001）' 
     };
   }
   
