@@ -1553,4 +1553,308 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.08);
     }
   }
+
+  /* ========================================
+     サマリー表示専用スタイル
+     ======================================== */
+  .summary-container {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  .summary-header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding: 24px;
+    background: var(--highlight-gradient);
+    color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+  }
+
+  .summary-header h2 {
+    margin: 0 0 8px 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+  }
+
+  .summary-timestamp {
+    opacity: 0.9;
+    font-size: 0.9rem;
+  }
+
+  .summary-card {
+    margin-bottom: 24px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+    overflow: hidden;
+  }
+
+  .summary-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+
+  .summary-card-header {
+    display: flex;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+  }
+
+  .summary-card[data-category="info"] .summary-card-header {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+    border-bottom-color: rgba(59, 130, 246, 0.2);
+  }
+
+  .summary-card[data-category="warning"] .summary-card-header {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+    border-bottom-color: rgba(245, 158, 11, 0.2);
+  }
+
+  .summary-card[data-category="danger"] .summary-card-header {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+    border-bottom-color: rgba(239, 68, 68, 0.2);
+  }
+
+  .summary-card[data-category="success"] .summary-card-header {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+    border-bottom-color: rgba(34, 197, 94, 0.2);
+  }
+
+  .summary-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+    font-size: 1.25rem;
+    color: white;
+  }
+
+  .summary-card[data-category="info"] .summary-card-icon {
+    background: var(--highlight-gradient);
+  }
+
+  .summary-card[data-category="warning"] .summary-card-icon {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  }
+
+  .summary-card[data-category="danger"] .summary-card-icon {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  }
+
+  .summary-card[data-category="success"] .summary-card-icon {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  }
+
+  .summary-card[data-category="default"] .summary-card-icon {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  }
+
+  .summary-card-title {
+    flex: 1;
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+  }
+
+  .summary-card-total {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-primary);
+  }
+
+  .total-count {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-left: 4px;
+  }
+
+  .summary-card[data-category="info"] .total-count {
+    color: #3b82f6;
+  }
+
+  .summary-card[data-category="warning"] .total-count {
+    color: #f59e0b;
+  }
+
+  .summary-card[data-category="danger"] .total-count {
+    color: #ef4444;
+  }
+
+  .summary-card[data-category="success"] .total-count {
+    color: #22c55e;
+  }
+
+  .summary-card-content {
+    padding: 0;
+  }
+
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .summary-table th {
+    background: var(--bg-accent);
+    color: var(--text-primary);
+    font-weight: 600;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.85rem;
+    letter-spacing: 0.025em;
+    text-shadow: none;
+  }
+
+  .summary-table th:first-child {
+    width: 35%;
+  }
+
+  .summary-table th:not(:first-child):not(:last-child) {
+    width: 13%;
+    text-align: center;
+  }
+
+  .summary-table th:last-child {
+    width: 13%;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .summary-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-accent);
+    transition: var(--transition);
+  }
+
+  .summary-table tbody tr:hover {
+    background: var(--bg-accent);
+  }
+
+  .location-cell {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .location-cell i {
+    color: var(--highlight-color);
+    margin-right: 8px;
+    font-size: 0.8rem;
+  }
+
+  .count-cell {
+    text-align: center;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .count-cell.has-count {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .total-cell {
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .total-row {
+    background: var(--bg-accent);
+    border-top: 2px solid var(--border-color);
+  }
+
+  .total-row td {
+    border-bottom: none;
+    font-weight: 600;
+  }
+
+  .grand-total {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--highlight-color);
+  }
+
+  .has-data {
+    background: rgba(59, 130, 246, 0.02);
+  }
+
+  .has-total {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--highlight-color);
+    font-weight: 700;
+  }
+
+  /* サマリーフォールバック表示 */
+  .summary-fallback {
+    text-align: center;
+    padding: 48px 24px;
+    background: var(--bg-accent);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+  }
+
+  .summary-fallback h3 {
+    margin: 0 0 16px 0;
+    color: var(--text-primary);
+    font-size: 1.25rem;
+  }
+
+  .summary-fallback p {
+    margin: 0 0 24px 0;
+    color: var(--text-secondary);
+  }
+
+  .debug-data {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    text-align: left;
+    max-height: 400px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  /* レスポンシブ対応 */
+  @media (max-width: 768px) {
+    .summary-card-header {
+      flex-direction: column;
+      text-align: center;
+      gap: 12px;
+    }
+
+    .summary-card-icon {
+      margin: 0 0 8px 0;
+    }
+
+    .summary-table th,
+    .summary-table td {
+      padding: 8px 12px;
+      font-size: 0.8rem;
+    }
+
+    .summary-card-title {
+      font-size: 1rem;
+    }
+
+    .summary-header h2 {
+      font-size: 1.5rem;
+    }
+  }
 </style> 

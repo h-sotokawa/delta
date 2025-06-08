@@ -321,6 +321,12 @@
       dataType: dataType 
     });
 
+    // サマリーデータの場合は専用の表示関数を使用
+    if (dataType === 'summary') {
+      displaySummaryData(data);
+      return;
+    }
+
     // 新しいcreateTable関数を使用（dataTypeをdisplayModeに変換）
     const displayMode = dataType === 'audit' ? 'audit' : dataType === 'summary' ? 'summary' : 'main';
     createTable(data, queryType, '', displayMode);
@@ -329,6 +335,258 @@
     setTimeout(() => {
       updateFloatScrollbarAfterTableLoad();
     }, 200);
+  }
+
+  // サマリーデータ専用の表示関数
+  function displaySummaryData(data) {
+    const tableContainer = document.getElementById('tableContainer');
+    
+    // サマリーデータの構造を分析
+    const summaryHtml = createSummaryCards(data);
+    
+    if (!summaryHtml || summaryHtml.trim() === '') {
+      // カードが生成されなかった場合のフォールバック表示
+      tableContainer.innerHTML = `
+        <div class="summary-container">
+          <div class="summary-header">
+            <h2>代替機状況サマリー</h2>
+            <div class="summary-timestamp">
+              最終更新: ${new Date().toLocaleString('ja-JP')}
+            </div>
+          </div>
+          <div class="summary-fallback">
+            <h3>データの解析中...</h3>
+            <p>サマリーデータの構造を分析しています。しばらくお待ちください。</p>
+            ${DEBUG_MODE ? `<pre class="debug-data">${JSON.stringify(data, null, 2)}</pre>` : ''}
+          </div>
+        </div>
+      `;
+      
+      // デバッグ情報を表示
+      if (DEBUG_MODE) {
+        showDebugInfo('サマリーカード生成失敗', {
+          dataLength: data.length,
+          summaryHtmlEmpty: true
+        });
+      }
+      return;
+    }
+    
+    tableContainer.innerHTML = `
+      <div class="summary-container">
+        <div class="summary-header">
+          <h2>代替機状況サマリー</h2>
+          <div class="summary-timestamp">
+            最終更新: ${new Date().toLocaleString('ja-JP')}
+          </div>
+        </div>
+        ${summaryHtml}
+      </div>
+    `;
+  }
+
+  // サマリーカードを作成する関数
+  function createSummaryCards(data) {
+    let cardsHtml = '';
+    let currentCategory = '';
+    let currentCategoryData = [];
+    
+    // デバッグ: データ構造を確認
+    if (DEBUG_MODE) {
+      showDebugInfo('サマリーデータ構造確認', {
+        totalRows: data.length,
+        firstRow: data[0],
+        secondRow: data[1],
+        thirdRow: data[2]
+      });
+    }
+    
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const firstCell = row[0] ? row[0].toString().trim() : '';
+      const secondCell = row[1] ? row[1].toString().trim() : '';
+      
+      // カテゴリタイトルは2列目にあり、数字で始まる
+      if (secondCell && secondCell.match(/^\d+\./)) {
+        // 前のカテゴリが存在する場合、カードを作成
+        if (currentCategory && currentCategoryData.length > 0) {
+          cardsHtml += createSummaryCard(currentCategory, currentCategoryData);
+        }
+        
+        // 新しいカテゴリを開始
+        currentCategory = secondCell;
+        currentCategoryData = [];
+        
+        if (DEBUG_MODE) {
+          showDebugInfo('新しいカテゴリ発見', {
+            category: currentCategory,
+            row: i
+          });
+        }
+      } else if (secondCell === 'SV') {
+        // ヘッダー行をスキップ
+        continue;
+      } else if (firstCell === '大阪' || firstCell === '神戸' || firstCell === '姫路' || firstCell === '合計') {
+        // データ行を追加
+        currentCategoryData.push(row);
+        
+        if (DEBUG_MODE) {
+          showDebugInfo('データ行追加', {
+            location: firstCell,
+            row: row,
+            category: currentCategory
+          });
+        }
+      }
+    }
+    
+    // 最後のカテゴリを処理
+    if (currentCategory && currentCategoryData.length > 0) {
+      cardsHtml += createSummaryCard(currentCategory, currentCategoryData);
+    }
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('サマリーカード生成完了', {
+        generatedHtml: cardsHtml.length > 0,
+        htmlLength: cardsHtml.length
+      });
+    }
+    
+    return cardsHtml;
+  }
+
+  // 個別のサマリーカードを作成
+  function createSummaryCard(category, data) {
+    // カテゴリのアイコンを決定
+    const categoryIcon = getCategoryIcon(category);
+    const categoryColor = getCategoryColor(category);
+    
+    let tableRows = '';
+    let totalSV = 0, totalCL = 0, totalPrinter = 0, totalOther = 0;
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('カード作成中', {
+        category: category,
+        dataLength: data.length,
+        data: data
+      });
+    }
+    
+    data.forEach((row, index) => {
+      const location = row[0] || '';
+      const sv = parseInt(row[1]) || 0;
+      const cl = parseInt(row[2]) || 0;
+      const printer = parseInt(row[3]) || 0;
+      const other = parseInt(row[4]) || 0;
+      
+      if (DEBUG_MODE) {
+        showDebugInfo('行処理中', {
+          index: index,
+          location: location,
+          sv: sv,
+          cl: cl,
+          printer: printer,
+          other: other
+        });
+      }
+      
+      if (location === '合計') {
+        totalSV = sv;
+        totalCL = cl;
+        totalPrinter = printer;
+        totalOther = other;
+      } else {
+        const total = sv + cl + printer + other;
+        const hasData = total > 0;
+        
+        tableRows += `
+          <tr class="${hasData ? 'has-data' : ''}">
+            <td class="location-cell">
+              <i class="fas fa-map-marker-alt"></i>
+              ${location}
+            </td>
+            <td class="count-cell ${sv > 0 ? 'has-count' : ''}">${sv}</td>
+            <td class="count-cell ${cl > 0 ? 'has-count' : ''}">${cl}</td>
+            <td class="count-cell ${printer > 0 ? 'has-count' : ''}">${printer}</td>
+            <td class="count-cell ${other > 0 ? 'has-count' : ''}">${other}</td>
+            <td class="total-cell ${total > 0 ? 'has-total' : ''}">${total}</td>
+          </tr>
+        `;
+      }
+    });
+    
+    const grandTotal = totalSV + totalCL + totalPrinter + totalOther;
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('カード完成', {
+        category: category,
+        grandTotal: grandTotal,
+        totalSV: totalSV,
+        totalCL: totalCL,
+        totalPrinter: totalPrinter,
+        totalOther: totalOther
+      });
+    }
+    
+    return `
+      <div class="summary-card" data-category="${categoryColor}">
+        <div class="summary-card-header">
+          <div class="summary-card-icon">
+            <i class="${categoryIcon}"></i>
+          </div>
+          <h3 class="summary-card-title">${category}</h3>
+          <div class="summary-card-total">
+            合計: <span class="total-count">${grandTotal}</span>台
+          </div>
+        </div>
+        <div class="summary-card-content">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>拠点</th>
+                <th>SV</th>
+                <th>CL</th>
+                <th>プリンタ</th>
+                <th>その他</th>
+                <th>小計</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+              <tr class="total-row">
+                <td class="location-cell">
+                  <i class="fas fa-calculator"></i>
+                  <strong>合計</strong>
+                </td>
+                <td class="count-cell total-cell"><strong>${totalSV}</strong></td>
+                <td class="count-cell total-cell"><strong>${totalCL}</strong></td>
+                <td class="count-cell total-cell"><strong>${totalPrinter}</strong></td>
+                <td class="count-cell total-cell"><strong>${totalOther}</strong></td>
+                <td class="total-cell grand-total"><strong>${grandTotal}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // カテゴリアイコンを取得
+  function getCategoryIcon(category) {
+    if (category.includes('代替機を貸し出している')) return 'fas fa-tools';
+    if (category.includes('商談や金額の問題')) return 'fas fa-exclamation-triangle';
+    if (category.includes('代替機を貸し出し中だが')) return 'fas fa-user-times';
+    if (category.includes('HW延長保守')) return 'fas fa-shield-alt';
+    return 'fas fa-info-circle';
+  }
+
+  // カテゴリカラーを取得
+  function getCategoryColor(category) {
+    if (category.includes('代替機を貸し出している')) return 'info';
+    if (category.includes('商談や金額の問題')) return 'warning';
+    if (category.includes('代替機を貸し出し中だが')) return 'danger';
+    if (category.includes('HW延長保守')) return 'success';
+    return 'default';
   }
 
   // ステータス更新関数
