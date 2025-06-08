@@ -57,53 +57,40 @@ function createGoogleForm(formConfig) {
     
     // フォームの基本設定
     form.setDescription(formConfig.description || '');
-    form.setCollectEmail(true);
+    form.setCollectEmail(false);  // メールアドレスを収集しない
     form.setAllowResponseEdits(false);
     form.setShowLinkToRespondAgain(false);
-    form.setConfirmationMessage(FORM_TEMPLATE_CONFIG.confirmationMessage);
+    form.setAcceptingResponses(false);  // 回答を受付しない
+    form.setConfirmationMessage('このフォームは現在回答を受け付けていません。');
     
     // フォームファイルを適切なフォルダに移動
     const formFile = DriveApp.getFileById(form.getId());
     folder.addFile(formFile);
     DriveApp.getRootFolder().removeFile(formFile);
     
-    // 拠点情報を隠しフィールドとして追加
-    const locationItem = form.addTextItem()
-      .setTitle('拠点管理番号')
-      .setRequired(true);
-    locationItem.createTextValidation()
-      .requireTextMatchesPattern(formConfig.locationNumber)
-      .build();
+    // 質問項目は作成しない（要求に応じて削除）
+    // フォームは空の状態で作成され、後で手動編集される
     
-    // 動的に質問を追加
-    if (formConfig.questions && Array.isArray(formConfig.questions)) {
-      formConfig.questions.forEach((question, index) => {
-        addQuestionToForm(form, question, index);
-      });
-    }
-    
-    // 回答先スプレッドシートを作成
-    const responseSheet = createResponseSpreadsheet(form, formConfig);
+    // 回答先スプレッドシートは作成しない（要求に応じて削除）
     
     addFormLog('フォーム作成成功', {
       formId: form.getId(),
       formUrl: form.getEditUrl(),
-      publicUrl: form.getPublishedUrl(),
-      responseSheetId: responseSheet.getId()
+      publicUrl: form.getPublishedUrl()
     });
     
     return {
       success: true,
-      message: 'フォームを正常に作成しました',
+      message: 'フォームを正常に作成しました（回答受付無効）',
       data: {
         formId: form.getId(),
         title: form.getTitle(),
         editUrl: form.getEditUrl(),
         publicUrl: form.getPublishedUrl(),
-        responseSheetId: responseSheet.getId(),
-        responseSheetUrl: responseSheet.getUrl(),
         folderId: folder.getId(),
-        locationNumber: formConfig.locationNumber
+        locationNumber: formConfig.locationNumber,
+        acceptingResponses: false,
+        collectEmail: false
       }
     };
     
@@ -130,7 +117,7 @@ function addQuestionToForm(form, questionConfig, index) {
   addFormLog('質問を追加', { questionConfig, index });
   
   try {
-    const { type, title, required = false, options = [], validation = null } = questionConfig;
+    const { type, title, required = false, options = [], validation = null, defaultValue = '' } = questionConfig;
     
     let item;
     
@@ -139,6 +126,9 @@ function addQuestionToForm(form, questionConfig, index) {
         item = form.addTextItem()
           .setTitle(title)
           .setRequired(required);
+        if (defaultValue) {
+          item.setHelpText('デフォルト値: ' + defaultValue);
+        }
         if (validation) {
           applyTextValidation(item, validation);
         }
@@ -173,7 +163,17 @@ function addQuestionToForm(form, questionConfig, index) {
           .setTitle(title)
           .setRequired(required);
         if (options.length > 0) {
-          item.setChoices(options.map(opt => item.createChoice(opt)));
+          const choices = options.map(opt => item.createChoice(opt));
+          item.setChoices(choices);
+          
+          // デフォルト値が設定されている場合は先頭に配置
+          if (defaultValue && options.includes(defaultValue)) {
+            const defaultChoices = [
+              item.createChoice(defaultValue),
+              ...choices.filter(choice => choice.getValue() !== defaultValue)
+            ];
+            item.setChoices(defaultChoices);
+          }
         }
         break;
         
@@ -219,7 +219,8 @@ function addQuestionToForm(form, questionConfig, index) {
  */
 function applyTextValidation(item, validation) {
   try {
-    const builder = item.createTextValidation();
+    // FormApp.createTextValidation()を使用（正しいAPI）
+    const builder = FormApp.createTextValidation();
     
     switch (validation.type) {
       case 'EMAIL':
@@ -254,6 +255,14 @@ function applyTextValidation(item, validation) {
       error: error.toString(),
       validation
     });
+    // バリデーション適用に失敗した場合は、ヘルプテキストのみ設定
+    if (validation.errorMessage) {
+      try {
+        item.setHelpText(validation.errorMessage);
+      } catch (helpError) {
+        addFormLog('ヘルプテキスト設定エラー', helpError);
+      }
+    }
   }
 }
 
@@ -451,15 +460,14 @@ function deleteGoogleForm(formId) {
     const form = FormApp.openById(formId);
     const formTitle = form.getTitle();
     
-    // 関連するスプレッドシートも削除
+    // 関連するスプレッドシートがある場合のみ削除（通常は作成されていない）
     const destinationId = form.getDestinationId();
     if (destinationId) {
       try {
-        const spreadsheet = SpreadsheetApp.openById(destinationId);
         DriveApp.getFileById(destinationId).setTrashed(true);
         addFormLog('関連スプレッドシート削除', { destinationId });
       } catch (spreadsheetError) {
-        addFormLog('スプレッドシート削除エラー', {
+        addFormLog('スプレッドシート削除スキップ（存在しない）', {
           destinationId,
           error: spreadsheetError.toString()
         });

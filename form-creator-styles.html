@@ -315,24 +315,29 @@
     top: 50%;
     right: 15px;
     transform: translateY(-50%);
-    background: none;
-    border: none;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     color: white;
     cursor: pointer;
-    padding: 5px;
+    padding: 4px 8px;
     border-radius: 4px;
-    opacity: 0.8;
-    transition: opacity 0.2s, background-color 0.2s;
+    font-weight: normal;
+    font-size: 16px;
+    line-height: 1;
+    transition: all 0.2s ease;
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .message-close-btn:hover {
-    opacity: 1;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.5);
   }
 
-  .message-close-btn i {
-    font-size: 0.9rem;
-  }
+
 
   @keyframes slideIn {
     from {
@@ -646,6 +651,50 @@
     justify-content: center;
     gap: 15px;
     margin-top: 25px;
+  }
+
+  /* フォーム編集マニュアルスタイル */
+  .manual-section {
+    margin: 25px 0;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border-left: 4px solid #3b82f6;
+  }
+
+  .manual-section h4 {
+    color: #1e40af;
+    margin: 0 0 15px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+  }
+
+  .manual-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .manual-step {
+    padding: 12px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .manual-step strong {
+    color: #374151;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .manual-step p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+    line-height: 1.4;
   }
 
   /* 代替機属性入力フォーム */
