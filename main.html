@@ -76,6 +76,25 @@
       }, 100);
     }
     
+    // フォーム作成ページの場合、フォーム作成機能を初期化
+    if (pageId === 'form-creator') {
+      if (DEBUG_MODE) {
+        showDebugInfo('showPage: フォーム作成ページ表示', { pageId });
+      }
+      setTimeout(() => {
+        if (typeof onFormCreatorPageShow === 'function') {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage遅延実行: フォーム作成機能初期化', {});
+          }
+          onFormCreatorPageShow();
+        } else {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage: onFormCreatorPageShow関数が見つからない', {});
+          }
+        }
+      }, 100);
+    }
+    
     // スクロール位置をトップに
     window.scrollTo(0, 0);
   }

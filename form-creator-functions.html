@@ -1,0 +1,1265 @@
+<!-- form-creator-functions.html - フォーム作成ページの機能 -->
+<script>
+  // ========================================
+  // ページ読み込み後の初期化
+  // ========================================
+  function onFormCreatorPageShow() {
+    // フォーム作成ページ表示時の処理
+  }
+
+  // ========================================
+  // フォーム作成モード切り替え機能
+  // ========================================
+  function switchFormCreationMode(mode) {
+    // タブの状態を更新
+    document.querySelectorAll('.form-type-tab').forEach(function(tab) {
+      tab.classList.remove('active');
+    });
+    document.getElementById(mode + '-tab').classList.add('active');
+    
+    // フォームセクションの表示を切り替え
+    document.querySelectorAll('.form-section').forEach(function(section) {
+      section.classList.remove('active');
+    });
+    document.getElementById(mode + '-form').classList.add('active');
+    
+    // 管理モードの場合、フォーム一覧を読み込み
+    if (mode === 'manage') {
+      loadFormsList();
+    }
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('フォーム作成モード切り替え', { mode });
+    }
+  }
+
+  // ========================================
+  // 拠点選択機能
+  // ========================================
+  function getLocationDisplayName(locationValue) {
+    const locationNames = {
+      'osaka-desktop': '大阪(デスクトップ)',
+      'osaka-server': '大阪(サーバー、ノート)',
+      'kobe-terminal': '神戸(端末)',
+      'himeji-terminal': '姫路(端末)',
+      'osaka-printer': '大阪(プリンタ、その他)',
+      'hyogo-printer': '兵庫(プリンタ、その他)'
+    };
+    
+    return locationNames[locationValue] || '未選択拠点';
+  }
+  // 代替機種別選択時の処理
+  function updateDeviceType() {
+    // console.log('updateDeviceType 関数が呼び出されました');
+    
+    const deviceTypeSelect = document.getElementById('device-type');
+    const locationSelect = document.getElementById('location-select');
+    const deviceCategorySelect = document.getElementById('device-category');
+    
+    // console.log('要素取得結果:', { 
+    //   deviceTypeSelect: !!deviceTypeSelect,
+    //   locationSelect: !!locationSelect,
+    //   deviceCategorySelect: !!deviceCategorySelect
+    // });
+    
+    if (!deviceTypeSelect || !locationSelect || !deviceCategorySelect) {
+      // console.error('必要な要素が見つかりません');
+      return;
+    }
+    
+    const selectedType = deviceTypeSelect.value;
+    // console.log('選択された代替機種別:', selectedType);
+    
+    // 代替機種別に基づく拠点の選択肢マッピング
+    const locationOptions = {
+      'terminal': [
+        { value: 'osaka-desktop', text: '大阪(デスクトップ)' },
+        { value: 'osaka-server', text: '大阪(サーバー、ノート)' },
+        { value: 'kobe-terminal', text: '神戸(端末)' },
+        { value: 'himeji-terminal', text: '姫路(端末)' }
+      ],
+      'printer': [
+        { value: 'osaka-printer', text: '大阪(プリンタ、その他)' },
+        { value: 'hyogo-printer', text: '兵庫(プリンタ、その他)' }
+      ]
+    };
+    
+    // 拠点選択肢を更新
+    // console.log('拠点選択肢を更新中...');
+    locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
+    
+    if (selectedType && locationOptions[selectedType]) {
+      // console.log('利用可能な拠点:', locationOptions[selectedType]);
+      locationOptions[selectedType].forEach(function(option) {
+        const optionElement = document.createElement('option');
+        optionElement.value = option.value;
+        optionElement.textContent = option.text;
+        locationSelect.appendChild(optionElement);
+      });
+      locationSelect.disabled = false;
+      // console.log('拠点選択を有効化しました');
+    } else {
+      // console.log('選択された代替機種別に対応する拠点がありません');
+      locationSelect.disabled = true;
+    }
+    
+    // 詳細カテゴリと管理番号をリセット
+    deviceCategorySelect.innerHTML = '<option value="">拠点を選択してください</option>';
+    deviceCategorySelect.disabled = true;
+    
+    const locationNumberInput = document.getElementById('location-number');
+    if (locationNumberInput) {
+      locationNumberInput.value = '';
+    }
+    
+         // 属性フォームを更新
+     updateAttributesForm();
+     
+     if (DEBUG_MODE) {
+       showDebugInfo('代替機種別選択更新', { 
+        selectedType, 
+        locationOptions: locationOptions[selectedType] || []
+      });
+    }
+  }
+
+  // 拠点選択時の処理
+  function updateLocationNumber() {
+    const deviceTypeSelect = document.getElementById('device-type');
+    const locationSelect = document.getElementById('location-select');
+    const locationPrefixSpan = document.getElementById('location-prefix');
+    const locationSuffixInput = document.getElementById('location-suffix');
+    const locationNumberInput = document.getElementById('location-number');
+    const deviceCategorySelect = document.getElementById('device-category');
+    
+    if (!deviceTypeSelect || !locationSelect || !locationPrefixSpan || !locationSuffixInput || !locationNumberInput || !deviceCategorySelect) return;
+    
+    const deviceType = deviceTypeSelect.value;
+    const selectedLocation = locationSelect.value;
+    
+    // 拠点に基づく管理番号のプレフィックスマッピング
+    const locationPrefixes = {
+      'osaka-desktop': 'Osaka',
+      'osaka-server': 'Osaka', 
+      'kobe-terminal': 'Kobe',
+      'himeji-terminal': 'Hime',
+      'osaka-printer': 'Osaka',
+      'hyogo-printer': 'Kobe'
+    };
+    
+    // 拠点に基づく詳細カテゴリの選択肢マッピング
+    const deviceCategoryOptions = {
+      'osaka-desktop': [
+        { value: 'SV', text: 'SV（サーバー）' },
+        { value: 'CL', text: 'CL（クライアント）' }
+      ],
+      'osaka-server': [
+        { value: 'SV', text: 'SV（サーバー）' },
+        { value: 'CL', text: 'CL（クライアント）' }
+      ],
+      'kobe-terminal': [
+        { value: 'SV', text: 'SV（サーバー）' },
+        { value: 'CL', text: 'CL（クライアント）' }
+      ],
+      'himeji-terminal': [
+        { value: 'SV', text: 'SV（サーバー）' },
+        { value: 'CL', text: 'CL（クライアント）' }
+      ],
+      'osaka-printer': [
+        { value: 'プリンタ', text: 'プリンタ' },
+        { value: 'その他', text: 'その他' }
+      ],
+      'hyogo-printer': [
+        { value: 'プリンタ', text: 'プリンタ' },
+        { value: 'その他', text: 'その他' }
+      ]
+    };
+    
+    // プレフィックスの更新
+    if (selectedLocation && locationPrefixes[selectedLocation]) {
+      locationPrefixSpan.textContent = locationPrefixes[selectedLocation] + '_';
+      locationSuffixInput.disabled = false;
+      locationSuffixInput.placeholder = '001';
+      
+      // デフォルト値を設定（まだ入力されていない場合）
+      if (!locationSuffixInput.value) {
+        locationSuffixInput.value = '001';
+      }
+      
+      // 結合された拠点管理番号を更新
+      updateCombinedLocationNumber();
+    } else {
+      locationPrefixSpan.textContent = '選択してください_';
+      locationSuffixInput.disabled = true;
+      locationSuffixInput.value = '';
+      locationNumberInput.value = '';
+    }
+    
+    // 詳細カテゴリの選択肢を更新
+    deviceCategorySelect.innerHTML = '<option value="">詳細カテゴリを選択してください</option>';
+    
+    if (selectedLocation && deviceCategoryOptions[selectedLocation]) {
+      deviceCategoryOptions[selectedLocation].forEach(function(option) {
+        const optionElement = document.createElement('option');
+        optionElement.value = option.value;
+        optionElement.textContent = option.text;
+        deviceCategorySelect.appendChild(optionElement);
+      });
+      deviceCategorySelect.disabled = false;
+    } else {
+      deviceCategorySelect.disabled = true;
+    }
+    
+             // 属性フォームを更新
+    updateAttributesForm();
+    
+
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('拠点選択更新', { 
+        deviceType,
+        selectedLocation, 
+        newLocationNumber: locationNumberInput.value,
+        deviceOptions: deviceCategoryOptions[selectedLocation] || []
+      });
+    }
+  }
+
+  // 拠点管理番号の結合処理
+  function updateCombinedLocationNumber() {
+    const locationPrefixSpan = document.getElementById('location-prefix');
+    const locationSuffixInput = document.getElementById('location-suffix');
+    const locationNumberInput = document.getElementById('location-number');
+    
+    if (locationPrefixSpan && locationSuffixInput && locationNumberInput) {
+      const prefix = locationPrefixSpan.textContent.replace('_', '');
+      const suffix = locationSuffixInput.value.trim();
+      
+      console.log('拠点管理番号結合処理:', {
+        prefix: prefix,
+        suffix: suffix,
+        prefixValid: prefix !== '選択してください',
+        suffixValid: suffix !== ''
+      });
+      
+      if (prefix !== '選択してください' && suffix) {
+        const combinedNumber = prefix + '_' + suffix;
+        locationNumberInput.value = combinedNumber;
+        console.log('拠点管理番号設定完了:', combinedNumber);
+      } else {
+        locationNumberInput.value = '';
+        console.log('拠点管理番号クリア（条件未満足）');
+      }
+    } else {
+      console.error('拠点管理番号の要素が見つかりません:', {
+        locationPrefixSpan: !!locationPrefixSpan,
+        locationSuffixInput: !!locationSuffixInput,
+        locationNumberInput: !!locationNumberInput
+      });
+    }
+  }
+
+  // ========================================
+  // 代替機属性プレビュー機能
+  // ========================================
+  function updateAttributesForm() {
+    const deviceTypeSelect = document.getElementById('device-type');
+    const locationSelect = document.getElementById('location-select');
+    const deviceCategorySelect = document.getElementById('device-category');
+    const attributesContainer = document.getElementById('attributes-form');
+    
+    if (!deviceTypeSelect || !locationSelect || !deviceCategorySelect || !attributesContainer) return;
+    
+    const deviceType = deviceTypeSelect.value;
+    const location = locationSelect.value;
+    const deviceCategory = deviceCategorySelect.value;
+    
+    // 代替機種別タイプの判定
+    const isTerminal = deviceType === 'terminal';
+    const isPrinter = deviceType === 'printer';
+    
+    if (!deviceType) {
+      attributesContainer.innerHTML = `
+        <div class="attributes-placeholder">
+          <i class="fas fa-info-circle"></i>
+          <p>代替機種別を選択すると、入力フィールドが表示されます</p>
+        </div>
+      `;
+      return;
+    }
+    
+    if (!location) {
+      attributesContainer.innerHTML = `
+        <div class="attributes-placeholder">
+          <i class="fas fa-info-circle"></i>
+          <p>拠点を選択すると、入力フィールドが表示されます</p>
+        </div>
+      `;
+      return;
+    }
+    
+    let attributeFields = [];
+    
+    if (isTerminal) {
+      attributeFields = [
+        { name: 'assetNumber', label: '資産管理番号', type: 'text', required: true, placeholder: '例: AS001234' },
+        { name: 'model', label: '型番', type: 'text', required: true, placeholder: '例: ST210E' },
+        { name: 'serial', label: 'シリアル(製造番号)', type: 'text', required: true, placeholder: '例: ABC12345' },
+        { name: 'software', label: 'ソフト', type: 'text', required: true, placeholder: '例: Recepty NEXT, MRN' },
+        { name: 'os', label: 'OS', type: 'text', required: true, placeholder: '例: Windows 11' }
+      ];
+    } else if (isPrinter) {
+      attributeFields = [
+        { name: 'model', label: '型番', type: 'text', required: true, placeholder: '例: PX-S887' },
+        { name: 'serial', label: 'シリアル(製造番号)', type: 'text', required: true, placeholder: '例: XYZ98765' }
+      ];
+    }
+    
+    const deviceTypeDisplayName = deviceType === 'terminal' ? '端末' : 'プリンタ・その他';
+    
+    // 属性フィールドのHTMLを生成
+    var attributeFieldsHtml = '';
+    for (var i = 0; i < attributeFields.length; i++) {
+      var field = attributeFields[i];
+      if (field.type === 'select') {
+        var optionsHtml = '';
+        for (var j = 0; j < field.options.length; j++) {
+          optionsHtml += '<option value="' + field.options[j] + '">' + field.options[j] + '</option>';
+        }
+        attributeFieldsHtml += `
+          <div class="form-group">
+            <label for="attr-${field.name}">
+              ${field.label} ${field.required ? '<span class="required">*</span>' : ''}
+            </label>
+            <select id="attr-${field.name}" name="attributes[${field.name}]" ${field.required ? 'required' : ''}>
+              <option value="">選択してください</option>
+              ${optionsHtml}
+            </select>
+          </div>
+        `;
+      } else {
+        attributeFieldsHtml += `
+          <div class="form-group">
+            <label for="attr-${field.name}">
+              ${field.label} ${field.required ? '<span class="required">*</span>' : ''}
+            </label>
+            <input type="${field.type}" 
+                   id="attr-${field.name}" 
+                   name="attributes[${field.name}]" 
+                   placeholder="${field.placeholder}"
+                   ${field.required ? 'required' : ''}
+                   ${field.readonly ? 'readonly' : ''}>
+          </div>
+        `;
+      }
+    }
+    
+    attributesContainer.innerHTML = `
+      <div class="attributes-input-section">
+        <h4><i class="fas fa-edit"></i> 代替機属性入力（${deviceTypeDisplayName}）</h4>
+        <div class="attributes-grid">
+          ${attributeFieldsHtml}
+        </div>
+        <div class="attributes-note">
+          <i class="fas fa-info-circle"></i>
+          <span>これらの属性情報がフォームの初期値として設定されます</span>
+        </div>
+      </div>
+    `;
+    
+
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('属性フォーム更新', { 
+        deviceType,
+        location, 
+        deviceCategory, 
+        isTerminal, 
+        isPrinter, 
+        attributeFields 
+      });
+    }
+  }
+
+  // 代替機種別選択時の処理
+  function updateDeviceCategory() {
+    updateAttributesForm();
+    
+    if (DEBUG_MODE) {
+      const deviceCategorySelect = document.getElementById('device-category');
+      showDebugInfo('代替機種別変更', { selectedCategory: deviceCategorySelect.value });
+    }
+  }
+
+  // 代替機種別に応じた質問項目を生成
+  function getDeviceQuestions(location, deviceCategory, attributeData = {}) {
+    const deviceTypeSelect = document.getElementById('device-type');
+    const deviceType = deviceTypeSelect ? deviceTypeSelect.value : '';
+    
+    const isTerminal = deviceType === 'terminal';
+    const isPrinter = deviceType === 'printer';
+    
+    let questions = [];
+    
+    if (isTerminal) {
+      questions = [
+        { 
+          type: 'TEXT', 
+          title: '資産管理番号', 
+          required: true,
+          defaultValue: attributeData.assetNumber || ''
+        },
+        { 
+          type: 'TEXT', 
+          title: '拠点管理番号', 
+          required: true,
+          defaultValue: attributeData.locationNumber || ''
+        },
+        { 
+          type: 'TEXT', 
+          title: '型番', 
+          required: true,
+          defaultValue: attributeData.model || ''
+        },
+        { 
+          type: 'TEXT', 
+          title: 'シリアル(製造番号)', 
+          required: true,
+          defaultValue: attributeData.serial || ''
+        },
+        { 
+          type: 'TEXT', 
+          title: 'ソフト', 
+          required: true,
+          defaultValue: attributeData.software || ''
+        },
+        { 
+          type: 'TEXT', 
+          title: 'OS', 
+          required: true,
+          defaultValue: attributeData.os || ''
+        },
+        { 
+          type: 'DROPDOWN', 
+          title: '代替機種別', 
+          required: true,
+          options: ['SV', 'CL'],
+          defaultValue: attributeData.deviceCategory || ''
+        }
+      ];
+    } else if (isPrinter) {
+      questions = [
+        { 
+          type: 'TEXT', 
+          title: '拠点管理番号', 
+          required: true,
+          defaultValue: attributeData.locationNumber || ''
+        },
+        { 
+          type: 'TEXT', 
+          title: '型番', 
+          required: true,
+          defaultValue: attributeData.model || ''
+        },
+        { 
+          type: 'TEXT', 
+          title: 'シリアル(製造番号)', 
+          required: true,
+          defaultValue: attributeData.serial || ''
+        },
+        { 
+          type: 'DROPDOWN', 
+          title: '代替機種別', 
+          required: true,
+          options: ['プリンタ', 'その他'],
+          defaultValue: attributeData.deviceCategory || ''
+        }
+      ];
+    }
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('質問項目生成', { location, deviceCategory, attributeData, isTerminal, isPrinter, questions });
+    }
+    
+    return questions;
+  }
+
+  // ========================================
+  // フォーム作成機能（簡素化）
+  // ========================================
+
+  function addQuestion() {
+    const container = document.getElementById('questions-container');
+    const newIndex = questionCount;
+    
+    const questionDiv = document.createElement('div');
+    questionDiv.className = 'question-item';
+    questionDiv.setAttribute('data-index', newIndex);
+    
+    questionDiv.innerHTML = `
+      <div class="question-header">
+        <span class="question-number">質問 ${newIndex + 1}</span>
+        <button type="button" class="btn-remove-question" onclick="removeQuestion(${newIndex})">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="question-config">
+        <div class="form-row">
+          <div class="form-group">
+            <label>質問タイトル <span class="required">*</span></label>
+            <input type="text" name="questions[${newIndex}][title]" required
+                   placeholder="質問を入力してください">
+          </div>
+          
+          <div class="form-group">
+            <label>質問タイプ</label>
+            <select name="questions[${newIndex}][type]" onchange="updateQuestionOptions(${newIndex})">
+              <option value="TEXT">短答式テキスト</option>
+              <option value="PARAGRAPH">長答式テキスト</option>
+              <option value="MULTIPLE_CHOICE">ラジオボタン</option>
+              <option value="CHECKBOX">チェックボックス</option>
+              <option value="DROPDOWN">プルダウン</option>
+              <option value="SCALE">評価スケール</option>
+              <option value="DATE">日付</option>
+              <option value="TIME">時刻</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>
+              <input type="checkbox" name="questions[${newIndex}][required]" value="true">
+              必須項目にする
+            </label>
+          </div>
+        </div>
+
+        <div class="question-options" id="question-options-${newIndex}" style="display: none;">
+          <label>選択肢（1行に1つずつ入力）</label>
+          <textarea name="questions[${newIndex}][options]" rows="4"
+                    placeholder="選択肢1&#10;選択肢2&#10;選択肢3"></textarea>
+        </div>
+      </div>
+    `;
+    
+    container.appendChild(questionDiv);
+    questionCount++;
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('質問を追加', { newIndex });
+    }
+  }
+
+  function removeQuestion(index) {
+    const questionDiv = document.querySelector(`[data-index="${index}"]`);
+    if (questionDiv) {
+      questionDiv.remove();
+      updateQuestionNumbers();
+      
+      if (DEBUG_MODE) {
+        showDebugInfo('質問を削除', { index });
+      }
+    }
+  }
+
+  function updateQuestionNumbers() {
+    const questions = document.querySelectorAll('.question-item');
+    questions.forEach(function(question, index) {
+      const numberSpan = question.querySelector('.question-number');
+      if (numberSpan) {
+        numberSpan.textContent = 'Q' + (index + 1);
+      }
+    });
+  }
+
+  function updateQuestionOptions(index) {
+    const typeSelect = document.querySelector(`[name="questions[${index}][type]"]`);
+    const optionsDiv = document.getElementById(`question-options-${index}`);
+    
+    if (typeSelect && optionsDiv) {
+      const selectedType = typeSelect.value;
+      const showOptions = ['MULTIPLE_CHOICE', 'CHECKBOX', 'DROPDOWN'].includes(selectedType);
+      
+      optionsDiv.style.display = showOptions ? 'block' : 'none';
+      
+      if (DEBUG_MODE) {
+        showDebugInfo('質問タイプ変更', { index, selectedType, showOptions });
+      }
+    }
+  }
+
+  function resetFormCreation() {
+    const form = document.getElementById('googleFormCreationForm');
+    if (form) {
+      form.reset();
+      
+      // 質問項目を初期化（最初の1つだけ残す）
+      const container = document.getElementById('questions-container');
+      const questions = container.querySelectorAll('.question-item');
+      
+      questions.forEach(function(question, index) {
+        if (index > 0) {
+          question.remove();
+        }
+      });
+      
+      questionCount = 1;
+      updateQuestionNumbers();
+      
+      // エラー状態をクリア
+      form.querySelectorAll('.error').forEach(function(element) {
+        element.classList.remove('error');
+      });
+      
+      if (DEBUG_MODE) {
+        showDebugInfo('フォーム作成をリセット');
+      }
+      
+      showMessage('フォームをリセットしました', 'success');
+    }
+  }
+
+  // ========================================
+  // Google Form作成処理
+  // ========================================
+  function handleGoogleFormCreation(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('Google Form作成開始', Array.from(formData.entries()));
+    }
+    
+    // フォームデータを整理
+    const deviceType = formData.get('deviceType');
+    const locationNumber = formData.get('locationNumber');
+    const location = formData.get('location');
+    const deviceCategory = formData.get('deviceCategory');
+    
+    // 属性データを解析
+    const attributeData = {};
+    for (const [key, value] of formData.entries()) {
+      if (key.startsWith('attributes[')) {
+        const match = key.match(/attributes\[(\w+)\]/);
+        if (match) {
+          const [, attrName] = match;
+          attributeData[attrName] = value;
+        }
+      }
+    }
+
+    const formConfig = {
+      title: locationNumber, // 拠点管理番号をタイトルとして使用
+      description: `${getLocationDisplayName(location)} 代替機依頼フォーム`,
+      deviceType: deviceType,
+      locationNumber: locationNumber,
+      location: location,
+      deviceCategory: deviceCategory,
+      attributes: attributeData,
+      questions: getDeviceQuestions(location, deviceCategory, attributeData)
+    };
+    
+    // 質問データを解析
+    const questionData = {};
+    for (const [key, value] of formData.entries()) {
+      if (key.startsWith('questions[')) {
+        const match = key.match(/questions\[(\d+)\]\[(\w+)\]/);
+        if (match) {
+          const [, index, field] = match;
+          if (!questionData[index]) questionData[index] = {};
+          
+          if (field === 'options') {
+            questionData[index][field] = value.split('\n').filter(opt => opt.trim());
+          } else if (field === 'required') {
+            questionData[index][field] = value === 'true';
+          } else {
+            questionData[index][field] = value;
+          }
+        }
+      }
+    }
+    
+    // 質問配列を作成
+    Object.keys(questionData).forEach(function(index) {
+      const question = questionData[index];
+      if (question.title) {
+        formConfig.questions.push(question);
+      }
+    });
+    
+    // フォーム送信前のデバッグ情報
+    console.log('=== フォーム送信データ確認 ===');
+    console.log('formData entries:', Array.from(formData.entries()));
+    console.log('生成されたformConfig:', formConfig);
+    
+    // バリデーション
+    if (!validateGoogleFormConfig(formConfig)) {
+      console.error('バリデーション失敗 - フォーム送信を中止');
+      return;
+    }
+    
+    console.log('バリデーション成功 - フォーム送信を開始');
+    
+    // 送信ボタンをローディング状態に
+    const submitButton = form.querySelector('button[type="submit"]');
+    setButtonLoading(submitButton, true);
+    
+    // Google Apps Scriptに送信
+    createGoogleFormAPI(formConfig)
+      .then(function(result) {
+        if (result.success) {
+          showFormCreationSuccess(result.data);
+          form.reset();
+          resetFormCreation();
+          
+          if (DEBUG_MODE) {
+            showDebugInfo('Google Form作成成功', result);
+          }
+        } else {
+          throw new Error(result.error || 'フォーム作成に失敗しました');
+        }
+      })
+      .catch(function(error) {
+        showMessage('エラー: ' + error.message, 'error');
+        
+        if (DEBUG_MODE) {
+          showDebugInfo('Google Form作成エラー', { error: error.message });
+        }
+      })
+      .finally(function() {
+        setButtonLoading(submitButton, false);
+      });
+  }
+
+  function validateGoogleFormConfig(formConfig) {
+    let isValid = true;
+    let validationErrors = [];
+    
+    // デバッグ情報を表示
+    console.log('=== フォーム設定バリデーション開始 ===');
+    console.log('formConfig:', formConfig);
+    
+    // 必須フィールドチェック
+    if (!formConfig.title || formConfig.title.trim() === '') {
+      validationErrors.push('フォームタイトルが未設定です');
+      isValid = false;
+    } else {
+      console.log('✓ フォームタイトル:', formConfig.title);
+    }
+    
+    if (!formConfig.locationNumber || formConfig.locationNumber.trim() === '') {
+      validationErrors.push('拠点管理番号が未設定です');
+      isValid = false;
+    } else {
+      console.log('✓ 拠点管理番号:', formConfig.locationNumber);
+    }
+    
+    // 拠点管理番号の形式チェック（新しいパターンに対応）
+    if (formConfig.locationNumber) {
+      const locationPattern = /^[A-Za-z]+_[A-Za-z0-9]+$/;
+      if (!locationPattern.test(formConfig.locationNumber)) {
+        validationErrors.push('拠点管理番号の形式が正しくありません（期待する形式: プレフィックス_サフィックス）');
+        console.log('✗ 拠点管理番号の形式エラー:', formConfig.locationNumber, 'パターン:', locationPattern);
+        isValid = false;
+      } else {
+        console.log('✓ 拠点管理番号の形式OK:', formConfig.locationNumber);
+      }
+    }
+    
+    // 基本情報のチェック
+    if (!formConfig.deviceType) {
+      validationErrors.push('代替機種別が未選択です');
+      isValid = false;
+    } else {
+      console.log('✓ 代替機種別:', formConfig.deviceType);
+    }
+    
+    if (!formConfig.location) {
+      validationErrors.push('拠点が未選択です');
+      isValid = false;
+    } else {
+      console.log('✓ 拠点:', formConfig.location);
+    }
+    
+    if (!formConfig.deviceCategory) {
+      validationErrors.push('詳細カテゴリが未選択です');
+      isValid = false;
+    } else {
+      console.log('✓ 詳細カテゴリ:', formConfig.deviceCategory);
+    }
+    
+    // 質問が1つ以上あるかチェック
+    if (!formConfig.questions || formConfig.questions.length === 0) {
+      validationErrors.push('質問項目が設定されていません');
+      isValid = false;
+    } else {
+      console.log('✓ 質問項目数:', formConfig.questions.length);
+      formConfig.questions.forEach(function(question, index) {
+        console.log('質問' + (index + 1) + ':', question);
+      });
+    }
+    
+    // 属性データのチェック
+    if (formConfig.attributes) {
+      console.log('✓ 属性データ:', formConfig.attributes);
+      
+      // 端末の場合の必須属性チェック
+      if (formConfig.deviceType === 'terminal') {
+        const requiredTerminalAttrs = ['assetNumber', 'model', 'serial', 'software', 'os'];
+        requiredTerminalAttrs.forEach(function(attr) {
+          if (!formConfig.attributes[attr] || formConfig.attributes[attr].trim() === '') {
+            validationErrors.push('端末の必須属性「' + attr + '」が未入力です');
+            isValid = false;
+          }
+        });
+      }
+      
+      // プリンタの場合の必須属性チェック
+      if (formConfig.deviceType === 'printer') {
+        const requiredPrinterAttrs = ['model', 'serial'];
+        requiredPrinterAttrs.forEach(function(attr) {
+          if (!formConfig.attributes[attr] || formConfig.attributes[attr].trim() === '') {
+            validationErrors.push('プリンタの必須属性「' + attr + '」が未入力です');
+            isValid = false;
+          }
+        });
+      }
+    } else {
+      validationErrors.push('属性データが設定されていません');
+      isValid = false;
+    }
+    
+    console.log('=== バリデーション結果 ===');
+    console.log('isValid:', isValid);
+    if (validationErrors.length > 0) {
+      console.log('エラー一覧:', validationErrors);
+    }
+    
+    // エラーがある場合は詳細メッセージを表示
+    if (!isValid) {
+      showValidationErrors(validationErrors);
+    }
+    
+    return isValid;
+  }
+
+  // バリデーションエラーの詳細表示
+  function showValidationErrors(errors) {
+    var errorMessage = 'フォーム作成でエラーが発生しました:\n\n';
+    for (var i = 0; i < errors.length; i++) {
+      errorMessage += '• ' + errors[i] + '\n';
+    }
+    
+    // コンソールにも出力
+    console.error('バリデーションエラー詳細:', errors);
+    
+    // アラートで詳細エラーを表示
+    alert(errorMessage);
+    
+    // 通常のエラーメッセージも表示
+    showMessage('入力内容に不備があります（詳細はコンソールを確認してください）', 'error');
+  }
+
+  function showFormCreationSuccess(formData) {
+    // 成功ダイアログを表示
+    const successHtml = `
+      <div class="form-success-dialog">
+        <div class="success-content">
+          <h3><i class="fas fa-check-circle"></i> フォーム作成完了</h3>
+          <p><strong>${formData.title}</strong> を正常に作成しました。</p>
+          
+          <div class="form-links">
+            <div class="link-item">
+              <label>編集用URL:</label>
+              <div class="url-display">
+                <input type="text" value="${formData.editUrl}" readonly>
+                <button onclick="copyToClipboard('${formData.editUrl}')">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="link-item">
+              <label>回答用URL:</label>
+              <div class="url-display">
+                <input type="text" value="${formData.publicUrl}" readonly>
+                <button onclick="copyToClipboard('${formData.publicUrl}')">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="dialog-actions">
+            <button class="btn btn-primary" onclick="window.open('${formData.editUrl}', '_blank')">
+              <i class="fas fa-external-link-alt"></i>
+              フォームを編集
+            </button>
+            <button class="btn btn-secondary" onclick="closeSuccessDialog()">
+              閉じる
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // ダイアログを表示
+    const dialogDiv = document.createElement('div');
+    dialogDiv.className = 'success-dialog-overlay';
+    dialogDiv.innerHTML = successHtml;
+    document.body.appendChild(dialogDiv);
+  }
+
+  // ========================================
+  // フォームバリデーション
+  // ========================================
+  function validateForm(form, formType) {
+    let isValid = true;
+    
+    // 必須フィールドのチェック
+    const requiredFields = form.querySelectorAll('[required]');
+    requiredFields.forEach(field => {
+      field.classList.remove('error');
+      
+      if (!field.value.trim()) {
+        field.classList.add('error');
+        isValid = false;
+      }
+    });
+    
+    // フォームタイプ別の追加バリデーション
+    if (formType === 'terminal') {
+      isValid &= validateTerminalForm(form);
+    } else if (formType === 'printer') {
+      isValid &= validatePrinterForm(form);
+    }
+    
+    return isValid;
+  }
+  
+  function validateTerminalForm(form) {
+    let isValid = true;
+    
+    // 資産管理番号の形式チェック
+    const assetNumber = form.querySelector('[name="assetNumber"]');
+    if (assetNumber && assetNumber.value) {
+      const assetPattern = /^[A-Z]{2,4}-\d{6}$/;
+      if (!assetPattern.test(assetNumber.value)) {
+        assetNumber.classList.add('error');
+        isValid = false;
+      }
+    }
+    
+    // 拠点管理番号の形式チェック
+    const locationNumber = form.querySelector('[name="locationNumber"]');
+    if (locationNumber && locationNumber.value) {
+      const locationPattern = /^[A-Z]{3}-\d{3}$/;
+      if (!locationPattern.test(locationNumber.value)) {
+        locationNumber.classList.add('error');
+        isValid = false;
+      }
+    }
+    
+    return isValid;
+  }
+  
+  function validatePrinterForm(form) {
+    let isValid = true;
+    
+    // 拠点管理番号の形式チェック
+    const locationNumber = form.querySelector('[name="locationNumber"]');
+    if (locationNumber && locationNumber.value) {
+      const locationPattern = /^[A-Z]{3}-\d{3}$/;
+      if (!locationPattern.test(locationNumber.value)) {
+        locationNumber.classList.add('error');
+        isValid = false;
+      }
+    }
+    
+    return isValid;
+  }
+
+  // ========================================
+  // Google Apps Scriptとの通信
+  // ========================================
+  function createGoogleFormAPI(formConfig) {
+    return new Promise(function(resolve, reject) {
+      try {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject)
+          .createGoogleForm(formConfig);
+      } catch (error) {
+        // Google Apps Script環境でない場合（開発環境）
+        if (DEBUG_MODE) {
+          setTimeout(function() {
+            resolve({ 
+              success: true, 
+              message: 'テストモード: フォームが正常に作成されました',
+              data: {
+                formId: 'test-form-id',
+                title: formConfig.title,
+                editUrl: 'https://docs.google.com/forms/d/test-form-id/edit',
+                publicUrl: 'https://docs.google.com/forms/d/test-form-id/viewform',
+                responseSheetId: 'test-sheet-id',
+                responseSheetUrl: 'https://docs.google.com/spreadsheets/d/test-sheet-id',
+                locationNumber: formConfig.locationNumber
+              }
+            });
+          }, 1000);
+        } else {
+          reject(new Error('Google Apps Script環境が必要です'));
+        }
+      }
+    });
+  }
+
+  function loadFormsList() {
+    const loadingIndicator = document.getElementById('forms-loading');
+    const formsList = document.getElementById('forms-list');
+    
+    loadingIndicator.style.display = 'block';
+    
+    return new Promise(function(resolve, reject) {
+      try {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            displayFormsList(result);
+            resolve(result);
+          })
+          .withFailureHandler(function(error) {
+            showMessage('フォーム一覧の取得に失敗しました: ' + error.message, 'error');
+            reject(error);
+          })
+          .getCreatedFormsList();
+      } catch (error) {
+        // Google Apps Script環境でない場合（開発環境）
+        if (DEBUG_MODE) {
+          setTimeout(function() {
+            const testResult = {
+              success: true,
+              forms: [
+                {
+                  id: 'test-form-1',
+                  title: 'テスト フォーム 1',
+                  description: 'テスト用のフォームです',
+                  editUrl: 'https://docs.google.com/forms/d/test-form-1/edit',
+                  publicUrl: 'https://docs.google.com/forms/d/test-form-1/viewform',
+                  createdDate: new Date(),
+                  responseCount: 5
+                }
+              ],
+              totalCount: 1
+            };
+            displayFormsList(testResult);
+            resolve(testResult);
+          }, 1000);
+        } else {
+          showMessage('Google Apps Script環境が必要です', 'error');
+          reject(new Error('Google Apps Script環境が必要です'));
+        }
+      }
+    }).finally(function() {
+      loadingIndicator.style.display = 'none';
+    });
+  }
+
+  function displayFormsList(result) {
+    const formsList = document.getElementById('forms-list');
+    
+    if (!result.success || !result.forms || result.forms.length === 0) {
+      formsList.innerHTML = 
+        '<div class="no-forms">' +
+          '<i class="fas fa-inbox"></i>' +
+          '<p>作成済みフォームがありません</p>' +
+        '</div>';
+      return;
+    }
+    
+    var formsHtml = '';
+    for (var i = 0; i < result.forms.length; i++) {
+      var form = result.forms[i];
+      formsHtml += 
+        '<div class="form-item">' +
+          '<div class="form-info">' +
+            '<h4>' + form.title + '</h4>' +
+            '<p>' + (form.description || '説明なし') + '</p>' +
+            '<div class="form-meta">' +
+              '<span><i class="fas fa-calendar"></i> ' + new Date(form.createdDate).toLocaleDateString() + '</span>' +
+              '<span><i class="fas fa-chart-bar"></i> 回答: ' + form.responseCount + '件</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="form-actions">' +
+            '<button class="btn btn-sm btn-primary" onclick="window.open(\'' + form.editUrl + '\', \'_blank\')">' +
+              '<i class="fas fa-edit"></i> 編集' +
+            '</button>' +
+            '<button class="btn btn-sm btn-secondary" onclick="window.open(\'' + form.publicUrl + '\', \'_blank\')">' +
+              '<i class="fas fa-external-link-alt"></i> 表示' +
+            '</button>' +
+            '<button class="btn btn-sm btn-danger" onclick="deleteForm(\'' + form.id + '\', \'' + form.title + '\')">' +
+              '<i class="fas fa-trash"></i> 削除' +
+            '</button>' +
+          '</div>' +
+        '</div>';
+    }
+    
+    formsList.innerHTML = formsHtml;
+  }
+
+  function deleteForm(formId, formTitle) {
+    if (!confirm('フォーム「' + formTitle + '」を削除しますか？\n\nこの操作は取り消せません。')) {
+      return;
+    }
+    
+    return new Promise(function(resolve, reject) {
+      try {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success) {
+              showMessage('フォームを削除しました', 'success');
+              loadFormsList(); // 一覧を更新
+            } else {
+              showMessage('削除に失敗しました: ' + result.error, 'error');
+            }
+            resolve(result);
+          })
+          .withFailureHandler(function(error) {
+            showMessage('削除中にエラーが発生しました: ' + error.message, 'error');
+            reject(error);
+          })
+          .deleteGoogleForm(formId);
+      } catch (error) {
+        if (DEBUG_MODE) {
+          setTimeout(function() {
+            showMessage('テストモード: フォームを削除しました', 'success');
+            loadFormsList();
+            resolve({ success: true });
+          }, 500);
+        } else {
+          showMessage('Google Apps Script環境が必要です', 'error');
+          reject(new Error('Google Apps Script環境が必要です'));
+        }
+      }
+    });
+  }
+
+  // ========================================
+  // UI ヘルパー関数
+  // ========================================
+  function setButtonLoading(button, isLoading) {
+    if (!button) return;
+    
+    if (isLoading) {
+      button.classList.add('loading');
+      button.disabled = true;
+      const icon = button.querySelector('i');
+      if (icon) {
+        icon.className = 'fas fa-spinner';
+      }
+    } else {
+      button.classList.remove('loading');
+      button.disabled = false;
+      const icon = button.querySelector('i');
+      if (icon) {
+        icon.className = 'fas fa-save';
+      }
+    }
+  }
+  
+  function showMessage(message, type) {
+    // 既存のメッセージを削除
+    document.querySelectorAll('.success-message, .error-message').forEach(function(msg) {
+      msg.remove();
+    });
+    
+    // 新しいメッセージを作成
+    const messageDiv = document.createElement('div');
+    messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
+    var iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+    
+    // エラーメッセージの場合は閉じるボタンを追加
+    if (type === 'error') {
+      messageDiv.innerHTML = 
+        '<div class="message-content">' +
+          '<i class="fas ' + iconClass + '"></i>' +
+          '<span>' + message + '</span>' +
+        '</div>' +
+        '<button class="message-close-btn" onclick="this.parentElement.remove()">' +
+          '<i class="fas fa-times"></i>' +
+        '</button>';
+    } else {
+      messageDiv.innerHTML = 
+        '<i class="fas ' + iconClass + '"></i>' +
+        '<span>' + message + '</span>';
+    }
+    
+    document.body.appendChild(messageDiv);
+    
+    // 成功メッセージのみ自動削除（エラーメッセージは手動削除）
+    if (type === 'success') {
+      setTimeout(function() {
+        if (messageDiv.parentNode) {
+          messageDiv.remove();
+        }
+      }, 3000);
+    }
+  }
+
+  // ========================================
+  // ユーティリティ関数
+  // ========================================
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+      showMessage('URLをクリップボードにコピーしました', 'success');
+    }).catch(function(err) {
+      showMessage('コピーに失敗しました', 'error');
+    });
+  }
+
+  function closeSuccessDialog() {
+    const dialog = document.querySelector('.success-dialog-overlay');
+    if (dialog) {
+      dialog.remove();
+    }
+  }
+
+  // ========================================
+  // イベントリスナーの設定
+  // ========================================
+  document.addEventListener('DOMContentLoaded', function() {
+    // Google Form作成フォームの送信イベント
+    const googleFormCreationForm = document.getElementById('googleFormCreationForm');
+    if (googleFormCreationForm) {
+      googleFormCreationForm.addEventListener('submit', handleGoogleFormCreation);
+    }
+    
+    // 拠点管理番号suffix入力のイベントリスナー
+    const locationSuffixInput = document.getElementById('location-suffix');
+    if (locationSuffixInput) {
+      locationSuffixInput.addEventListener('input', function() {
+        updateCombinedLocationNumber();
+      });
+    }
+    
+    // 初期の質問タイプ変更イベント
+    updateQuestionOptions(0);
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('フォーム作成ページ初期化完了', {});
+    }
+  });
+
+  // グローバルスコープに関数を公開
+  window.updateDeviceType = updateDeviceType;
+  window.updateLocationNumber = updateLocationNumber;
+  window.updateDeviceCategory = updateDeviceCategory;
+  window.switchFormCreationMode = switchFormCreationMode;
+  window.deleteForm = deleteForm;
+  window.closeSuccessDialog = closeSuccessDialog;
+  window.copyToClipboard = copyToClipboard;
+
+</script> 
