@@ -760,15 +760,26 @@
       console.log('✓ 拠点管理番号:', formConfig.locationNumber);
     }
     
-    // 拠点管理番号の形式チェック（新しいパターンに対応）
+    // 拠点管理番号の形式チェック（プレフィックスのみ検証）
     if (formConfig.locationNumber) {
-      const locationPattern = /^[A-Za-z]+_[A-Za-z0-9]+$/;
-      if (!locationPattern.test(formConfig.locationNumber)) {
-        validationErrors.push('拠点管理番号の形式が正しくありません（期待する形式: プレフィックス_サフィックス）');
-        console.log('✗ 拠点管理番号の形式エラー:', formConfig.locationNumber, 'パターン:', locationPattern);
+      // アンダースコアで分割
+      const parts = formConfig.locationNumber.split('_');
+      if (parts.length < 2) {
+        validationErrors.push('拠点管理番号は「プレフィックス_サフィックス」の形式で入力してください（例：Osaka_001）');
+        console.log('✗ 拠点管理番号の形式エラー（アンダースコアなし）:', formConfig.locationNumber);
         isValid = false;
       } else {
-        console.log('✓ 拠点管理番号の形式OK:', formConfig.locationNumber);
+        // プレフィックス（アンダースコア前の部分）のみ検証
+        const prefix = parts[0];
+        const prefixPattern = /^[A-Za-z]+$/;
+        
+        if (!prefixPattern.test(prefix) || prefix.length < 2) {
+          validationErrors.push('プレフィックスは2文字以上の英字で入力してください（例：Osaka、Hime）');
+          console.log('✗ プレフィックスの形式エラー:', prefix);
+          isValid = false;
+        } else {
+          console.log('✓ 拠点管理番号の形式OK:', formConfig.locationNumber, '（プレフィックス:', prefix, '）');
+        }
       }
     }
     
@@ -984,15 +995,7 @@
       }
     }
     
-    // 拠点管理番号の形式チェック
-    const locationNumber = form.querySelector('[name="locationNumber"]');
-    if (locationNumber && locationNumber.value) {
-      const locationPattern = /^[A-Z]{3}-\d{3}$/;
-      if (!locationPattern.test(locationNumber.value)) {
-        locationNumber.classList.add('error');
-        isValid = false;
-      }
-    }
+    // 拠点管理番号は統一検証関数で処理されるためここでは削除
     
     return isValid;
   }
@@ -1000,15 +1003,7 @@
   function validatePrinterForm(form) {
     let isValid = true;
     
-    // 拠点管理番号の形式チェック
-    const locationNumber = form.querySelector('[name="locationNumber"]');
-    if (locationNumber && locationNumber.value) {
-      const locationPattern = /^[A-Z]{3}-\d{3}$/;
-      if (!locationPattern.test(locationNumber.value)) {
-        locationNumber.classList.add('error');
-        isValid = false;
-      }
-    }
+    // 拠点管理番号は統一検証関数で処理されるためここでは削除
     
     return isValid;
   }
