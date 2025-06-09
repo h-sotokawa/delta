@@ -592,32 +592,44 @@
 
   function resetFormCreation() {
     const form = document.getElementById('googleFormCreationForm');
-    if (form) {
+    if (!form) {
+      console.warn('フォーム要素が見つかりません');
+      return;
+    }
+    
+    try {
       form.reset();
       
       // 質問項目を初期化（最初の1つだけ残す）
       const container = document.getElementById('questions-container');
-      const questions = container.querySelectorAll('.question-item');
-      
-      questions.forEach(function(question, index) {
-        if (index > 0) {
-          question.remove();
-        }
-      });
+      if (container) {
+        const questions = container.querySelectorAll('.question-item');
+        
+        questions.forEach(function(question, index) {
+          if (index > 0) {
+            question.remove();
+          }
+        });
+      }
       
       questionCount = 1;
       updateQuestionNumbers();
       
-      // エラー状態をクリア
-      form.querySelectorAll('.error').forEach(function(element) {
-        element.classList.remove('error');
-      });
+      // エラー状態をクリア（存在確認してから実行）
+      if (form && form.querySelectorAll) {
+        form.querySelectorAll('.error').forEach(function(element) {
+          element.classList.remove('error');
+        });
+      }
       
       if (DEBUG_MODE) {
         showDebugInfo('フォーム作成をリセット');
       }
       
       showMessage('フォームをリセットしました', 'success');
+    } catch (error) {
+      console.error('resetFormCreation エラー:', error);
+      showMessage('フォームリセット中にエラーが発生しました', 'error');
     }
   }
 
@@ -715,7 +727,7 @@
         if (result.success) {
           console.log('result.data:', result.data);
           showFormCreationSuccess(result.data);
-          form.reset();
+          // フォームリセットはresetFormCreation内で実行されるため重複呼び出しを避ける
           resetFormCreation();
           
           if (DEBUG_MODE) {
@@ -885,6 +897,88 @@
     var title = formData.title || formData.name || 'フォーム';
     console.log('使用するタイトル:', title);
     
+    // QRコード画像の表示部分を構築
+    let qrCodeSection = '';
+    
+    // デバッグ: QRコードデータを詳細にログ出力
+    console.log('QRコードデータ確認:', {
+      qrCodeExists: !!formData.qrCode,
+      qrCodeSuccess: formData.qrCode ? formData.qrCode.success : 'undefined',
+      publicImageUrl: formData.qrCode ? formData.qrCode.publicImageUrl : 'undefined',
+      fullQrCodeData: formData.qrCode
+    });
+    
+    if (formData.qrCode && formData.qrCode.success) {
+      // Base64データがある場合は優先して使用（CORS制限回避）
+      let primaryImageSrc = '';
+      let fallbackSrcs = [];
+      
+      if (formData.qrCode.base64ImageData) {
+        primaryImageSrc = formData.qrCode.base64ImageData;
+        console.log('Base64データを使用します');
+      } else if (formData.qrCode.publicImageUrl) {
+        primaryImageSrc = formData.qrCode.publicImageUrl;
+        if (formData.qrCode.thumbnailUrl) {
+          fallbackSrcs.push(formData.qrCode.thumbnailUrl);
+        }
+      }
+      
+      console.log('QRコード画像URL:', {
+        primary: primaryImageSrc ? 'Base64データ' : primaryImageSrc,
+        hasBase64: !!formData.qrCode.base64ImageData,
+        publicUrl: formData.qrCode.publicImageUrl,
+        thumbnailUrl: formData.qrCode.thumbnailUrl,
+        fallbacks: fallbackSrcs
+      });
+      
+      if (primaryImageSrc) {
+        // エラーハンドリング用のJavaScriptを構築
+        let onErrorHandler = 'this.onerror=null; ';
+        fallbackSrcs.forEach((url, index) => {
+          onErrorHandler += `if(!this.dataset.tried${index}) { this.dataset.tried${index}='true'; this.src='${url}'; return; } `;
+        });
+        onErrorHandler += `this.style.display='none'; document.getElementById('qr-error-msg').style.display='block';`;
+        
+        qrCodeSection = 
+          '<div class="qr-code-section">' +
+            '<h4><i class="fas fa-qrcode"></i> QRコード</h4>' +
+            '<div class="qr-code-container">' +
+              '<img src="' + primaryImageSrc + '" alt="QRコード" class="qr-code-image" ' +
+              'onerror="' + onErrorHandler + '" />' +
+              '<div id="qr-error-msg" style="display:none; color: #dc2626; margin-top: 10px;">' +
+                '<p>⚠️ QRコード画像の読み込みに失敗しました</p>' +
+                '<p>ファイルID: ' + (formData.qrCode.fileId || 'なし') + '</p>' +
+                (formData.qrCode.publicImageUrl ? 
+                  '<p><a href="' + formData.qrCode.publicImageUrl + '" target="_blank" style="color: #3b82f6;">直接リンクで確認</a></p>' : '') +
+              '</div>' +
+              '<p class="qr-code-note">📱 <strong>読み取りテストをお願いします</strong></p>' +
+              '<p class="qr-code-instruction">上記QRコードをスマートフォンで読み取って、正しくフォームが表示されることをご確認ください。</p>' +
+            '</div>' +
+          '</div>';
+      } else {
+        qrCodeSection = 
+          '<div class="qr-code-section error">' +
+            '<h4><i class="fas fa-exclamation-triangle"></i> QRコード画像データなし</h4>' +
+            '<p>QRコード画像のURLまたはデータが取得できませんでした。</p>' +
+          '</div>';
+      }
+    } else {
+      // QRコード生成失敗時の詳細情報を表示
+      const errorDetails = formData.qrCode ? 
+        `成功フラグ: ${formData.qrCode.success}, URL: ${formData.qrCode.publicImageUrl || 'なし'}` :
+        'QRコードデータが存在しません';
+        
+      qrCodeSection = 
+        '<div class="qr-code-section error">' +
+          '<h4><i class="fas fa-exclamation-triangle"></i> QRコード生成エラー</h4>' +
+          '<p>QRコードの生成に失敗しました。フォーム作成は正常に完了しています。</p>' +
+          '<details style="margin-top: 10px;">' +
+            '<summary style="cursor: pointer; color: #6b7280;">詳細情報</summary>' +
+            '<p style="font-family: monospace; font-size: 0.8rem; color: #6b7280; margin-top: 5px;">' + errorDetails + '</p>' +
+          '</details>' +
+        '</div>';
+    }
+    
     // 成功ダイアログを表示
     const successHtml = 
       '<div class="form-success-dialog">' +
@@ -894,49 +988,19 @@
           
           '<div class="form-links">' +
             '<div class="link-item">' +
-              '<label>編集用URL:</label>' +
+              '<label>公開URL（回答用）:</label>' +
               '<div class="url-display">' +
-                '<input type="text" value="' + formData.editUrl + '" readonly>' +
-                '<button onclick="copyToClipboard(\'' + formData.editUrl + '\')">' +
+                '<input type="text" value="' + formData.publicUrl + '" readonly>' +
+                '<button onclick="copyToClipboard(\'' + formData.publicUrl + '\')">' +
                   '<i class="fas fa-copy"></i>' +
                 '</button>' +
               '</div>' +
             '</div>' +
           '</div>' +
           
-          '<div class="manual-section">' +
-            '<h4><i class="fas fa-book"></i> フォーム編集マニュアル</h4>' +
-            '<div class="manual-content">' +
-              '<div class="manual-step">' +
-                '<strong>1. 質問の追加:</strong>' +
-                '<p>右側の「+」ボタンをクリックして質問を追加してください。</p>' +
-              '</div>' +
-              '<div class="manual-step">' +
-                '<strong>2. 質問タイプの選択:</strong>' +
-                '<p>• 記述式: 自由テキスト入力<br>' +
-                '• 選択式: 単一選択<br>' +
-                '• チェックボックス: 複数選択</p>' +
-              '</div>' +
-              '<div class="manual-step">' +
-                '<strong>3. 必須設定:</strong>' +
-                '<p>質問右下の「必須」トグルで回答を必須にできます。</p>' +
-              '</div>' +
-              '<div class="manual-step">' +
-                '<strong>4. 回答受付の有効化:</strong>' +
-                '<p>編集完了後、「回答」タブで「回答を受付中」に変更してください。</p>' +
-              '</div>' +
-              '<div class="manual-step">' +
-                '<strong>5. 回答先シート作成:</strong>' +
-                '<p>必要に応じて回答タブから「新しいスプレッドシートを作成」を選択してください。</p>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
+          qrCodeSection +
           
           '<div class="dialog-actions">' +
-            '<button class="btn btn-primary" onclick="window.open(\'' + formData.editUrl + '\', \'_blank\')">' +
-              '<i class="fas fa-external-link-alt"></i>' +
-              'フォームを編集' +
-            '</button>' +
             '<button class="btn btn-secondary" onclick="closeSuccessDialog()">' +
               '閉じる' +
             '</button>' +
@@ -960,6 +1024,12 @@
   // ========================================
   function validateForm(form, formType) {
     let isValid = true;
+    
+    // フォーム要素の存在確認
+    if (!form || !form.querySelectorAll) {
+      console.error('validateForm: 無効なフォーム要素', form);
+      return false;
+    }
     
     // 必須フィールドのチェック
     const requiredFields = form.querySelectorAll('[required]');
@@ -1032,7 +1102,16 @@
                 publicUrl: 'https://docs.google.com/forms/d/test-form-id/viewform',
                 responseSheetId: 'test-sheet-id',
                 responseSheetUrl: 'https://docs.google.com/spreadsheets/d/test-sheet-id',
-                locationNumber: formConfig.locationNumber
+                locationNumber: formConfig.locationNumber,
+                qrCode: {
+                  success: true,
+                  publicImageUrl: 'https://via.placeholder.com/200x200/0ea5e9/ffffff?text=TEST+QR',
+                  thumbnailUrl: 'https://via.placeholder.com/400x400/0ea5e9/ffffff?text=TEST+QR+THUMB',
+                  base64ImageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8/5+hnoEIwDiqkL4KAcT9GO0U4BxoAAAAAElFTkSuQmCC',
+                  fileName: 'qr_test_001.png',
+                  fileId: 'test-file-id',
+                  qrCodeUrl: 'https://docs.google.com/forms/d/test-form-id/viewform'
+                }
               }
             });
           }, 1000);

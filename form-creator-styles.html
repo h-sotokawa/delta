@@ -653,49 +653,66 @@
     margin-top: 25px;
   }
 
-  /* フォーム編集マニュアルスタイル */
-  .manual-section {
+  /* QRコード表示スタイル */
+  .qr-code-section {
     margin: 25px 0;
     padding: 20px;
-    background: #f8fafc;
+    background: #f0f9ff;
     border-radius: 8px;
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid #0ea5e9;
+    text-align: center;
   }
 
-  .manual-section h4 {
-    color: #1e40af;
+  .qr-code-section.error {
+    background: #fef2f2;
+    border-left-color: #ef4444;
+  }
+
+  .qr-code-section h4 {
+    color: #0c4a6e;
     margin: 0 0 15px 0;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     font-size: 1.1rem;
   }
 
-  .manual-content {
+  .qr-code-section.error h4 {
+    color: #dc2626;
+  }
+
+  .qr-code-container {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    align-items: center;
+    gap: 15px;
   }
 
-  .manual-step {
-    padding: 12px;
-    background: white;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
+  .qr-code-image {
+    max-width: 200px;
+    max-height: 200px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
 
-  .manual-step strong {
-    color: #374151;
-    display: block;
-    margin-bottom: 4px;
-  }
-
-  .manual-step p {
+  .qr-code-note {
+    font-size: 1.1rem;
+    color: #0c4a6e;
     margin: 0;
-    color: #6b7280;
-    font-size: 0.9rem;
-    line-height: 1.4;
+    font-weight: 600;
   }
+
+  .qr-code-instruction {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin: 0;
+    max-width: 400px;
+    line-height: 1.5;
+  }
+
+
 
   /* 代替機属性入力フォーム */
   .device-attributes-section {

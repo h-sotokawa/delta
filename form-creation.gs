@@ -264,6 +264,9 @@ function createGoogleForm(formConfig) {
           fileId: qrCodeResult.fileId,
           fileName: qrCodeResult.fileName,
           fileUrl: qrCodeResult.fileUrl,
+          publicImageUrl: qrCodeResult.publicImageUrl, // 画像表示用の公開URL
+          thumbnailUrl: qrCodeResult.thumbnailUrl, // サムネイル用URL
+          base64ImageData: qrCodeResult.base64ImageData, // Base64エンコード画像データ
           folderId: qrCodeResult.folderId,
           qrCodeUrl: form.getPublishedUrl() // QRコードが指すフォームURL
         } : { success: false, error: 'QRコード生成に失敗しました' }
@@ -886,18 +889,52 @@ function saveQRCode(qrCodeBlob, locationNumber) {
     // QRコードファイルを保存
     const file = folder.createFile(qrCodeBlob.setName(fileName));
     
+    // ファイルを誰でも閲覧可能に設定（画像表示用）
+    try {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (sharingError) {
+      addFormLog('QRコードファイル共有設定エラー', {
+        error: sharingError.toString(),
+        fileId: file.getId()
+      });
+    }
+    
+    // 複数の公開画像URL形式を用意
+    const fileId = file.getId();
+    const publicImageUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    const thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+    
+    // Base64エンコードした画像データも生成（CORS回避用）
+    let base64ImageData = null;
+    try {
+      const imageBytes = qrCodeBlob.getBytes();
+      const base64String = Utilities.base64Encode(imageBytes);
+      base64ImageData = `data:image/png;base64,${base64String}`;
+    } catch (base64Error) {
+      addFormLog('Base64変換エラー', {
+        error: base64Error.toString(),
+        fileId: fileId
+      });
+    }
+    
     addFormLog('QRコード保存成功', {
       fileName,
-      fileId: file.getId(),
+      fileId: fileId,
       locationNumber,
-      folderId: folder.getId()
+      folderId: folder.getId(),
+      publicImageUrl,
+      thumbnailUrl,
+      hasBase64Data: !!base64ImageData
     });
     
     return {
       success: true,
-      fileId: file.getId(),
+      fileId: fileId,
       fileName: fileName,
       fileUrl: file.getUrl(),
+      publicImageUrl: publicImageUrl, // 画像表示用の公開URL
+      thumbnailUrl: thumbnailUrl, // サムネイル用URL
+      base64ImageData: base64ImageData, // Base64エンコード画像データ
       folderId: folder.getId()
     };
     
