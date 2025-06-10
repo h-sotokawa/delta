@@ -63,6 +63,9 @@
           refreshButton.disabled = false;
         }
         
+        // 該当拠点の最終更新時刻を表示
+        displayLocationUpdateTime(selectedLocation);
+        
         const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
         loadSpreadsheet(selectedLocation, queryType);
         return;
@@ -101,6 +104,9 @@
           refreshButton.disabled = false;
         }
         
+        // 該当拠点の最終更新時刻を表示（あれば）
+        displayLocationUpdateTime(selectedLocation);
+        
         // 読み込み表示
         loadingDiv.style.display = 'block';
         tableContainer.innerHTML = `
@@ -126,6 +132,12 @@
       
       if (refreshButton) {
         refreshButton.disabled = true;
+      }
+      
+      // 時刻表示を隠す
+      const lastUpdateElement = document.getElementById('lastUpdateTime');
+      if (lastUpdateElement) {
+        lastUpdateElement.style.display = 'none';
       }
     }
   }
@@ -166,6 +178,9 @@
             
             displayData(response.data, queryType);
             errorDiv.textContent = '';
+            
+            // 最終更新時刻を表示（拠点ごと）
+            updateLastUpdateTime('lastUpdateTime', 'lastUpdateTimeText', location);
             
             // 読み込み完了メッセージを表示
             if (typeof showPopupMessage === 'function') {
@@ -260,6 +275,9 @@
             }
             displayData(response.data, queryType);
             errorDiv.textContent = '';
+            
+            // 最終更新時刻を表示（拠点ごと）
+            updateLastUpdateTime('lastUpdateTime', 'lastUpdateTimeText', location);
           } else {
             const errorMessage = response.error || '不明なエラーが発生しました';
             const errorDetails = response.errorDetails || {};
@@ -648,6 +666,348 @@
       .updateMachineStatus(rowIndex, statusToUpdate, currentLocation);
   }
 
+  // 拠点ごとの最終更新時刻を記録するオブジェクト
+  let locationUpdateTimes = {};
+
+  // ページ読み込み時に拠点ごとの更新時刻を復元
+  document.addEventListener('DOMContentLoaded', function() {
+    loadLocationUpdateTimes();
+  });
+
+  // 拠点の更新時刻を記録する関数（表示は行わない）
+  function recordLocationUpdateTime(location) {
+    if (!location) return;
+    
+    const now = new Date();
+    const timeString = now.toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    locationUpdateTimes[location] = timeString;
+    // ローカルストレージにも保存
+    try {
+      localStorage.setItem('locationUpdateTimes', JSON.stringify(locationUpdateTimes));
+    } catch (e) {
+      console.warn('ローカルストレージへの保存に失敗しました:', e);
+    }
+  }
+
+  // 最終更新時刻を更新する関数
+  function updateLastUpdateTime(elementId, textElementId, location = null) {
+    const now = new Date();
+    const timeString = now.toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    // 拠点ごとの更新時刻を記録
+    if (location) {
+      locationUpdateTimes[location] = timeString;
+      // ローカルストレージにも保存
+      try {
+        localStorage.setItem('locationUpdateTimes', JSON.stringify(locationUpdateTimes));
+      } catch (e) {
+        console.warn('ローカルストレージへの保存に失敗しました:', e);
+      }
+    }
+    
+    const element = document.getElementById(elementId);
+    const textElement = document.getElementById(textElementId);
+    
+    if (element && textElement) {
+      textElement.textContent = timeString;
+      element.style.display = 'flex';
+    }
+  }
+
+  // 拠点の最終更新時刻を取得する関数
+  function getLocationUpdateTime(location) {
+    return locationUpdateTimes[location] || null;
+  }
+
+  // ローカルストレージから拠点ごとの更新時刻を読み込む関数
+  function loadLocationUpdateTimes() {
+    try {
+      const saved = localStorage.getItem('locationUpdateTimes');
+      if (saved) {
+        locationUpdateTimes = JSON.parse(saved);
+        
+        // デバッグ情報
+        if (DEBUG_MODE && typeof showDebugInfo === 'function') {
+          showDebugInfo('ローカルストレージから更新時刻復元', {
+            count: Object.keys(locationUpdateTimes).length,
+            times: locationUpdateTimes
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('ローカルストレージからの読み込みに失敗しました:', e);
+      locationUpdateTimes = {};
+    }
+  }
+
+  // 監査シート変更時に該当シートの最終更新時刻を表示する関数
+  function displayAuditSheetUpdateTime(auditSheet) {
+    const updateTime = getLocationUpdateTime(auditSheet);
+    const element = document.getElementById('lastUpdateTimeAudit');
+    const textElement = document.getElementById('lastUpdateTimeAuditText');
+    const locationNameElement = document.getElementById('lastUpdateLocationNameAudit');
+    
+    // デバッグ情報
+    if (DEBUG_MODE) {
+      showDebugInfo('監査シート更新時刻表示', {
+        auditSheet: auditSheet,
+        updateTime: updateTime,
+        allUpdateTimes: locationUpdateTimes,
+        elementExists: !!element,
+        textElementExists: !!textElement
+      });
+    }
+    
+    if (element && textElement) {
+      if (updateTime) {
+        textElement.textContent = updateTime;
+        
+        // 監査シート名を表示
+        if (locationNameElement) {
+          locationNameElement.textContent = `${auditSheet} `;
+        }
+        
+        element.style.display = 'flex';
+      } else {
+        element.style.display = 'none';
+      }
+    }
+  }
+
+  // 拠点変更時に該当拠点の最終更新時刻を表示する関数
+  function displayLocationUpdateTime(location) {
+    const updateTime = getLocationUpdateTime(location);
+    const element = document.getElementById('lastUpdateTime');
+    const textElement = document.getElementById('lastUpdateTimeText');
+    const locationNameElement = document.getElementById('lastUpdateLocationName');
+    
+    // デバッグ情報
+    if (DEBUG_MODE) {
+      showDebugInfo('拠点更新時刻表示', {
+        location: location,
+        updateTime: updateTime,
+        allUpdateTimes: locationUpdateTimes,
+        elementExists: !!element,
+        textElementExists: !!textElement
+      });
+    }
+    
+    if (element && textElement) {
+      if (updateTime) {
+        textElement.textContent = updateTime;
+        
+        // 拠点名を表示（LOCATION_NAMES_CLIENTが定義されている場合はそれを使用）
+        if (locationNameElement) {
+          const locationName = (typeof LOCATION_NAMES_CLIENT !== 'undefined' ? 
+            LOCATION_NAMES_CLIENT[location] : location) || location;
+          locationNameElement.textContent = `${locationName} `;
+        }
+        
+        element.style.display = 'flex';
+      } else {
+        element.style.display = 'none';
+      }
+    }
+  }
+
+  // 監査データを更新
+  function refreshAuditData() {
+    const auditSheet = document.getElementById('auditSheet').value;
+    if (!auditSheet) {
+      showPopupMessage('監査シートが選択されていません');
+      return;
+    }
+
+    const refreshButton = document.getElementById('refreshAuditButton');
+    
+    // ボタンのローディング状態を設定
+    if (refreshButton) {
+      refreshButton.classList.add('loading');
+      refreshButton.disabled = true;
+    }
+
+    showDebugInfo('監査データ手動更新開始', { auditSheet });
+    
+    const errorDiv = document.getElementById('error');
+    const tableContainer = document.getElementById('tableContainer');
+    const loadingDiv = document.getElementById('loading');
+
+    loadingDiv.style.display = 'block';
+    errorDiv.textContent = '';
+    tableContainer.innerHTML = '';
+
+    try {
+      google.script.run
+        .withSuccessHandler(function(response) {
+          loadingDiv.style.display = 'none';
+          
+          // ボタンのローディング状態を解除
+          if (refreshButton) {
+            refreshButton.classList.remove('loading');
+            refreshButton.disabled = false;
+          }
+          
+          if (response.success) {
+            // 監査データの場合、ヘッダー行を調整
+            let adjustedData = response.data;
+            if (response.metadata && response.metadata.isAuditData && response.metadata.headerRowIndex >= 0) {
+              const headerRowIndex = response.metadata.headerRowIndex;
+              if (headerRowIndex < response.data.length) {
+                // ヘッダー行を先頭に移動
+                const headerRow = response.data[headerRowIndex];
+                const dataRows = response.data.slice(headerRowIndex + 1);
+                adjustedData = [headerRow, ...dataRows];
+                
+                showDebugInfo('監査データのヘッダー行を調整（更新時）', {
+                  originalHeaderRowIndex: headerRowIndex,
+                  adjustedDataLength: adjustedData.length,
+                  headerRow: headerRow
+                });
+              }
+            }
+            
+            displayData(adjustedData, 'all', 'audit');
+            errorDiv.textContent = '';
+            showPopupMessage('監査データを更新しました');
+            
+            // 最終更新時刻を表示（監査シートごと）
+            updateLastUpdateTime('lastUpdateTimeAudit', 'lastUpdateTimeAuditText', auditSheet);
+            
+            if (typeof showPopupMessage === 'function') {
+              showPopupMessage(`${response.metadata.sheetType}を更新しました`);
+            }
+          } else {
+            errorDiv.textContent = `監査データの取得に失敗しました: ${response.error}`;
+            tableContainer.innerHTML = '';
+          }
+          
+          if (response.logs && DEBUG_MODE) {
+            showServerLogs(response.logs);
+          }
+        })
+        .withFailureHandler(function(error) {
+          loadingDiv.style.display = 'none';
+          
+          // ボタンのローディング状態を解除
+          if (refreshButton) {
+            refreshButton.classList.remove('loading');
+            refreshButton.disabled = false;
+          }
+          
+          errorDiv.textContent = `監査データの取得中にエラーが発生しました: ${error}`;
+          tableContainer.innerHTML = '';
+        })
+        .getDestinationSheetData(auditSheet, 'all');
+    } catch (error) {
+      loadingDiv.style.display = 'none';
+      
+      // ボタンのローディング状態を解除
+      if (refreshButton) {
+        refreshButton.classList.remove('loading');
+        refreshButton.disabled = false;
+      }
+      
+      errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
+      tableContainer.innerHTML = '';
+    }
+  }
+
+  // サマリーデータを更新
+  function refreshSummaryData() {
+    const refreshButton = document.getElementById('refreshSummaryButton');
+    
+    // ボタンのローディング状態を設定
+    if (refreshButton) {
+      refreshButton.classList.add('loading');
+      refreshButton.disabled = true;
+    }
+
+    showDebugInfo('サマリーデータ手動更新開始', {});
+    
+    const errorDiv = document.getElementById('error');
+    const tableContainer = document.getElementById('tableContainer');
+    const loadingDiv = document.getElementById('loading');
+
+    loadingDiv.style.display = 'block';
+    errorDiv.textContent = '';
+    tableContainer.innerHTML = '';
+
+    try {
+      google.script.run
+        .withSuccessHandler(function(response) {
+          loadingDiv.style.display = 'none';
+          
+          // ボタンのローディング状態を解除
+          if (refreshButton) {
+            refreshButton.classList.remove('loading');
+            refreshButton.disabled = false;
+          }
+          
+          if (!response) {
+            errorDiv.textContent = 'エラーが発生しました : スプレッドシート内の日時の表示形式を"書式なし"に変更してください';
+            tableContainer.innerHTML = '';
+            return;
+          }
+          
+          if (response.success) {
+            displayData(response.data, 'all', 'summary');
+            errorDiv.textContent = '';
+            showPopupMessage('サマリーデータを更新しました');
+            
+            // 最終更新時刻を表示
+            updateLastUpdateTime('lastUpdateTimeSummary', 'lastUpdateTimeSummaryText');
+          } else {
+            const errorMessage = response.error || '不明なエラーが発生しました';
+            errorDiv.textContent = `サマリーデータの取得に失敗しました: ${errorMessage}`;
+            tableContainer.innerHTML = '';
+          }
+          
+          if (response.logs && DEBUG_MODE) {
+            showServerLogs(response.logs);
+          }
+        })
+        .withFailureHandler(function(error) {
+          loadingDiv.style.display = 'none';
+          
+          // ボタンのローディング状態を解除
+          if (refreshButton) {
+            refreshButton.classList.remove('loading');
+            refreshButton.disabled = false;
+          }
+          
+          errorDiv.textContent = `サマリーデータの取得中にエラーが発生しました: ${error}`;
+          tableContainer.innerHTML = '';
+        })
+        .getDestinationSheetData('サマリー', 'all');
+    } catch (error) {
+      loadingDiv.style.display = 'none';
+      
+      // ボタンのローディング状態を解除
+      if (refreshButton) {
+        refreshButton.classList.remove('loading');
+        refreshButton.disabled = false;
+      }
+      
+      errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
+      tableContainer.innerHTML = '';
+    }
+  }
+
   // 現在選択されている拠点のデータを更新
   function refreshCurrentLocation() {
     if (!currentLocation) {
@@ -713,6 +1073,9 @@
             displayData(response.data, queryType);
             errorDiv.textContent = '';
             showPopupMessage('データを更新しました');
+            
+            // 最終更新時刻を表示（拠点ごと）
+            updateLastUpdateTime('lastUpdateTime', 'lastUpdateTimeText', currentLocation);
           } else {
             const errorMessage = response.error || '不明なエラーが発生しました';
             showDebugInfo('更新エラー発生', { error: errorMessage });
@@ -2507,6 +2870,8 @@
   // 監査シート選択の表示/非表示制御
   function updateAuditSheetVisibility(sheetType) {
     const auditSheetSelector = document.querySelector('.audit-sheet-selector');
+    const refreshAuditButton = document.getElementById('refreshAuditButton');
+    const lastUpdateTimeAudit = document.getElementById('lastUpdateTimeAudit');
     
     if (sheetType === 'audit') {
       auditSheetSelector.style.display = 'block';
@@ -2514,6 +2879,25 @@
       auditSheetSelector.style.display = 'none';
       // 監査シート選択をリセット
       document.getElementById('auditSheet').value = '';
+      // 更新ボタンを無効化
+      if (refreshAuditButton) {
+        refreshAuditButton.disabled = true;
+      }
+      // 監査データの時刻表示を隠す
+      if (lastUpdateTimeAudit) {
+        lastUpdateTimeAudit.style.display = 'none';
+      }
+    }
+  }
+
+  // サマリー更新セクションの表示/非表示制御
+  function updateSummaryRefreshVisibility(sheetType) {
+    const summaryRefreshSelector = document.querySelector('.summary-refresh-selector');
+    
+    if (sheetType === 'summary') {
+      summaryRefreshSelector.style.display = 'block';
+    } else {
+      summaryRefreshSelector.style.display = 'none';
     }
   }
   
@@ -2537,6 +2921,7 @@
     // 各セクションの表示/非表示を制御
     updateLocationVisibility(sheetType);
     updateAuditSheetVisibility(sheetType);
+    updateSummaryRefreshVisibility(sheetType);
     updateQuerySelectorVisibility(sheetType);
     
     // テーブルをクリア
@@ -2556,9 +2941,26 @@
   
   // 監査シート変更イベントハンドラー
   function handleAuditSheetChange() {
-    showDebugInfo('監査シート変更', { 
-      auditSheet: document.getElementById('auditSheet').value 
-    });
+    const auditSheet = document.getElementById('auditSheet').value;
+    const refreshAuditButton = document.getElementById('refreshAuditButton');
+    
+    showDebugInfo('監査シート変更', { auditSheet });
+    
+    // 監査シートが選択されたら更新ボタンを有効化
+    if (refreshAuditButton) {
+      refreshAuditButton.disabled = !auditSheet;
+    }
+    
+    // 該当監査シートの最終更新時刻を表示
+    if (auditSheet) {
+      displayAuditSheetUpdateTime(auditSheet);
+    } else {
+      // 監査シートが選択されていない場合は時刻表示を隠す
+      const lastUpdateElement = document.getElementById('lastUpdateTimeAudit');
+      if (lastUpdateElement) {
+        lastUpdateElement.style.display = 'none';
+      }
+    }
     
     loadDataBasedOnSheetType();
   }
@@ -2600,8 +3002,29 @@
           loadingDiv.style.display = 'none';
           
           if (response.success) {
-            displayData(response.data, 'all', 'audit');
+            // 監査データの場合、ヘッダー行を調整
+            let adjustedData = response.data;
+            if (response.metadata && response.metadata.isAuditData && response.metadata.headerRowIndex >= 0) {
+              const headerRowIndex = response.metadata.headerRowIndex;
+              if (headerRowIndex < response.data.length) {
+                // ヘッダー行を先頭に移動
+                const headerRow = response.data[headerRowIndex];
+                const dataRows = response.data.slice(headerRowIndex + 1);
+                adjustedData = [headerRow, ...dataRows];
+                
+                showDebugInfo('監査データのヘッダー行を調整', {
+                  originalHeaderRowIndex: headerRowIndex,
+                  adjustedDataLength: adjustedData.length,
+                  headerRow: headerRow
+                });
+              }
+            }
+            
+            displayData(adjustedData, 'all', 'audit');
             errorDiv.textContent = '';
+            
+            // 最終更新時刻を表示（監査シートごと）
+            updateLastUpdateTime('lastUpdateTimeAudit', 'lastUpdateTimeAuditText', auditSheet);
             
             if (typeof showPopupMessage === 'function') {
               showPopupMessage(`${response.metadata.sheetType}を読み込みました`);
@@ -2678,6 +3101,9 @@
             if (response.success) {
               displayData(response.data, 'all', 'summary');
               errorDiv.textContent = '';
+              
+              // 最終更新時刻を表示
+              updateLastUpdateTime('lastUpdateTimeSummary', 'lastUpdateTimeSummaryText');
               
               if (typeof showPopupMessage === 'function') {
                 showPopupMessage('サマリーデータを読み込みました');

@@ -93,6 +93,12 @@
           
           if (response && response.success) {
             preloadedData[location] = response;
+            
+            // バックグラウンド読み込み時も更新時刻を記録（表示は行わない）
+            if (typeof recordLocationUpdateTime === 'function') {
+              recordLocationUpdateTime(location);
+            }
+            
             if (DEBUG_MODE && typeof showDebugInfo === 'function') {
               showDebugInfo('バックグラウンド読み込み成功', { 
                 location, 
@@ -181,6 +187,12 @@
       
       if (preloadedResponse && preloadedResponse.success) {
         displayData(preloadedResponse.data, queryType);
+        
+        // 最終更新時刻を表示（プリロードデータ使用時は既存の時刻を表示）
+        if (typeof displayLocationUpdateTime === 'function') {
+          displayLocationUpdateTime(location);
+        }
+        
         if (typeof showPopupMessage === 'function') {
           showPopupMessage('プリロードされたデータを表示しました');
         }

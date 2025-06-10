@@ -25,6 +25,10 @@
         <i class="fas fa-sync-alt"></i>
         更新
       </button>
+      <div id="lastUpdateTime" class="last-update-time" style="display: none;">
+        <i class="fas fa-clock"></i>
+        <span id="lastUpdateLocationName"></span>最終更新: <span id="lastUpdateTimeText">-</span>
+      </div>
     </div>
     
     <!-- 監査データ用の詳細選択 -->
@@ -36,8 +40,29 @@
         <option value="神戸">神戸</option>
         <option value="姫路">姫路</option>
       </select>
+      <button id="refreshAuditButton" class="refresh-button" onclick="refreshAuditData()" disabled>
+        <i class="fas fa-sync-alt"></i>
+        更新
+      </button>
+      <div id="lastUpdateTimeAudit" class="last-update-time" style="display: none;">
+        <i class="fas fa-clock"></i>
+        <span id="lastUpdateLocationNameAudit"></span>最終更新: <span id="lastUpdateTimeAuditText">-</span>
+      </div>
     </div>
     
+    <!-- サマリーデータ用の更新ボタン -->
+    <div class="summary-refresh-selector" style="display: none;">
+      <label>サマリーデータ：</label>
+      <button id="refreshSummaryButton" class="refresh-button" onclick="refreshSummaryData()">
+        <i class="fas fa-sync-alt"></i>
+        更新
+      </button>
+      <div id="lastUpdateTimeSummary" class="last-update-time">
+        <i class="fas fa-clock"></i>
+        最終更新: <span id="lastUpdateTimeSummaryText">-</span>
+      </div>
+    </div>
+
     <div class="query-selector" style="display: none;">
       <label>表示内容：</label>
       <div class="radio-group">

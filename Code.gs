@@ -896,12 +896,25 @@ function getDestinationSheetData(sheetName, queryType) {
       throw new Error('シートにデータがありません。');
     }
     
+    // 監査データの場合は3行目をヘッダーとして扱う
+    const isAuditData = sheetName === '大阪' || sheetName === '神戸' || sheetName === '姫路';
+    let dataStartRow = 1;
+    let headerRowIndex = 0;
+    
+    if (isAuditData) {
+      // 監査データの場合、ヘッダー行は3行目
+      headerRowIndex = 2; // 0-based index
+      dataStartRow = 1; // 1行目から取得して、フロントエンド側でヘッダー行を調整
+    }
+    
     addLog('データ読み込み開始', {
-      range: `A1:${String.fromCharCode(64 + lastColumn)}${lastRow}`,
-      totalCells: lastRow * lastColumn
+      range: `A${dataStartRow}:${String.fromCharCode(64 + lastColumn)}${lastRow}`,
+      totalCells: (lastRow - dataStartRow + 1) * lastColumn,
+      isAuditData: isAuditData,
+      headerRowIndex: headerRowIndex
     });
     
-    const range = sheet.getRange(1, 1, lastRow, lastColumn);
+    const range = sheet.getRange(dataStartRow, 1, lastRow - dataStartRow + 1, lastColumn);
     const data = range.getValues();
     
     addLog('データ読み込み完了', {
@@ -970,7 +983,9 @@ function getDestinationSheetData(sheetName, queryType) {
         dataSize: data.length,
         dateColumnCount: dateColumnCount,
         errorCellCount: errorCellCount,
-        availableSheets: sheetNames
+        availableSheets: sheetNames,
+        isAuditData: isAuditData,
+        headerRowIndex: headerRowIndex
       }
     };
     

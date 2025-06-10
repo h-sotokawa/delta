@@ -3,7 +3,7 @@
   /* ========================================
      スプレッドシートビューアー専用スタイル
      ======================================== */
-  .location-selector, .query-selector, .sheet-type-selector, .audit-sheet-selector {
+  .location-selector, .query-selector, .sheet-type-selector, .audit-sheet-selector, .summary-refresh-selector {
     margin: 24px 0;
     padding: 20px 24px;
     background: var(--bg-accent);
@@ -17,7 +17,7 @@
     position: relative;
   }
 
-  .location-selector::before, .query-selector::before, .sheet-type-selector::before, .audit-sheet-selector::before {
+  .location-selector::before, .query-selector::before, .sheet-type-selector::before, .audit-sheet-selector::before, .summary-refresh-selector::before {
     content: '';
     position: absolute;
     top: 0;
@@ -27,12 +27,12 @@
     background: var(--highlight-color);
   }
 
-  .location-selector:hover, .query-selector:hover, .sheet-type-selector:hover, .audit-sheet-selector:hover {
+  .location-selector:hover, .query-selector:hover, .sheet-type-selector:hover, .audit-sheet-selector:hover, .summary-refresh-selector:hover {
     box-shadow: var(--shadow-md);
     transform: translateY(-1px);
   }
 
-  .location-selector label, .query-selector label, .sheet-type-selector label, .audit-sheet-selector label {
+  .location-selector label, .query-selector label, .sheet-type-selector label, .audit-sheet-selector label, .summary-refresh-selector label {
     font-weight: 500;
     margin-right: 12px;
     color: var(--text-primary);
@@ -40,7 +40,7 @@
     letter-spacing: 0.025em;
   }
 
-  .location-selector select, .query-selector select, .sheet-type-selector select, .audit-sheet-selector select {
+  .location-selector select, .query-selector select, .sheet-type-selector select, .audit-sheet-selector select, .summary-refresh-selector select {
     padding: 10px 14px;
     font-size: 14px;
     border: 1px solid var(--border-accent);
@@ -52,7 +52,7 @@
     font-weight: 500;
   }
 
-  .location-selector select:focus, .query-selector select:focus, .sheet-type-selector select:focus, .audit-sheet-selector select:focus {
+  .location-selector select:focus, .query-selector select:focus, .sheet-type-selector select:focus, .audit-sheet-selector select:focus, .summary-refresh-selector select:focus {
     outline: none;
     border-color: var(--highlight-color);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -105,6 +105,26 @@
   @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+  }
+
+  /* 最終更新時刻表示 */
+  .last-update-time {
+    margin-left: 16px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .last-update-time i {
+    color: var(--highlight-color);
+    font-size: 12px;
+  }
+
+  .last-update-time span {
+    font-weight: 500;
+    color: var(--text-primary);
   }
 
   .radio-group {
