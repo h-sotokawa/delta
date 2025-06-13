@@ -9,6 +9,9 @@ const FORM_FOLDER_NAME = '代替機管理システム_自動生成フォーム';
 // QRコード保存先フォルダID（スクリプトプロパティで管理）
 const QR_CODE_FOLDER_KEY = 'QR_CODE_FOLDER_ID';
 
+// スプレッドシート設定
+const SPREADSHEET_ID_DESTINATION_KEY = 'SPREADSHEET_ID_DESTINATION';
+
 // 拠点別フォルダーID管理
 const LOCATION_FOLDER_KEYS = {
   'osaka-desktop': 'OSAKA_DESKTOP_FOLDER_ID',
@@ -17,6 +20,24 @@ const LOCATION_FOLDER_KEYS = {
   'himeji-terminal': 'HIMEJI_TERMINAL_FOLDER_ID',
   'osaka-printer': 'OSAKA_PRINTER_FOLDER_ID',
   'hyogo-printer': 'HYOGO_PRINTER_FOLDER_ID'
+};
+
+// 拠点別シート名マッピング
+const LOCATION_SHEET_NAMES = {
+  'osaka-desktop': '大阪',
+  'osaka-server': '大阪',
+  'kobe-terminal': '神戸',
+  'himeji-terminal': '姫路'
+};
+
+// スプレッドシート列マッピング（フィールド名 → 列名の候補リスト）
+const SPREADSHEET_COLUMN_MAPPING = {
+  'assetNumber': ['資産番号', 'アセット番号', 'Asset'],
+  'modelNumber': ['型番', 'モデル', 'Model'],
+  'serial': ['シリアル', 'シリアル番号', 'Serial', '製造番号'],
+  'software': ['ソフト', 'ソフトウェア', 'Software'],
+  'os': ['OS', 'オペレーティングシステム', 'Operating System'],
+  'locationNumber': ['拠点管理番号', '拠点コード', '拠点番号', 'Location Code']
 };
 
 // デバイスタイプ別URL管理
@@ -30,6 +51,114 @@ function addFormLog(message, data = null) {
   if (DEBUG) {
     const timestamp = new Date().toISOString();
     console.log(`[FORM-CREATION ${timestamp}] ${message}`, data);
+  }
+}
+
+/**
+ * ヘッダー行から列インデックスを検出する関数
+ * @param {Array} headerRow - ヘッダー行データ
+ * @return {Object} 列名とインデックスのマッピング
+ */
+function detectColumnIndexes(headerRow) {
+  const columnIndexes = {};
+  
+  if (!headerRow || !Array.isArray(headerRow)) {
+    addFormLog('ヘッダー行が無効', { headerRow });
+    return columnIndexes;
+  }
+  
+  // 各フィールドの列インデックスを検索
+  Object.keys(SPREADSHEET_COLUMN_MAPPING).forEach(fieldName => {
+    const candidateNames = SPREADSHEET_COLUMN_MAPPING[fieldName];
+    let foundIndex = -1;
+    
+    for (let i = 0; i < headerRow.length; i++) {
+      const headerValue = headerRow[i] ? headerRow[i].toString().trim() : '';
+      
+      // 候補名との一致を確認
+      for (const candidateName of candidateNames) {
+        if (headerValue === candidateName) {
+          foundIndex = i;
+          break;
+        }
+      }
+      
+      if (foundIndex !== -1) break;
+    }
+    
+    if (foundIndex !== -1) {
+      columnIndexes[fieldName] = foundIndex;
+    }
+  });
+  
+  addFormLog('列インデックス検出結果', {
+    detectedColumns: columnIndexes,
+    headerRowLength: headerRow.length,
+    totalMappings: Object.keys(SPREADSHEET_COLUMN_MAPPING).length
+  });
+  
+  return columnIndexes;
+}
+
+/**
+ * ヘッダー行を検出する関数
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - シートオブジェクト
+ * @return {Object} ヘッダー情報
+ */
+function detectHeaderRow(sheet) {
+  const lastRow = sheet.getLastRow();
+  const lastColumn = sheet.getLastColumn();
+  
+  if (lastRow === 0 || lastColumn === 0) {
+    return {
+      found: false,
+      error: 'シートにデータがありません'
+    };
+  }
+  
+  // 1行目と3行目をチェック
+  const candidateRows = [1, 3].filter(rowNum => rowNum <= lastRow);
+  let bestHeaderResult = null;
+  let bestScore = -1;
+  
+  for (const rowNum of candidateRows) {
+    const rowData = sheet.getRange(rowNum, 1, 1, lastColumn).getValues()[0];
+    const columnIndexes = detectColumnIndexes(rowData);
+    const score = Object.keys(columnIndexes).length;
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestHeaderResult = {
+        rowIndex: rowNum,
+        rowData: rowData,
+        columnIndexes: columnIndexes,
+        score: score
+      };
+    }
+  }
+  
+  if (bestHeaderResult && bestScore > 0) {
+    addFormLog('ヘッダー行検出成功', {
+      rowIndex: bestHeaderResult.rowIndex,
+      score: bestScore,
+      detectedColumns: Object.keys(bestHeaderResult.columnIndexes)
+    });
+    
+    return {
+      found: true,
+      ...bestHeaderResult
+    };
+  } else {
+    addFormLog('ヘッダー行検出失敗', {
+      candidateRows,
+      lastRow,
+      lastColumn
+    });
+    
+    return {
+      found: false,
+      error: '有効なヘッダー行が見つかりませんでした'
+    };
   }
 }
 
@@ -236,10 +365,66 @@ function createGoogleForm(formConfig) {
     
     // 回答先スプレッドシートは作成しない（要求に応じて削除）
     
+    // スプレッドシートに行を追加
+    let spreadsheetResult = null;
+    try {
+      const additionalData = {
+        formId: form.getId(),
+        createdDate: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy/MM/dd HH:mm:ss'),
+        formUrl: form.getEditUrl(),
+        publicUrl: form.getPublishedUrl()
+      };
+      
+      // フロントエンドからのformConfigを、スプレッドシート用のformDataに変換
+      const spreadsheetFormData = {
+        locationNumber: formConfig.locationNumber,
+        assetNumber: formConfig.attributes?.assetNumber || '',
+        modelNumber: formConfig.attributes?.model || '',
+        serial: formConfig.attributes?.serial || '',
+        software: formConfig.attributes?.software || '',
+        os: formConfig.attributes?.os || ''
+      };
+      
+      addFormLog('スプレッドシート用データ変換', {
+        originalFormConfig: {
+          locationNumber: formConfig.locationNumber,
+          attributes: formConfig.attributes
+        },
+        convertedSpreadsheetData: spreadsheetFormData
+      });
+      
+      spreadsheetResult = addRowToSpreadsheet(formConfig.location, spreadsheetFormData, additionalData);
+      
+      if (spreadsheetResult.success) {
+        addFormLog('スプレッドシート連携成功', {
+          sheetName: spreadsheetResult.sheetName,
+          spreadsheetId: spreadsheetResult.spreadsheetId
+        });
+      } else {
+        addFormLog('スプレッドシート連携失敗', {
+          error: spreadsheetResult.error,
+          location: formConfig.location
+        });
+      }
+      
+    } catch (spreadsheetError) {
+      addFormLog('スプレッドシート連携処理でエラー', {
+        error: spreadsheetError.toString(),
+        location: formConfig.location,
+        formId: form.getId()
+      });
+      // スプレッドシート連携エラーはフォーム作成自体は継続
+      spreadsheetResult = {
+        success: false,
+        error: spreadsheetError.toString()
+      };
+    }
+    
     addFormLog('フォーム作成成功', {
       formId: form.getId(),
       formUrl: form.getEditUrl(),
-      publicUrl: form.getPublishedUrl()
+      publicUrl: form.getPublishedUrl(),
+      spreadsheetLinked: spreadsheetResult?.success || false
     });
     
     return {
@@ -269,7 +454,14 @@ function createGoogleForm(formConfig) {
           base64ImageData: qrCodeResult.base64ImageData, // Base64エンコード画像データ
           folderId: qrCodeResult.folderId,
           qrCodeUrl: form.getPublishedUrl() // QRコードが指すフォームURL
-        } : { success: false, error: 'QRコード生成に失敗しました' }
+        } : { success: false, error: 'QRコード生成に失敗しました' },
+        spreadsheet: spreadsheetResult ? {
+          success: spreadsheetResult.success,
+          sheetName: spreadsheetResult.sheetName,
+          spreadsheetId: spreadsheetResult.spreadsheetId,
+          rowData: spreadsheetResult.rowData,
+          error: spreadsheetResult.error
+        } : { success: false, error: 'スプレッドシート連携が実行されませんでした' }
       }
     };
     
@@ -1335,7 +1527,15 @@ function testFormWithQRCode(testLocationNumber = 'QRTest_001') {
       description: 'QRコード生成テスト用のフォームです',
       locationNumber: testLocationNumber,
       deviceType: 'terminal',
-      location: 'osaka-desktop'
+      location: 'osaka-desktop',
+      // テスト用attributes（スプレッドシート連携テスト）
+      attributes: {
+        assetNumber: 'QR-ASSET-001',
+        model: 'QR-MODEL-123',
+        serial: 'QR-SER789012',
+        software: 'QRテストソフト',
+        os: 'Windows 11'
+      }
     };
     
     console.log('フォーム作成開始:', formConfig);
@@ -1441,7 +1641,15 @@ function testFormConfirmationMessage(testLocationNumber = 'MsgTest_001', testDev
       description: '確認メッセージのテスト用フォーム',
       locationNumber: testLocationNumber,
       deviceType: testDeviceType,
-      location: 'osaka-desktop'
+      location: 'osaka-desktop',
+      // テスト用attributes（スプレッドシート連携テスト）
+      attributes: {
+        assetNumber: 'MSG-ASSET-001',
+        model: 'MSG-MODEL-123',
+        serial: 'MSG-SER345678',
+        software: 'メッセージテストソフト',
+        os: 'Windows 11'
+      }
     };
     
     console.log('フォーム作成開始:', formConfig);
@@ -1708,4 +1916,735 @@ function testLocationNumberValidation() {
     total: testCases.length,
     message: `拠点管理番号検証テスト完了: ${passed}/${testCases.length}件成功`
   };
-} 
+}
+
+/**
+ * スプレッドシートに行を追加する関数
+ * @param {string} location - 拠点識別子
+ * @param {Object} formData - フォームデータ
+ * @param {Object} additionalData - 追加データ
+ */
+function addRowToSpreadsheet(location, formData, additionalData = {}) {
+  addFormLog('スプレッドシート行追加開始', { location, formData, additionalData });
+  
+  try {
+    // スプレッドシートIDを取得
+    const properties = PropertiesService.getScriptProperties();
+    const spreadsheetId = properties.getProperty(SPREADSHEET_ID_DESTINATION_KEY);
+    
+    if (!spreadsheetId) {
+      throw new Error('SPREADSHEET_ID_DESTINATIONが設定されていません');
+    }
+    
+    // スプレッドシートを開く
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    
+    // 拠点別シート名を取得
+    const sheetName = LOCATION_SHEET_NAMES[location];
+    if (!sheetName) {
+      throw new Error(`未知の拠点: ${location}`);
+    }
+    
+    // シートを取得（存在しない場合はエラー）
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet) {
+      throw new Error(`シート「${sheetName}」が見つかりません。事前にシートを作成してください。`);
+    }
+    
+    // ヘッダー行を動的に検出
+    const headerInfo = detectHeaderRow(sheet);
+    
+    if (!headerInfo.found) {
+      throw new Error(`シート「${sheetName}」でヘッダー行を検出できませんでした: ${headerInfo.error}`);
+    }
+    
+    addFormLog('ヘッダー行検出完了', {
+      sheetName,
+      headerRowIndex: headerInfo.rowIndex,
+      detectedColumns: Object.keys(headerInfo.columnIndexes),
+      totalColumns: headerInfo.rowData.length
+    });
+    
+    // 行データを作成（動的列インデックス使用）
+    const rowData = createRowData(formData, additionalData, headerInfo.columnIndexes, headerInfo.rowData.length);
+    
+    // 行を追加
+    sheet.appendRow(rowData);
+    
+         addFormLog('スプレッドシート行追加完了', {
+       sheetName,
+       rowDataLength: rowData.length,
+       lastRowAfter: sheet.getLastRow()
+     });
+     
+     return {
+       success: true,
+       sheetName: sheetName,
+       spreadsheetId: spreadsheetId,
+       rowData: rowData,
+       headerRowIndex: headerInfo.rowIndex,
+       detectedColumns: Object.keys(headerInfo.columnIndexes)
+     };
+    
+  } catch (error) {
+    addFormLog('スプレッドシート行追加エラー', {
+      location,
+      error: error.toString(),
+      stack: error.stack
+    });
+    
+    // エラーが発生してもフォーム作成は継続
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * 行データを作成する関数（動的列対応）
+ * @param {Object} formData - フォームデータ
+ * @param {Object} additionalData - 追加データ
+ * @param {Object} columnIndexes - 列インデックスマッピング
+ * @param {number} totalColumns - 総列数
+ */
+function createRowData(formData, additionalData, columnIndexes, totalColumns) {
+  try {
+    // 検出された列数に対応するデータ配列を作成（すべて空文字で初期化）
+    const rowData = new Array(totalColumns).fill('');
+    
+    // 設定されたデータの記録用
+    const setFields = [];
+    
+    // 各フィールドのデータを対応する列に設定
+    Object.keys(SPREADSHEET_COLUMN_MAPPING).forEach(fieldName => {
+      const columnIndex = columnIndexes[fieldName];
+      const fieldValue = formData[fieldName];
+      
+      if (columnIndex !== undefined && fieldValue) {
+        rowData[columnIndex] = fieldValue;
+        setFields.push({
+          field: fieldName,
+          value: fieldValue,
+          columnIndex: columnIndex
+        });
+      }
+    });
+    
+    addFormLog('動的行データ作成完了', {
+      totalColumns: totalColumns,
+      rowDataLength: rowData.length,
+      detectedColumns: Object.keys(columnIndexes).length,
+      setFields: setFields,
+      columnMapping: columnIndexes
+    });
+    
+    return rowData;
+    
+  } catch (error) {
+    addFormLog('行データ作成エラー', {
+      error: error.toString(),
+      formData,
+      additionalData,
+      columnIndexes,
+      totalColumns
+    });
+    throw error;
+  }
+}
+
+/**
+ * スプレッドシートIDを設定する関数（管理者用）
+ * @param {string} spreadsheetId - 設定するスプレッドシートID
+ */
+function setSpreadsheetDestination(spreadsheetId) {
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    
+    if (spreadsheetId) {
+      // スプレッドシートの存在確認
+      try {
+        SpreadsheetApp.openById(spreadsheetId);
+        properties.setProperty(SPREADSHEET_ID_DESTINATION_KEY, spreadsheetId);
+        addFormLog('スプレッドシートID設定', { spreadsheetId });
+      } catch (spreadsheetError) {
+        throw new Error('指定されたスプレッドシートIDが無効です: ' + spreadsheetId);
+      }
+    } else {
+      // スプレッドシートIDをクリア
+      properties.deleteProperty(SPREADSHEET_ID_DESTINATION_KEY);
+      addFormLog('スプレッドシートID削除');
+    }
+    
+    return {
+      success: true,
+      message: spreadsheetId ? 'スプレッドシートIDを設定しました' : 'スプレッドシートIDを削除しました',
+      spreadsheetId: spreadsheetId
+    };
+    
+  } catch (error) {
+    addFormLog('スプレッドシートID設定エラー', {
+      error: error.toString(),
+      spreadsheetId
+    });
+    
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * 現在のスプレッドシート設定を取得する関数
+ */
+function getSpreadsheetSettings() {
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    const spreadsheetId = properties.getProperty(SPREADSHEET_ID_DESTINATION_KEY);
+    
+    let spreadsheetInfo = null;
+    if (spreadsheetId) {
+      try {
+        const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+        spreadsheetInfo = {
+          id: spreadsheetId,
+          name: spreadsheet.getName(),
+          url: spreadsheet.getUrl(),
+          sheets: spreadsheet.getSheets().map(sheet => ({
+            name: sheet.getName(),
+            rows: sheet.getLastRow(),
+            columns: sheet.getLastColumn()
+          }))
+        };
+      } catch (spreadsheetError) {
+        addFormLog('スプレッドシート情報取得エラー', { spreadsheetId, error: spreadsheetError.toString() });
+      }
+    }
+    
+    return {
+      success: true,
+      settings: {
+        spreadsheetId: spreadsheetId,
+        spreadsheetInfo: spreadsheetInfo,
+        locationSheetNames: LOCATION_SHEET_NAMES,
+        columnMapping: SPREADSHEET_COLUMN_MAPPING
+      }
+    };
+    
+  } catch (error) {
+    addFormLog('スプレッドシート設定取得エラー', {
+      error: error.toString()
+    });
+    
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * スプレッドシート連携機能のテスト関数
+ * @param {string} testLocationNumber - テスト用拠点管理番号
+ * @param {string} testLocation - テスト用拠点識別子
+ */
+function testSpreadsheetIntegration(testLocationNumber = 'SpreadTest_001', testLocation = 'osaka-desktop') {
+  console.log('=== スプレッドシート連携テスト開始 ===');
+  
+  try {
+    // スプレッドシート設定の確認
+    const spreadsheetSettings = getSpreadsheetSettings();
+    console.log('スプレッドシート設定確認:', spreadsheetSettings);
+    
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      console.warn('⚠️ スプレッドシートIDが設定されていません。');
+      console.log('設定例:');
+      console.log('setSpreadsheetDestination("YOUR_SPREADSHEET_ID")');
+      return {
+        success: false,
+        message: 'スプレッドシートIDが設定されていません',
+        error: 'SPREADSHEET_ID_DESTINATION が設定されていません'
+      };
+    }
+    
+             // テスト用フォームデータ
+    const testFormData = {
+      title: `スプレッドシート連携テスト_${testLocationNumber}`,
+      description: 'スプレッドシート連携機能のテスト用フォーム',
+      locationNumber: testLocationNumber,
+      deviceType: 'terminal',
+      location: testLocation,
+      // attributesオブジェクトに設定（フロントエンドと同じ構造）
+      attributes: {
+        assetNumber: 'ASSET-TEST-001',
+        model: 'MODEL-TEST-123',
+        serial: 'SER123456789',
+        software: 'テストソフトウェア',
+        os: 'Windows 11'
+      }
+    };
+    
+    console.log('フォーム作成開始:', testFormData);
+    
+    // フォーム作成（スプレッドシート連携含む）
+    const result = createGoogleForm(testFormData);
+    
+    if (result.success) {
+      console.log('✅ フォーム作成成功');
+      console.log('📋 フォーム情報:', {
+        formId: result.data.formId,
+        title: result.data.title,
+        publicUrl: result.data.publicUrl
+      });
+      
+      // スプレッドシート連携結果の確認
+      if (result.data.spreadsheet?.success) {
+        console.log('✅ スプレッドシート連携成功');
+        console.log('📊 スプレッドシート情報:', {
+          sheetName: result.data.spreadsheet.sheetName,
+          spreadsheetId: result.data.spreadsheet.spreadsheetId,
+          rowDataLength: result.data.spreadsheet.rowData?.length
+        });
+        
+        // 実際のスプレッドシートを確認
+        try {
+          const spreadsheet = SpreadsheetApp.openById(result.data.spreadsheet.spreadsheetId);
+          const sheet = spreadsheet.getSheetByName(result.data.spreadsheet.sheetName);
+          
+          if (sheet) {
+            const lastRow = sheet.getLastRow();
+            const lastColumn = sheet.getLastColumn();
+            const addedRowData = sheet.getRange(lastRow, 1, 1, lastColumn).getValues()[0];
+            
+            console.log('📋 追加された行データ:');
+            if (result.data.spreadsheet.detectedColumns) {
+              result.data.spreadsheet.detectedColumns.forEach(fieldName => {
+                const columnMapping = SPREADSHEET_COLUMN_MAPPING[fieldName];
+                if (columnMapping) {
+                  console.log(`  ${fieldName} (${columnMapping[0]}): データあり`);
+                }
+              });
+            }
+            
+            console.log('📊 シート統計:', {
+              totalRows: lastRow,
+              totalColumns: lastColumn,
+              sheetName: sheet.getName(),
+              detectedColumns: result.data.spreadsheet.detectedColumns?.length || 0
+            });
+          }
+          
+        } catch (verifyError) {
+          console.error('スプレッドシート確認エラー:', verifyError.toString());
+        }
+        
+        return {
+          success: true,
+          message: 'スプレッドシート連携テスト完了',
+          formData: {
+            formId: result.data.formId,
+            publicUrl: result.data.publicUrl
+          },
+          spreadsheetData: {
+            sheetName: result.data.spreadsheet.sheetName,
+            spreadsheetId: result.data.spreadsheet.spreadsheetId,
+            rowAdded: true
+          }
+        };
+        
+      } else {
+        console.error('❌ スプレッドシート連携失敗:', result.data.spreadsheet?.error);
+        return {
+          success: false,
+          message: 'フォームは作成されましたが、スプレッドシート連携に失敗しました',
+          error: result.data.spreadsheet?.error,
+          formData: {
+            formId: result.data.formId,
+            publicUrl: result.data.publicUrl
+          }
+        };
+      }
+      
+    } else {
+      console.error('❌ フォーム作成失敗:', result.error);
+      return {
+        success: false,
+        message: 'フォーム作成に失敗しました',
+        error: result.error
+      };
+    }
+    
+  } catch (error) {
+    console.error('スプレッドシート連携テストエラー:', error.toString());
+    return {
+      success: false,
+      message: 'テストでエラーが発生しました',
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * フォーム作成とスプレッドシート連携の統合テスト
+ * @param {string} testLocationNumber - テスト用拠点管理番号
+ */
+function testFormWithSpreadsheet(testLocationNumber = 'IntegrationTest_001') {
+  console.log('=== フォーム＋スプレッドシート統合テスト開始 ===');
+  
+  try {
+    // 設定確認
+    const spreadsheetSettings = getSpreadsheetSettings();
+    const qrCodeSettings = getQRCodeFolderSettings();
+    
+    console.log('📊 現在の設定状況:');
+    console.log('  スプレッドシート設定:', spreadsheetSettings.success);
+    console.log('  QRコード設定:', qrCodeSettings.success);
+    
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      console.warn('⚠️ スプレッドシートIDが設定されていません');
+      console.log('設定コマンド例:');
+      console.log('setSpreadsheetDestination("YOUR_SPREADSHEET_ID")');
+    }
+    
+    // 対象拠点をテスト（プリンター関連を除外）
+    const allLocations = Object.keys(LOCATION_SHEET_NAMES);
+    const testResults = [];
+    
+    for (const [index, location] of allLocations.entries()) {
+      console.log(`\n📍 拠点テスト ${index + 1}/${allLocations.length}: ${location} (${LOCATION_SHEET_NAMES[location]})`);
+      
+             const locationTestData = {
+         title: `統合テスト_${location}_${testLocationNumber}`,
+         description: `${LOCATION_SHEET_NAMES[location]}の統合テスト用フォーム`,
+         locationNumber: `${testLocationNumber}_${location}`,
+         deviceType: 'terminal', // すべてterminalに統一
+         location: location,
+         // 必要な列のみ設定
+         assetNumber: `ASSET-${location.toUpperCase()}-${Date.now().toString().slice(-6)}`,
+         modelNumber: `MODEL-${location.toUpperCase()}-TEST`,
+         software: 'テストソフトウェア',
+         os: 'Windows 11'
+       };
+      
+      try {
+        const result = createGoogleForm(locationTestData);
+        
+        testResults.push({
+          location: location,
+          locationName: LOCATION_SHEET_NAMES[location],
+          formCreated: result.success,
+          formId: result.success ? result.data.formId : null,
+          spreadsheetLinked: result.success ? result.data.spreadsheet?.success : false,
+          qrCodeGenerated: result.success ? result.data.qrCode?.success : false,
+          error: result.success ? null : result.error
+        });
+        
+        if (result.success) {
+          console.log(`  ✅ 成功: フォーム作成済み`);
+          console.log(`  📊 スプレッドシート: ${result.data.spreadsheet?.success ? '成功' : '失敗'}`);
+          console.log(`  📱 QRコード: ${result.data.qrCode?.success ? '成功' : '失敗'}`);
+          
+          // スプレッドシート連携失敗の詳細ログ
+          if (!result.data.spreadsheet?.success) {
+            console.log(`    スプレッドシートエラー: ${result.data.spreadsheet?.error}`);
+          }
+        } else {
+          console.log(`  ❌ 失敗: ${result.error}`);
+        }
+        
+        // 間隔を空ける（API制限対策）
+        if (index < allLocations.length - 1) {
+          Utilities.sleep(2000);
+        }
+        
+      } catch (locationError) {
+        console.log(`  💥 拠点テスト例外: ${locationError.toString()}`);
+        testResults.push({
+          location: location,
+          locationName: LOCATION_SHEET_NAMES[location],
+          formCreated: false,
+          error: locationError.toString()
+        });
+      }
+    }
+    
+    // 結果サマリー
+    console.log('\n=== 統合テスト結果サマリー ===');
+    const successCount = testResults.filter(r => r.formCreated).length;
+    const spreadsheetCount = testResults.filter(r => r.spreadsheetLinked).length;
+    const qrCodeCount = testResults.filter(r => r.qrCodeGenerated).length;
+    
+    console.log(`📊 フォーム作成: ${successCount}/${testResults.length}件成功`);
+    console.log(`📊 スプレッドシート連携: ${spreadsheetCount}/${testResults.length}件成功`);
+    console.log(`📊 QRコード生成: ${qrCodeCount}/${testResults.length}件成功`);
+    
+    console.log('\n📋 拠点別結果:');
+    testResults.forEach(result => {
+      const status = result.formCreated ? '✅' : '❌';
+      const sheetStatus = result.spreadsheetLinked ? '📊✅' : '📊❌';
+      console.log(`${status} ${sheetStatus} ${result.location} (${result.locationName})`);
+      if (result.error) {
+        console.log(`    エラー: ${result.error}`);
+      }
+    });
+    
+    return {
+      success: successCount === testResults.length,
+      message: `統合テスト完了: ${successCount}/${testResults.length}件成功`,
+      results: testResults,
+      summary: {
+        total: testResults.length,
+        formCreated: successCount,
+        spreadsheetLinked: spreadsheetCount,
+        qrCodeGenerated: qrCodeCount,
+        locations: allLocations
+      }
+    };
+    
+  } catch (error) {
+    console.error('統合テストエラー:', error.toString());
+    return {
+      success: false,
+      message: '統合テストでエラーが発生しました',
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * スプレッドシートのシート存在確認テスト関数
+ */
+function testSpreadsheetSheetExistence() {
+  console.log('=== スプレッドシートシート存在確認テスト開始 ===');
+  
+  try {
+    // スプレッドシート設定の確認
+    const spreadsheetSettings = getSpreadsheetSettings();
+    console.log('スプレッドシート設定確認:', spreadsheetSettings);
+    
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      console.warn('⚠️ スプレッドシートIDが設定されていません。');
+      return {
+        success: false,
+        message: 'スプレッドシートIDが設定されていません',
+        error: 'SPREADSHEET_ID_DESTINATION が設定されていません'
+      };
+    }
+    
+    const spreadsheetId = spreadsheetSettings.settings.spreadsheetId;
+    console.log('対象スプレッドシートID:', spreadsheetId);
+    
+    // スプレッドシートを開く
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    console.log('スプレッドシート名:', spreadsheet.getName());
+    
+    // 既存のシート一覧を取得
+    const existingSheets = spreadsheet.getSheets().map(sheet => sheet.getName());
+    console.log('既存シート一覧:', existingSheets);
+    
+    // 必要なシートの存在確認
+    const requiredSheets = Object.values(LOCATION_SHEET_NAMES);
+    const uniqueRequiredSheets = [...new Set(requiredSheets)]; // 重複を削除
+    console.log('必要なシート:', uniqueRequiredSheets);
+    
+    const sheetCheckResults = [];
+    
+    uniqueRequiredSheets.forEach(sheetName => {
+      const exists = existingSheets.includes(sheetName);
+      const usedByLocations = Object.keys(LOCATION_SHEET_NAMES).filter(location => LOCATION_SHEET_NAMES[location] === sheetName);
+      
+      sheetCheckResults.push({
+        sheetName: sheetName,
+        exists: exists,
+        usedByLocations: usedByLocations
+      });
+      
+      const status = exists ? '✅' : '❌';
+      console.log(`${status} シート「${sheetName}」 (使用拠点: ${usedByLocations.join(', ')})`);
+    });
+    
+    // 拠点別の確認
+    console.log('\n📍 拠点別シート確認:');
+    Object.keys(LOCATION_SHEET_NAMES).forEach(location => {
+      const sheetName = LOCATION_SHEET_NAMES[location];
+      const exists = existingSheets.includes(sheetName);
+      const status = exists ? '✅' : '❌';
+      console.log(`${status} ${location} → シート「${sheetName}」`);
+    });
+    
+    // 不足しているシート
+    const missingSheets = uniqueRequiredSheets.filter(sheetName => !existingSheets.includes(sheetName));
+    
+    if (missingSheets.length > 0) {
+      console.log('\n⚠️ 不足しているシート:');
+      missingSheets.forEach(sheetName => {
+        const affectedLocations = Object.keys(LOCATION_SHEET_NAMES).filter(location => LOCATION_SHEET_NAMES[location] === sheetName);
+        console.log(`- 「${sheetName}」 (影響拠点: ${affectedLocations.join(', ')})`);
+      });
+      
+      console.log('\n📝 シート作成方法:');
+      console.log('1. スプレッドシートを手動で開く');
+      console.log('2. 以下のシート名で新しいシートを作成:');
+      missingSheets.forEach(sheetName => {
+        console.log(`   - ${sheetName}`);
+      });
+      console.log('3. 各シートにヘッダー行を設定（推奨列名）:');
+      Object.keys(SPREADSHEET_COLUMN_MAPPING).forEach(fieldName => {
+        const columnNames = SPREADSHEET_COLUMN_MAPPING[fieldName];
+        console.log(`   ${fieldName}: ${columnNames.join(' または ')}`);
+      });
+    }
+    
+    const allSheetsExist = missingSheets.length === 0;
+    
+    return {
+      success: allSheetsExist,
+      message: allSheetsExist ? 'すべての必要なシートが存在します' : `${missingSheets.length}個のシートが不足しています`,
+      spreadsheetInfo: {
+        id: spreadsheetId,
+        name: spreadsheet.getName(),
+        url: spreadsheet.getUrl()
+      },
+      existingSheets: existingSheets,
+      requiredSheets: uniqueRequiredSheets,
+      missingSheets: missingSheets,
+      sheetCheckResults: sheetCheckResults,
+      locationMapping: LOCATION_SHEET_NAMES
+    };
+    
+  } catch (error) {
+    console.error('シート存在確認テストエラー:', error.toString());
+    return {
+      success: false,
+      message: 'シート存在確認テストでエラーが発生しました',
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * スプレッドシートの動的ヘッダー検知テスト関数
+ */
+function testSpreadsheetHeaderPosition() {
+  console.log('=== スプレッドシート動的ヘッダー検知テスト開始 ===');
+  
+  try {
+    // スプレッドシート設定の確認
+    const spreadsheetSettings = getSpreadsheetSettings();
+    
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      console.warn('⚠️ スプレッドシートIDが設定されていません。');
+      return {
+        success: false,
+        message: 'スプレッドシートIDが設定されていません',
+        error: 'SPREADSHEET_ID_DESTINATION が設定されていません'
+      };
+    }
+    
+    const spreadsheetId = spreadsheetSettings.settings.spreadsheetId;
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    
+    console.log('スプレッドシート名:', spreadsheet.getName());
+    console.log('検索対象列マッピング:', SPREADSHEET_COLUMN_MAPPING);
+    
+    // 各拠点シートの動的ヘッダー検知を確認
+    const headerCheckResults = [];
+    const uniqueSheetNames = [...new Set(Object.values(LOCATION_SHEET_NAMES))];
+    
+    uniqueSheetNames.forEach(sheetName => {
+      console.log(`\n📊 シート「${sheetName}」の動的ヘッダー検知:`);
+      
+      try {
+        const sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+          console.log('❌ シートが見つかりません');
+          headerCheckResults.push({
+            sheetName: sheetName,
+            exists: false,
+            error: 'シートが見つかりません'
+          });
+          return;
+        }
+        
+        // 動的ヘッダー検知を実行
+        const headerInfo = detectHeaderRow(sheet);
+        
+        if (headerInfo.found) {
+          console.log(`  ✅ ヘッダー行検出成功: ${headerInfo.rowIndex}行目`);
+          console.log(`  🎯 検出された列: ${Object.keys(headerInfo.columnIndexes).length}個`);
+          
+          // 検出された列の詳細を表示
+          Object.keys(headerInfo.columnIndexes).forEach(fieldName => {
+            const columnIndex = headerInfo.columnIndexes[fieldName];
+            const headerValue = headerInfo.rowData[columnIndex];
+            console.log(`    ${fieldName}: 列${columnIndex + 1} (${headerValue})`);
+          });
+          
+          headerCheckResults.push({
+            sheetName: sheetName,
+            exists: true,
+            headerDetected: true,
+            headerRowIndex: headerInfo.rowIndex,
+            detectedColumns: Object.keys(headerInfo.columnIndexes),
+            columnMapping: headerInfo.columnIndexes,
+            score: headerInfo.score
+          });
+        } else {
+          console.log(`  ❌ ヘッダー行検出失敗: ${headerInfo.error}`);
+          headerCheckResults.push({
+            sheetName: sheetName,
+            exists: true,
+            headerDetected: false,
+            error: headerInfo.error
+          });
+        }
+        
+      } catch (sheetError) {
+        console.log(`❌ シート確認エラー: ${sheetError.toString()}`);
+        headerCheckResults.push({
+          sheetName: sheetName,
+          exists: false,
+          error: sheetError.toString()
+        });
+      }
+    });
+    
+    // 結果サマリー
+    console.log('\n=== 動的ヘッダー検知結果サマリー ===');
+    headerCheckResults.forEach(result => {
+      if (result.exists) {
+        if (result.headerDetected) {
+          console.log(`✅ ${result.sheetName}: ${result.headerRowIndex}行目（${result.detectedColumns.length}列検出）`);
+        } else {
+          console.log(`⚠️ ${result.sheetName}: ヘッダー未検出 - ${result.error}`);
+        }
+      } else {
+        console.log(`❌ ${result.sheetName}: ${result.error}`);
+      }
+    });
+    
+    return {
+      success: true,
+      message: '動的ヘッダー検知テスト完了',
+      spreadsheetInfo: {
+        id: spreadsheetId,
+        name: spreadsheet.getName(),
+        url: spreadsheet.getUrl()
+      },
+      columnMapping: SPREADSHEET_COLUMN_MAPPING,
+      headerCheckResults: headerCheckResults
+    };
+    
+  } catch (error) {
+    console.error('ヘッダー行確認テストエラー:', error.toString());
+    return {
+      success: false,
+      message: 'ヘッダー行確認テストでエラーが発生しました',
+      error: error.toString()
+    };
+  }
+}
+
+
+  
