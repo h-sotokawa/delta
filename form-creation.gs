@@ -27,9 +27,7 @@ const LOCATION_SHEET_NAMES = {
   'osaka-desktop': '大阪',
   'osaka-server': '大阪',
   'kobe-terminal': '神戸',
-  'himeji-terminal': '姫路',
-  'tokyo-terminal': '端末ステータス収集',
-  'printer': 'プリンタステータス収集'
+  'himeji-terminal': '姫路'
 };
 
 // スプレッドシート列マッピング（フィールド名 → 列名の候補リスト）
@@ -260,6 +258,85 @@ function createGoogleForm(formConfig) {
     if (!formConfig.title || !formConfig.locationNumber) {
       throw new Error('フォームタイトルと拠点管理番号は必須です');
     }
+
+    // 重複チェックを最初に実行（フォーム作成前）
+    let duplicateCheckResult = null;
+    try {
+      const checkData = {
+        locationNumber: formConfig.locationNumber,
+        assetNumber: formConfig.attributes?.assetNumber || '',
+        serial: formConfig.attributes?.serial || ''
+      };
+      
+      duplicateCheckResult = checkDuplicateValues(formConfig.location, checkData);
+      
+      if (!duplicateCheckResult.success) {
+        addFormLog('重複チェック失敗', {
+          error: duplicateCheckResult.error,
+          location: formConfig.location
+        });
+        
+        return {
+          success: false,
+          error: `重複チェックに失敗しました: ${duplicateCheckResult.error}`,
+          errorType: 'DUPLICATE_CHECK_FAILED'
+        };
+      } else if (duplicateCheckResult.hasDuplicates) {
+        addFormLog('重複データ検出（フォーム作成前）', {
+          duplicates: duplicateCheckResult.duplicates,
+          location: formConfig.location
+        });
+        
+        // 重複詳細メッセージを生成（シンプル版）
+        const duplicateMessages = duplicateCheckResult.duplicates.map((duplicate, index) => {
+          return `${duplicate.fieldDisplayName}「${duplicate.value}」は既に使用されています`;
+        });
+        
+        const detailedErrorMessage = `入力エラー: 以下の値が重複しています\n\n${duplicateMessages.join('\n')}\n\n異なる値を入力してください。`;
+        
+        // 重複がある場合はフォーム作成を開始せずにエラーを返す
+        return {
+          success: false,
+          error: detailedErrorMessage,
+          errorType: 'DUPLICATE_DATA',
+          duplicateCheck: duplicateCheckResult,
+          duplicateDetails: {
+            count: duplicateCheckResult.duplicates.length,
+            fields: duplicateCheckResult.duplicates.map(d => d.field),
+            messages: duplicateMessages,
+            sheetName: duplicateCheckResult.sheetName,
+            items: duplicateCheckResult.duplicates.map(duplicate => ({
+              field: duplicate.field,
+              fieldDisplayName: duplicate.fieldDisplayName,
+              value: duplicate.value,
+              location: {
+                sheetName: duplicate.sheetName,
+                rowNumber: duplicate.rowNumber,
+                columnLetter: duplicate.columnLetter
+              },
+              additionalInfo: duplicate.additionalInfo || {}
+            }))
+          }
+        };
+      } else {
+        addFormLog('重複チェック完了（重複なし）- フォーム作成を開始', {
+          checkedFields: Object.keys(checkData),
+          location: formConfig.location
+        });
+      }
+      
+    } catch (duplicateCheckError) {
+      addFormLog('重複チェック処理でエラー（フォーム作成前）', {
+        error: duplicateCheckError.toString(),
+        location: formConfig.location
+      });
+      
+      return {
+        success: false,
+        error: `重複チェック処理でエラーが発生しました: ${duplicateCheckError.message}`,
+        errorType: 'DUPLICATE_CHECK_ERROR'
+      };
+    }
     
     // 拠点別フォルダを取得または作成
     const folder = getLocationFolder(formConfig.location);
@@ -394,6 +471,8 @@ function createGoogleForm(formConfig) {
     
     // 回答先スプレッドシートは作成しない（要求に応じて削除）
     
+
+
     // スプレッドシートに行を追加
     let spreadsheetResult = null;
     try {
@@ -532,7 +611,14 @@ function createGoogleForm(formConfig) {
           locationNumber: formConfig.locationNumber,
           status: '999.フォーム作成完了',
           error: statusSheetResult.error
-        } : { success: false, error: 'ステータス収集シート追記が実行されませんでした' }
+        } : { success: false, error: 'ステータス収集シート追記が実行されませんでした' },
+        duplicateCheck: duplicateCheckResult ? {
+          success: duplicateCheckResult.success,
+          hasDuplicates: duplicateCheckResult.hasDuplicates,
+          duplicates: duplicateCheckResult.duplicates,
+          checkedFields: duplicateCheckResult.checkedFields,
+          error: duplicateCheckResult.error
+        } : { success: false, error: '重複チェックが実行されませんでした' }
       }
     };
     
@@ -2315,6 +2401,159 @@ function generateDynamicVlookupFormula(statusSheetName, lookupValue, fieldName, 
 
 
 /**
+ * 重複値をチェックする関数
+ * @param {string} location - 拠点識別子
+ * @param {Object} checkData - チェック対象データ
+ * @param {string} checkData.locationNumber - 拠点管理番号
+ * @param {string} checkData.assetNumber - 資産管理番号
+ * @param {string} checkData.serial - シリアル番号
+ * @return {Object} チェック結果
+ */
+function checkDuplicateValues(location, checkData) {
+  try {
+    // スプレッドシート設定を取得
+    const spreadsheetSettings = getSpreadsheetSettings();
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      return {
+        success: false,
+        error: 'スプレッドシート設定が見つかりません'
+      };
+    }
+
+    // 拠点に対応するシート名を取得
+    const sheetName = LOCATION_SHEET_NAMES[location];
+    if (!sheetName) {
+      return {
+        success: false,
+        error: `拠点 '${location}' に対応するシートが見つかりません`
+      };
+    }
+
+    // スプレッドシートとシートを取得
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetSettings.settings.spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      return {
+        success: false,
+        error: `シート '${sheetName}' が見つかりません`
+      };
+    }
+
+    // ヘッダー行を検出
+    const headerInfo = detectHeaderRow(sheet);
+    if (!headerInfo.found) {
+      return {
+        success: false,
+        error: `シート '${sheetName}' でヘッダー行が見つかりません: ${headerInfo.error}`
+      };
+    }
+
+    // 重複チェック対象の列を特定
+    const columnIndexes = headerInfo.columnIndexes;
+    const duplicates = [];
+    const checkedFields = [];
+
+    // データ範囲を取得（ヘッダー行の次の行から最終行まで）
+    const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    
+    if (lastRow <= headerInfo.rowIndex) {
+      // データがない場合は重複なし
+      return {
+        success: true,
+        hasDuplicates: false,
+        duplicates: [],
+        checkedFields: Object.keys(checkData).filter(key => checkData[key])
+      };
+    }
+
+    const dataRange = sheet.getRange(headerInfo.rowIndex + 1, 1, lastRow - headerInfo.rowIndex, lastColumn);
+    const dataValues = dataRange.getValues();
+
+    // 各フィールドの重複をチェック
+    Object.keys(checkData).forEach(fieldName => {
+      const value = checkData[fieldName];
+      if (!value) return; // 空の値はスキップ
+
+      const columnIndex = columnIndexes[fieldName];
+      if (columnIndex === undefined) {
+        addFormLog('重複チェック: 列が見つかりません', {
+          fieldName,
+          sheetName,
+          availableColumns: Object.keys(columnIndexes)
+        });
+        return;
+      }
+
+      checkedFields.push(fieldName);
+
+             // データ行で重複をチェック
+       for (let i = 0; i < dataValues.length; i++) {
+         const cellValue = dataValues[i][columnIndex];
+         if (cellValue && cellValue.toString().trim() === value.toString().trim()) {
+           // 重複行の他の情報も取得（参考情報として）
+           const rowData = dataValues[i];
+           const additionalInfo = {};
+           
+           // 拠点管理番号、資産番号、型番などの参考情報を取得
+           ['locationNumber', 'assetNumber', 'modelNumber'].forEach(refField => {
+             const refColumnIndex = columnIndexes[refField];
+             if (refColumnIndex !== undefined && rowData[refColumnIndex]) {
+               additionalInfo[refField] = rowData[refColumnIndex].toString().trim();
+             }
+           });
+           
+           duplicates.push({
+             field: fieldName,
+             fieldDisplayName: getFieldDisplayName(fieldName),
+             value: value,
+             duplicateValue: cellValue,
+             rowNumber: headerInfo.rowIndex + 1 + i + 1, // 実際の行番号
+             columnLetter: getColumnLetter(columnIndex + 1),
+             sheetName: sheetName,
+             additionalInfo: additionalInfo
+           });
+         }
+       }
+    });
+
+    addFormLog('重複チェック完了', {
+      sheetName,
+      checkedFields,
+      duplicatesFound: duplicates.length,
+      duplicates: duplicates.map(d => ({
+        field: d.field,
+        value: d.value,
+        rowNumber: d.rowNumber
+      }))
+    });
+
+    return {
+      success: true,
+      hasDuplicates: duplicates.length > 0,
+      duplicates: duplicates,
+      checkedFields: checkedFields,
+      sheetName: sheetName,
+      totalDataRows: dataValues.length
+    };
+
+  } catch (error) {
+    addFormLog('重複チェックエラー', {
+      location,
+      checkData,
+      error: error.toString(),
+      stack: error.stack
+    });
+
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
  * ステータス収集シートに行を追加する関数
  * @param {string} locationNumber - 拠点管理番号
  * @param {string} deviceCategory - デバイスカテゴリ（SV, CL, プリンタ, その他）
@@ -2434,6 +2673,25 @@ function addRowToStatusCollectionSheet(locationNumber, deviceCategory) {
       error: error.message
     };
   }
+}
+
+/**
+ * フィールド名を日本語表示名に変換する関数
+ * @param {string} fieldName - フィールド名
+ * @return {string} 日本語表示名
+ */
+function getFieldDisplayName(fieldName) {
+  const displayNames = {
+    'locationNumber': '拠点管理番号',
+    'assetNumber': '資産管理番号',
+    'serial': 'シリアル番号(製造番号)',
+    'modelNumber': '型番',
+    'software': 'ソフトウェア',
+    'os': 'OS',
+    'deviceType': 'デバイス種別'
+  };
+  
+  return displayNames[fieldName] || fieldName;
 }
 
 /**
@@ -3015,6 +3273,72 @@ function testStatusSheetColumnDetection(statusSheetName = '端末ステータス
     return {
       success: false,
       message: 'ステータス収集シート動的列検出テストでエラーが発生しました',
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * 重複チェック機能のテスト関数
+ * @param {string} testLocation - テスト対象拠点（osaka-desktop, kobe-terminal等）
+ * @param {Object} testData - テストデータ
+ */
+function testDuplicateCheck(testLocation = 'osaka-desktop', testData = null) {
+  console.log('=== 重複チェック機能テスト開始 ===');
+  console.log('対象拠点:', testLocation);
+  
+  // デフォルトテストデータ
+  const defaultTestData = {
+    locationNumber: 'TEST_001',
+    assetNumber: 'ASSET_001', 
+    serial: 'SERIAL_001'
+  };
+  
+  const checkData = testData || defaultTestData;
+  console.log('チェック対象データ:', checkData);
+  
+  try {
+    const result = checkDuplicateValues(testLocation, checkData);
+    
+    if (result.success) {
+      console.log('✅ 重複チェック実行成功');
+      console.log('📊 チェック結果:', {
+        sheetName: result.sheetName,
+        checkedFields: result.checkedFields,
+        hasDuplicates: result.hasDuplicates,
+        duplicatesCount: result.duplicates?.length || 0,
+        totalDataRows: result.totalDataRows
+      });
+      
+      if (result.hasDuplicates) {
+        console.log('⚠️ 重複データが見つかりました:');
+        result.duplicates.forEach((duplicate, index) => {
+          console.log(`  ${index + 1}. ${duplicate.field}: "${duplicate.value}" (行${duplicate.rowNumber}, ${duplicate.columnLetter}列)`);
+        });
+      } else {
+        console.log('✅ 重複データはありませんでした');
+      }
+      
+      return {
+        success: true,
+        message: '重複チェック機能テスト完了',
+        result: result
+      };
+      
+    } else {
+      console.error('❌ 重複チェック実行失敗:', result.error);
+      return {
+        success: false,
+        message: '重複チェック機能テストに失敗しました',
+        error: result.error
+      };
+    }
+    
+  } catch (error) {
+    console.error('重複チェック機能テストエラー:', error.toString());
+    return {
+      success: false,
+      message: '重複チェック機能テストでエラーが発生しました',
       error: error.toString()
     };
   }
