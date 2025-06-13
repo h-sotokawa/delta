@@ -190,6 +190,227 @@ function detectHeaderRow(sheet) {
 }
 
 /**
+ * 不足しているヘッダーを検出する関数
+ * @param {Object} currentColumnIndexes - 現在検出されている列インデックス
+ * @return {Array} 不足しているフィールド名の配列
+ */
+function detectMissingHeaders(currentColumnIndexes) {
+  const requiredFields = Object.keys(SPREADSHEET_COLUMN_MAPPING);
+  const missingFields = requiredFields.filter(fieldName => 
+    currentColumnIndexes[fieldName] === undefined
+  );
+  
+  addFormLog('不足ヘッダー検出', {
+    requiredFields: requiredFields.length,
+    currentFields: Object.keys(currentColumnIndexes).length,
+    missingFields: missingFields
+  });
+  
+  return missingFields;
+}
+
+/**
+ * シートの3行目に不足しているヘッダーを追加する関数
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - シートオブジェクト
+ * @param {Array} missingFields - 不足しているフィールド名の配列
+ * @return {Object} 追加結果
+ */
+function addMissingHeadersToSheet(sheet, missingFields) {
+  try {
+    if (!missingFields || missingFields.length === 0) {
+      return {
+        success: true,
+        added: 0,
+        message: '追加するヘッダーはありません'
+      };
+    }
+    
+    const HEADER_ROW = 3; // ヘッダーは3行目
+    let currentLastColumn = sheet.getLastColumn();
+    
+    // 3行目が存在しない場合は行を追加
+    const currentLastRow = sheet.getLastRow();
+    if (currentLastRow < HEADER_ROW) {
+      // 3行目まで行を追加
+      for (let i = currentLastRow + 1; i <= HEADER_ROW; i++) {
+        sheet.insertRowAfter(sheet.getLastRow());
+      }
+      addFormLog('行を追加してヘッダー行を確保', {
+        previousLastRow: currentLastRow,
+        newLastRow: sheet.getLastRow(),
+        headerRow: HEADER_ROW
+      });
+    }
+    
+    const addedHeaders = [];
+    let columnPosition = currentLastColumn + 1;
+    
+    // 各不足フィールドのヘッダーを追加
+    missingFields.forEach(fieldName => {
+      const candidateNames = SPREADSHEET_COLUMN_MAPPING[fieldName];
+      if (candidateNames && candidateNames.length > 0) {
+        // 最初の候補名を使用
+        const headerName = candidateNames[0];
+        
+        // 3行目の指定列にヘッダーを設定
+        sheet.getRange(HEADER_ROW, columnPosition).setValue(headerName);
+        
+        addedHeaders.push({
+          fieldName: fieldName,
+          headerName: headerName,
+          column: columnPosition,
+          columnLetter: getColumnLetter(columnPosition)
+        });
+        
+        addFormLog('ヘッダー追加', {
+          fieldName,
+          headerName,
+          column: columnPosition,
+          columnLetter: getColumnLetter(columnPosition),
+          position: `${getColumnLetter(columnPosition)}${HEADER_ROW}`
+        });
+        
+        columnPosition++;
+      }
+    });
+    
+    // 追加後に列数を更新
+    const newLastColumn = sheet.getLastColumn();
+    
+    addFormLog('ヘッダー追加完了', {
+      sheetName: sheet.getName(),
+      headerRow: HEADER_ROW,
+      previousLastColumn: currentLastColumn,
+      newLastColumn: newLastColumn,
+      addedCount: addedHeaders.length,
+      addedHeaders: addedHeaders
+    });
+    
+    return {
+      success: true,
+      added: addedHeaders.length,
+      addedHeaders: addedHeaders,
+      headerRow: HEADER_ROW,
+      newLastColumn: newLastColumn,
+      message: `${addedHeaders.length}個のヘッダーを3行目に追加しました`
+    };
+    
+  } catch (error) {
+    addFormLog('ヘッダー追加エラー', {
+      error: error.toString(),
+      sheetName: sheet.getName(),
+      missingFields
+    });
+    
+    return {
+      success: false,
+      error: error.message,
+      added: 0
+    };
+  }
+}
+
+/**
+ * ヘッダー行を検出し、不足している場合は自動追加する関数
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - シートオブジェクト
+ * @return {Object} ヘッダー情報（不足ヘッダー追加後）
+ */
+function detectAndEnsureHeaders(sheet) {
+  try {
+    // 最初にヘッダー行を検出
+    let headerInfo = detectHeaderRow(sheet);
+    
+    if (!headerInfo.found) {
+      // ヘッダー行が見つからない場合、3行目にすべて作成
+      addFormLog('ヘッダー行未検出、新規作成を開始', {
+        sheetName: sheet.getName()
+      });
+      
+      const allRequiredFields = Object.keys(SPREADSHEET_COLUMN_MAPPING);
+      const headerAddResult = addMissingHeadersToSheet(sheet, allRequiredFields);
+      
+      if (headerAddResult.success) {
+        // ヘッダー追加後に再検出
+        headerInfo = detectHeaderRow(sheet);
+        if (headerInfo.found) {
+          addFormLog('新規ヘッダー作成後の検出成功', {
+            rowIndex: headerInfo.rowIndex,
+            detectedColumns: Object.keys(headerInfo.columnIndexes)
+          });
+          
+          return {
+            ...headerInfo,
+            headersAdded: true,
+            addedHeadersInfo: headerAddResult
+          };
+        }
+      }
+      
+      return {
+        found: false,
+        error: 'ヘッダー作成後も検出に失敗しました',
+        headerAddResult: headerAddResult
+      };
+    }
+    
+    // ヘッダー行は見つかったが、不足している列がある場合
+    const missingFields = detectMissingHeaders(headerInfo.columnIndexes);
+    
+    if (missingFields.length > 0) {
+      addFormLog('不足ヘッダーを自動追加開始', {
+        sheetName: sheet.getName(),
+        missingFields: missingFields,
+        currentColumns: Object.keys(headerInfo.columnIndexes)
+      });
+      
+      const headerAddResult = addMissingHeadersToSheet(sheet, missingFields);
+      
+      if (headerAddResult.success) {
+        // ヘッダー追加後に再検出
+        const updatedHeaderInfo = detectHeaderRow(sheet);
+        if (updatedHeaderInfo.found) {
+          addFormLog('不足ヘッダー追加後の検出成功', {
+            rowIndex: updatedHeaderInfo.rowIndex,
+            detectedColumns: Object.keys(updatedHeaderInfo.columnIndexes),
+            previousColumns: Object.keys(headerInfo.columnIndexes).length,
+            newColumns: Object.keys(updatedHeaderInfo.columnIndexes).length
+          });
+          
+          return {
+            ...updatedHeaderInfo,
+            headersAdded: true,
+            addedHeadersInfo: headerAddResult
+          };
+        }
+      }
+      
+      // ヘッダー追加に失敗した場合は元の情報を返す
+      addFormLog('不足ヘッダー追加失敗、元の情報を使用', {
+        error: headerAddResult.error,
+        originalColumns: Object.keys(headerInfo.columnIndexes)
+      });
+    }
+    
+    return {
+      ...headerInfo,
+      headersAdded: missingFields.length > 0,
+      addedHeadersInfo: missingFields.length > 0 ? { success: false, added: 0 } : null
+    };
+    
+  } catch (error) {
+    addFormLog('ヘッダー検出・追加処理エラー', {
+      error: error.toString(),
+      sheetName: sheet.getName()
+    });
+    
+    return {
+      found: false,
+      error: error.message
+    };
+  }
+}
+
+/**
  * デバイスタイプ別のURL付きフォーム説明を生成
  * @param {string} baseDescription - 基本説明文
  * @param {string} deviceType - デバイスタイプ ('terminal' または 'printer')
@@ -2110,8 +2331,8 @@ function addRowToSpreadsheet(location, formData, additionalData = {}) {
       throw new Error(`シート「${sheetName}」が見つかりません。事前にシートを作成してください。`);
     }
     
-    // ヘッダー行を動的に検出
-    const headerInfo = detectHeaderRow(sheet);
+    // ヘッダー行を動的に検出し、不足している場合は自動追加
+    const headerInfo = detectAndEnsureHeaders(sheet);
     
     if (!headerInfo.found) {
       throw new Error(`シート「${sheetName}」でヘッダー行を検出できませんでした: ${headerInfo.error}`);
@@ -2121,7 +2342,9 @@ function addRowToSpreadsheet(location, formData, additionalData = {}) {
       sheetName,
       headerRowIndex: headerInfo.rowIndex,
       detectedColumns: Object.keys(headerInfo.columnIndexes),
-      totalColumns: headerInfo.rowData.length
+      totalColumns: headerInfo.rowData.length,
+      headersAdded: headerInfo.headersAdded || false,
+      addedHeadersCount: headerInfo.addedHeadersInfo?.added || 0
     });
     
     // 次の行番号を取得（数式で使用）
@@ -4020,6 +4243,162 @@ function testSpreadsheetSheetExistence() {
     return {
       success: false,
       message: 'シート存在確認テストでエラーが発生しました',
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * 自動ヘッダー追加機能のテスト関数
+ * @param {string} testSheetName - テスト対象のシート名（オプション）
+ */
+function testAutoHeaderAddition(testSheetName = null) {
+  console.log('=== 自動ヘッダー追加機能テスト開始 ===');
+  
+  try {
+    // スプレッドシート設定の確認
+    const spreadsheetSettings = getSpreadsheetSettings();
+    
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      console.warn('⚠️ スプレッドシートIDが設定されていません。');
+      return {
+        success: false,
+        message: 'スプレッドシートIDが設定されていません',
+        error: 'SPREADSHEET_ID_DESTINATION が設定されていません'
+      };
+    }
+    
+    const spreadsheetId = spreadsheetSettings.settings.spreadsheetId;
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    
+    console.log('スプレッドシート名:', spreadsheet.getName());
+    
+    // テスト対象シートを決定
+    const targetSheets = testSheetName ? [testSheetName] : [...new Set(Object.values(LOCATION_SHEET_NAMES))];
+    console.log('テスト対象シート:', targetSheets);
+    
+    const testResults = [];
+    
+    for (const sheetName of targetSheets) {
+      console.log(`\n📊 シート「${sheetName}」の自動ヘッダー追加テスト:`);
+      
+      try {
+        const sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+          console.log('❌ シートが見つかりません');
+          testResults.push({
+            sheetName: sheetName,
+            exists: false,
+            error: 'シートが見つかりません'
+          });
+          continue;
+        }
+        
+        // テスト前の状態を記録
+        const beforeState = {
+          lastRow: sheet.getLastRow(),
+          lastColumn: sheet.getLastColumn(),
+          headerInfo: detectHeaderRow(sheet)
+        };
+        
+        console.log('  📋 テスト前の状態:');
+        console.log(`    最終行: ${beforeState.lastRow}, 最終列: ${beforeState.lastColumn}`);
+        console.log(`    検出されたヘッダー: ${beforeState.headerInfo.found ? Object.keys(beforeState.headerInfo.columnIndexes).length : 0}個`);
+        
+        // 自動ヘッダー追加機能を実行
+        const headerResult = detectAndEnsureHeaders(sheet);
+        
+        if (headerResult.found) {
+          console.log('  ✅ ヘッダー検出・追加成功');
+          console.log(`    ヘッダー行: ${headerResult.rowIndex}行目`);
+          console.log(`    検出された列: ${Object.keys(headerResult.columnIndexes).length}個`);
+          console.log(`    ヘッダー追加: ${headerResult.headersAdded ? 'あり' : 'なし'}`);
+          
+          if (headerResult.headersAdded && headerResult.addedHeadersInfo) {
+            console.log(`    追加されたヘッダー: ${headerResult.addedHeadersInfo.added}個`);
+            headerResult.addedHeadersInfo.addedHeaders?.forEach(header => {
+              console.log(`      ${header.fieldName}: ${header.headerName} (${header.columnLetter}列)`);
+            });
+          }
+          
+          // テスト後の状態を記録
+          const afterState = {
+            lastRow: sheet.getLastRow(),
+            lastColumn: sheet.getLastColumn()
+          };
+          
+          console.log('  📋 テスト後の状態:');
+          console.log(`    最終行: ${afterState.lastRow}, 最終列: ${afterState.lastColumn}`);
+          
+          testResults.push({
+            sheetName: sheetName,
+            exists: true,
+            success: true,
+            beforeState: beforeState,
+            afterState: afterState,
+            headerResult: headerResult,
+            headersAdded: headerResult.headersAdded,
+            addedCount: headerResult.addedHeadersInfo?.added || 0
+          });
+          
+        } else {
+          console.log(`  ❌ ヘッダー検出・追加失敗: ${headerResult.error}`);
+          testResults.push({
+            sheetName: sheetName,
+            exists: true,
+            success: false,
+            error: headerResult.error,
+            beforeState: beforeState
+          });
+        }
+        
+      } catch (sheetError) {
+        console.log(`❌ シートテストエラー: ${sheetError.toString()}`);
+        testResults.push({
+          sheetName: sheetName,
+          exists: false,
+          error: sheetError.toString()
+        });
+      }
+    }
+    
+    // 結果サマリー
+    console.log('\n=== 自動ヘッダー追加テスト結果サマリー ===');
+    const successCount = testResults.filter(r => r.success).length;
+    const headersAddedCount = testResults.filter(r => r.headersAdded).length;
+    const totalAddedHeaders = testResults.reduce((sum, r) => sum + (r.addedCount || 0), 0);
+    
+    console.log(`📊 テスト成功: ${successCount}/${testResults.length}シート`);
+    console.log(`📊 ヘッダー追加発生: ${headersAddedCount}/${testResults.length}シート`);
+    console.log(`📊 総追加ヘッダー数: ${totalAddedHeaders}個`);
+    
+    console.log('\n📋 シート別結果:');
+    testResults.forEach(result => {
+      const status = result.success ? '✅' : '❌';
+      const addedInfo = result.headersAdded ? `(+${result.addedCount}列)` : '';
+      console.log(`${status} ${result.sheetName}${addedInfo}`);
+      if (result.error) {
+        console.log(`    エラー: ${result.error}`);
+      }
+    });
+    
+    return {
+      success: successCount === testResults.length,
+      message: `自動ヘッダー追加テスト完了: ${successCount}/${testResults.length}シート成功`,
+      results: testResults,
+      summary: {
+        total: testResults.length,
+        successful: successCount,
+        headersAddedSheets: headersAddedCount,
+        totalAddedHeaders: totalAddedHeaders
+      }
+    };
+    
+  } catch (error) {
+    console.error('自動ヘッダー追加テストエラー:', error.toString());
+    return {
+      success: false,
+      message: '自動ヘッダー追加テストでエラーが発生しました',
       error: error.toString()
     };
   }
