@@ -27,7 +27,9 @@ const LOCATION_SHEET_NAMES = {
   'osaka-desktop': '大阪',
   'osaka-server': '大阪',
   'kobe-terminal': '神戸',
-  'himeji-terminal': '姫路'
+  'himeji-terminal': '姫路',
+  'tokyo-terminal': '端末ステータス収集',
+  'printer': 'プリンタステータス収集'
 };
 
 // スプレッドシート列マッピング（フィールド名 → 列名の候補リスト）
@@ -37,7 +39,34 @@ const SPREADSHEET_COLUMN_MAPPING = {
   'serial': ['シリアル', 'シリアル番号', 'Serial', '製造番号'],
   'software': ['ソフト', 'ソフトウェア', 'Software'],
   'os': ['OS', 'オペレーティングシステム', 'Operating System'],
-  'locationNumber': ['拠点管理番号', '拠点コード', '拠点番号', 'Location Code']
+  'deviceType': ['代替機種別', '機種別', 'デバイス種別', 'Device Type'],
+  'locationNumber': ['拠点管理番号', '拠点コード', '拠点番号', 'Location Code'],
+  // 数式追加用の列
+  'assignee': ['担当者'],
+  'lendingStatus': ['貸出ステータス'],
+  'lendingDestination': ['貸出先'],
+  'lendingDate': ['貸出日'],
+  'userDeviceDeposit': ['ユーザー預り機有'],
+  'depositReceiptNo': ['お預かり証No.'],
+  'remarks': ['備考']
+};
+
+// ステータス収集シート名の定義
+const STATUS_COLLECTION_SHEETS = {
+  terminal: '端末ステータス収集',  // SV, CL用
+  printer: 'プリンタステータス収集'  // プリンタ, その他用
+};
+
+// ステータス収集シートの列マッピング（動的検知用）
+const STATUS_SHEET_COLUMN_MAPPING = {
+  'locationNumber': ['0-0.拠点管理番号'],
+  'assignee': ['0-1.担当者'],
+  'status': ['0-4.ステータス'],
+  'destination': ['1-1.顧客名または貸出先'],
+  'timestamp': ['タイムスタンプ'],
+  'userDeviceDeposit': ['1-4.ユーザー機の預り有無'],
+  'depositReceiptNo': ['1-8.お預かり証No.'],
+  'remarks': ['1-6.備考']
 };
 
 // デバイスタイプ別URL管理
@@ -382,12 +411,15 @@ function createGoogleForm(formConfig) {
         modelNumber: formConfig.attributes?.model || '',
         serial: formConfig.attributes?.serial || '',
         software: formConfig.attributes?.software || '',
-        os: formConfig.attributes?.os || ''
+        os: formConfig.attributes?.os || '',
+        deviceType: formConfig.deviceCategory || ''  // deviceCategoryを使用（SV/CL等）
       };
       
       addFormLog('スプレッドシート用データ変換', {
         originalFormConfig: {
           locationNumber: formConfig.locationNumber,
+          deviceType: formConfig.deviceType,
+          deviceCategory: formConfig.deviceCategory,
           attributes: formConfig.attributes
         },
         convertedSpreadsheetData: spreadsheetFormData
@@ -417,6 +449,37 @@ function createGoogleForm(formConfig) {
       spreadsheetResult = {
         success: false,
         error: spreadsheetError.toString()
+      };
+    }
+
+    // ステータス収集シートに行を追加
+    let statusSheetResult = null;
+    try {
+      statusSheetResult = addRowToStatusCollectionSheet(formConfig.locationNumber, formConfig.deviceCategory);
+      
+      if (statusSheetResult.success) {
+        addFormLog('ステータス収集シート追記成功', {
+          sheetName: statusSheetResult.sheetName,
+          locationNumber: formConfig.locationNumber,
+          status: '999.フォーム作成完了'
+        });
+      } else {
+        addFormLog('ステータス収集シート追記失敗', {
+          error: statusSheetResult.error,
+          locationNumber: formConfig.locationNumber
+        });
+      }
+      
+    } catch (statusSheetError) {
+      addFormLog('ステータス収集シート追記処理でエラー', {
+        error: statusSheetError.toString(),
+        locationNumber: formConfig.locationNumber,
+        deviceCategory: formConfig.deviceCategory
+      });
+      // ステータス収集シート追記エラーはフォーム作成自体は継続
+      statusSheetResult = {
+        success: false,
+        error: statusSheetError.toString()
       };
     }
     
@@ -461,7 +524,15 @@ function createGoogleForm(formConfig) {
           spreadsheetId: spreadsheetResult.spreadsheetId,
           rowData: spreadsheetResult.rowData,
           error: spreadsheetResult.error
-        } : { success: false, error: 'スプレッドシート連携が実行されませんでした' }
+        } : { success: false, error: 'スプレッドシート連携が実行されませんでした' },
+        statusSheet: statusSheetResult ? {
+          success: statusSheetResult.success,
+          sheetName: statusSheetResult.sheetName,
+          spreadsheetId: statusSheetResult.spreadsheetId,
+          locationNumber: formConfig.locationNumber,
+          status: '999.フォーム作成完了',
+          error: statusSheetResult.error
+        } : { success: false, error: 'ステータス収集シート追記が実行されませんでした' }
       }
     };
     
@@ -1527,6 +1598,7 @@ function testFormWithQRCode(testLocationNumber = 'QRTest_001') {
       description: 'QRコード生成テスト用のフォームです',
       locationNumber: testLocationNumber,
       deviceType: 'terminal',
+      deviceCategory: 'CL',  // SV/CL形式で設定
       location: 'osaka-desktop',
       // テスト用attributes（スプレッドシート連携テスト）
       attributes: {
@@ -1641,14 +1713,15 @@ function testFormConfirmationMessage(testLocationNumber = 'MsgTest_001', testDev
       description: '確認メッセージのテスト用フォーム',
       locationNumber: testLocationNumber,
       deviceType: testDeviceType,
-      location: 'osaka-desktop',
+      deviceCategory: testDeviceType === 'printer' ? 'プリンタ' : 'SV',  // プリンタの場合は「プリンタ」
+      location: testDeviceType === 'printer' ? 'osaka-printer' : 'osaka-desktop',
       // テスト用attributes（スプレッドシート連携テスト）
       attributes: {
-        assetNumber: 'MSG-ASSET-001',
+        assetNumber: testDeviceType === 'terminal' ? 'MSG-ASSET-001' : '',  // プリンタには資産番号なし
         model: 'MSG-MODEL-123',
         serial: 'MSG-SER345678',
-        software: 'メッセージテストソフト',
-        os: 'Windows 11'
+        software: testDeviceType === 'terminal' ? 'メッセージテストソフト' : '',  // プリンタにはソフトなし
+        os: testDeviceType === 'terminal' ? 'Windows 11' : ''  // プリンタにはOSなし
       }
     };
     
@@ -1965,11 +2038,36 @@ function addRowToSpreadsheet(location, formData, additionalData = {}) {
       totalColumns: headerInfo.rowData.length
     });
     
-    // 行データを作成（動的列インデックス使用）
-    const rowData = createRowData(formData, additionalData, headerInfo.columnIndexes, headerInfo.rowData.length);
+    // 次の行番号を取得（数式で使用）
+    const nextRowNumber = sheet.getLastRow() + 1;
     
-    // 行を追加
-    sheet.appendRow(rowData);
+    addFormLog('行データ作成開始', {
+      sheetName,
+      nextRowNumber,
+      formDataDeviceType: formData.deviceType,
+      headerColumnsCount: Object.keys(headerInfo.columnIndexes).length
+    });
+    
+    // 行データを作成（数式付き、動的列インデックス使用）
+    const rowData = createRowDataWithFormulas(formData, additionalData, headerInfo.columnIndexes, headerInfo.rowData.length, nextRowNumber);
+    
+    addFormLog('行データ作成完了', {
+      rowDataLength: rowData.length,
+      nonEmptyValues: rowData.filter(val => val !== '').length,
+      formulaValues: rowData.filter(val => typeof val === 'string' && val.startsWith('=')).length,
+      sampleData: rowData.slice(0, 5)  // 最初の5列のサンプル
+    });
+    
+    // 数式を正しく保存するため、setValuesを使用
+    const targetRange = sheet.getRange(nextRowNumber, 1, 1, rowData.length);
+    targetRange.setValues([rowData]);
+    
+    addFormLog('数式付きデータをsetValuesで追加', {
+      targetRow: nextRowNumber,
+      targetColumns: rowData.length,
+      range: targetRange.getA1Notation(),
+      containsFormulas: rowData.some(value => typeof value === 'string' && value.startsWith('='))
+    });
     
          addFormLog('スプレッドシート行追加完了', {
        sheetName,
@@ -1998,6 +2096,483 @@ function addRowToSpreadsheet(location, formData, additionalData = {}) {
       success: false,
       error: error.message
     };
+  }
+}
+
+/**
+ * デバイスカテゴリからステータス収集シート名を取得
+ * @param {string} deviceCategory - デバイスカテゴリ（SV, CL, プリンタ, その他）
+ * @return {string} ステータス収集シート名
+ */
+function getStatusCollectionSheetName(deviceCategory) {
+  if (!deviceCategory) {
+    return null;
+  }
+  
+  // SV, CLは端末ステータス収集シート
+  if (deviceCategory === 'SV' || deviceCategory === 'CL') {
+    return STATUS_COLLECTION_SHEETS.terminal;
+  }
+  
+  // プリンタ, その他はプリンタステータス収集シート
+  if (deviceCategory === 'プリンタ' || deviceCategory === 'その他') {
+    return STATUS_COLLECTION_SHEETS.printer;
+  }
+  
+  return null;
+}
+
+/**
+ * ステータス収集シートの列インデックスを動的に検出する関数
+ * @param {string} statusSheetName - ステータス収集シート名
+ * @return {Object} 列名とインデックスのマッピング
+ */
+function detectStatusSheetColumns(statusSheetName) {
+  try {
+    const spreadsheetSettings = getSpreadsheetSettings();
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      return { success: false, error: 'スプレッドシート設定が見つかりません' };
+    }
+    
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetSettings.settings.spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(statusSheetName);
+    
+    if (!sheet) {
+      return { success: false, error: `ステータス収集シート '${statusSheetName}' が見つかりません` };
+    }
+    
+    const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    
+    if (lastRow === 0 || lastColumn === 0) {
+      return { success: false, error: 'ステータス収集シートが空です（行数：' + lastRow + '、列数：' + lastColumn + '）' };
+    }
+    
+    // 1行目と3行目をチェック（メインシートと同様）
+    const candidateRows = [1, 3].filter(rowNum => rowNum <= lastRow);
+    
+    addFormLog('ステータス収集シート構造確認', {
+      sheetName: statusSheetName,
+      lastRow,
+      lastColumn,
+      candidateRows
+    });
+    let bestResult = null;
+    let bestScore = -1;
+    
+    for (const rowNum of candidateRows) {
+      const headerRow = sheet.getRange(rowNum, 1, 1, lastColumn).getValues()[0];
+      const columnIndexes = {};
+      let score = 0;
+      
+      addFormLog('ステータス収集シートヘッダー行確認', {
+        sheetName: statusSheetName,
+        rowNum,
+        headerRow: headerRow.slice(0, 10), // 最初の10列だけ表示
+        headerRowLength: headerRow.length
+      });
+      
+      // 各フィールドの列インデックスを検索
+      Object.keys(STATUS_SHEET_COLUMN_MAPPING).forEach(fieldName => {
+        const candidateNames = STATUS_SHEET_COLUMN_MAPPING[fieldName];
+        
+        for (let i = 0; i < headerRow.length; i++) {
+          const headerValue = headerRow[i] ? headerRow[i].toString().trim() : '';
+          
+          for (const candidateName of candidateNames) {
+            if (headerValue === candidateName) {
+              columnIndexes[fieldName] = getColumnLetter(i + 1);
+              score++;
+              addFormLog('ステータス収集シート列マッチ', {
+                fieldName,
+                candidateName,
+                headerValue,
+                columnLetter: getColumnLetter(i + 1),
+                columnIndex: i
+              });
+              break;
+            }
+          }
+          
+          if (columnIndexes[fieldName]) break;
+        }
+      });
+      
+      addFormLog('ステータス収集シート行検出結果', {
+        rowNum,
+        score,
+        detectedColumns: Object.keys(columnIndexes),
+        columnIndexes
+      });
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestResult = {
+          headerRowIndex: rowNum,
+          columnIndexes: columnIndexes,
+          score: score
+        };
+      }
+    }
+    
+    if (bestResult && bestScore > 0) {
+      addFormLog('ステータス収集シート列検出成功', {
+        sheetName: statusSheetName,
+        headerRowIndex: bestResult.headerRowIndex,
+        detectedColumns: Object.keys(bestResult.columnIndexes),
+        score: bestScore
+      });
+      
+      return {
+        success: true,
+        columnIndexes: bestResult.columnIndexes,
+        headerRowIndex: bestResult.headerRowIndex
+      };
+    } else {
+      return {
+        success: false,
+        error: `ステータス収集シート '${statusSheetName}' で有効な列が見つかりませんでした`
+      };
+    }
+    
+  } catch (error) {
+    addFormLog('ステータス収集シート列検出エラー', {
+      sheetName: statusSheetName,
+      error: error.toString()
+    });
+    
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * 動的列検出を使用したVLOOKUP数式を生成する関数
+ * @param {string} statusSheetName - ステータス収集シート名
+ * @param {string} lookupValue - 検索値（拠点管理番号のセル参照）
+ * @param {string} fieldName - 取得するフィールド名
+ * @param {Object} statusColumns - ステータス収集シートの列マッピング
+ * @param {string} condition - 条件（オプション）
+ * @return {string} 数式
+ */
+function generateDynamicVlookupFormula(statusSheetName, lookupValue, fieldName, statusColumns, condition = null) {
+  if (!statusSheetName || !lookupValue || !fieldName || !statusColumns) {
+    return '';
+  }
+  
+  const returnColumn = statusColumns[fieldName];
+  if (!returnColumn) {
+    addFormLog('数式生成スキップ', {
+      reason: `フィールド '${fieldName}' の列が見つかりません`,
+      availableColumns: Object.keys(statusColumns)
+    });
+    return '';
+  }
+  
+  // 拠点管理番号列を動的に取得（デフォルトはB列）
+  const lookupColumn = statusColumns['locationNumber'] || 'B';
+  
+  // 一致する拠点管理番号の最後の行を取得する数式（配列数式使用）
+  // FILTER関数で最後の一致を取得（Google スプレッドシート用、無限範囲対応）
+  let formula = `=IFERROR(INDEX(FILTER('${statusSheetName}'!${returnColumn}:${returnColumn}, '${statusSheetName}'!${lookupColumn}:${lookupColumn}=${lookupValue}), ROWS(FILTER('${statusSheetName}'!${returnColumn}:${returnColumn}, '${statusSheetName}'!${lookupColumn}:${lookupColumn}=${lookupValue}))), "")`;
+  
+  // 条件がある場合の処理
+  if (condition) {
+    // 貸出ステータスが"1.貸出中"の場合の条件式
+    if (condition === 'lendingOnly') {
+      const statusColumn = statusColumns['status'];
+      if (statusColumn) {
+        // 最後の行のステータスをチェックしてから値を取得
+        const statusCheckFormula = `INDEX(FILTER('${statusSheetName}'!${statusColumn}:${statusColumn}, '${statusSheetName}'!${lookupColumn}:${lookupColumn}=${lookupValue}), ROWS(FILTER('${statusSheetName}'!${statusColumn}:${statusColumn}, '${statusSheetName}'!${lookupColumn}:${lookupColumn}=${lookupValue})))`;
+        const valueFormula = `INDEX(FILTER('${statusSheetName}'!${returnColumn}:${returnColumn}, '${statusSheetName}'!${lookupColumn}:${lookupColumn}=${lookupValue}), ROWS(FILTER('${statusSheetName}'!${returnColumn}:${returnColumn}, '${statusSheetName}'!${lookupColumn}:${lookupColumn}=${lookupValue})))`;
+        formula = `=IF(${statusCheckFormula}="1.貸出中", IFERROR(${valueFormula}, ""), "")`;
+      } else {
+        addFormLog('条件付き数式生成警告', {
+          reason: 'ステータス列が見つからないため、条件なしの数式を使用します',
+          fieldName: fieldName,
+          availableColumns: Object.keys(statusColumns)
+        });
+        // ステータス列が見つからない場合は条件なしの数式を使用
+      }
+    }
+  }
+  
+  addFormLog('動的数式生成完了（最後の行参照）', {
+    statusSheetName,
+    fieldName,
+    returnColumn,
+    lookupColumn,
+    condition,
+    formula,
+    note: '一致する拠点管理番号の最後の行を参照'
+  });
+  
+  return formula;
+}
+
+
+
+/**
+ * ステータス収集シートに行を追加する関数
+ * @param {string} locationNumber - 拠点管理番号
+ * @param {string} deviceCategory - デバイスカテゴリ（SV, CL, プリンタ, その他）
+ * @return {Object} 追加結果
+ */
+function addRowToStatusCollectionSheet(locationNumber, deviceCategory) {
+  try {
+    // スプレッドシート設定を取得
+    const spreadsheetSettings = getSpreadsheetSettings();
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      return {
+        success: false,
+        error: 'スプレッドシート設定が見つかりません'
+      };
+    }
+
+    // ステータス収集シート名を取得
+    const statusSheetName = getStatusCollectionSheetName(deviceCategory);
+    if (!statusSheetName) {
+      return {
+        success: false,
+        error: `デバイスカテゴリ '${deviceCategory}' に対応するステータス収集シートが見つかりません`
+      };
+    }
+
+    // スプレッドシートとシートを取得
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetSettings.settings.spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(statusSheetName);
+    
+    if (!sheet) {
+      return {
+        success: false,
+        error: `ステータス収集シート '${statusSheetName}' が見つかりません`
+      };
+    }
+
+    // ステータス収集シートの列を動的に検出
+    const statusSheetColumns = detectStatusSheetColumns(statusSheetName);
+    
+    if (!statusSheetColumns.success) {
+      return {
+        success: false,
+        error: `ステータス収集シート '${statusSheetName}' の列検出に失敗しました: ${statusSheetColumns.error}`
+      };
+    }
+
+    // 必要な列が存在するかチェック
+    const locationColumn = statusSheetColumns.columnIndexes['locationNumber'];
+    const statusColumn = statusSheetColumns.columnIndexes['status'];
+    
+    if (!locationColumn || !statusColumn) {
+      return {
+        success: false,
+        error: `必要な列が見つかりません (拠点管理番号: ${locationColumn}, ステータス: ${statusColumn})`
+      };
+    }
+
+    // 新しい行を追加
+    const lastRow = sheet.getLastRow();
+    const newRowNumber = lastRow + 1;
+    
+    // タイムスタンプを生成
+    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy/MM/dd HH:mm:ss');
+    
+    // 行データを作成（検出された列に対応）
+    const totalColumns = sheet.getLastColumn() || Object.keys(statusSheetColumns.columnIndexes).length;
+    const rowData = new Array(totalColumns).fill('');
+    
+    // 拠点管理番号列のインデックスを取得（列文字から数値に変換）
+    const locationColumnIndex = getColumnIndex(locationColumn);
+    const statusColumnIndex = getColumnIndex(statusColumn);
+    
+    // データを設定
+    rowData[locationColumnIndex - 1] = locationNumber;  // 0ベースに調整
+    rowData[statusColumnIndex - 1] = '999.フォーム作成完了';  // 0ベースに調整
+    
+    // タイムスタンプ列があれば設定
+    const timestampColumn = statusSheetColumns.columnIndexes['timestamp'];
+    if (timestampColumn) {
+      const timestampColumnIndex = getColumnIndex(timestampColumn);
+      rowData[timestampColumnIndex - 1] = timestamp;  // 0ベースに調整
+    }
+
+    // 行を追加
+    const targetRange = sheet.getRange(newRowNumber, 1, 1, rowData.length);
+    targetRange.setValues([rowData]);
+
+    addFormLog('ステータス収集シート行追加完了', {
+      sheetName: statusSheetName,
+      newRowNumber,
+      locationNumber,
+      status: '999.フォーム作成完了',
+      timestamp,
+      detectedColumns: Object.keys(statusSheetColumns.columnIndexes)
+    });
+
+    return {
+      success: true,
+      sheetName: statusSheetName,
+      spreadsheetId: spreadsheetSettings.settings.spreadsheetId,
+      rowNumber: newRowNumber,
+      locationNumber: locationNumber,
+      status: '999.フォーム作成完了',
+      timestamp: timestamp
+    };
+
+  } catch (error) {
+    addFormLog('ステータス収集シート行追加エラー', {
+      locationNumber,
+      deviceCategory,
+      error: error.toString(),
+      stack: error.stack
+    });
+
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * 列文字（A, B, C等）を列番号（1, 2, 3等）に変換する関数
+ * @param {string} columnLetter - 列文字
+ * @return {number} 列番号（1ベース）
+ */
+function getColumnIndex(columnLetter) {
+  let result = 0;
+  for (let i = 0; i < columnLetter.length; i++) {
+    result = result * 26 + (columnLetter.charCodeAt(i) - 64);
+  }
+  return result;
+}
+
+/**
+ * 列番号をアルファベットに変換する関数
+ * @param {number} columnNumber - 列番号（1ベース）
+ * @return {string} 列のアルファベット表記
+ */
+function getColumnLetter(columnNumber) {
+  let result = '';
+  while (columnNumber > 0) {
+    columnNumber--;
+    result = String.fromCharCode(65 + (columnNumber % 26)) + result;
+    columnNumber = Math.floor(columnNumber / 26);
+  }
+  return result;
+}
+
+/**
+ * 数式付きの行データを作成する関数（動的列検出対応）
+ * @param {Object} formData - フォームデータ
+ * @param {Object} additionalData - 追加データ
+ * @param {Object} columnIndexes - 列インデックスマッピング
+ * @param {number} totalColumns - 総列数
+ * @param {number} currentRowNumber - 現在の行番号
+ * @return {Array} 行データ（数式含む）
+ */
+function createRowDataWithFormulas(formData, additionalData, columnIndexes, totalColumns, currentRowNumber) {
+  try {
+    // 基本の行データを作成
+    const rowData = createRowData(formData, additionalData, columnIndexes, totalColumns);
+    
+    addFormLog('基本行データ作成成功', {
+      rowDataLength: rowData.length,
+      totalColumns,
+      deviceCategory: formData.deviceType
+    });
+    
+    // 数式が必要な列の処理
+    const deviceCategory = formData.deviceType;  // deviceTypeフィールドから取得
+    const statusSheetName = getStatusCollectionSheetName(deviceCategory);
+  
+  if (statusSheetName && columnIndexes.locationNumber !== undefined) {
+    const locationNumberCell = getColumnLetter(columnIndexes.locationNumber + 1) + currentRowNumber;
+    
+    // ステータス収集シートの列を動的に検出
+    const statusSheetColumns = detectStatusSheetColumns(statusSheetName);
+    
+    if (statusSheetColumns.success) {
+      addFormLog('ステータス収集シート列検出成功', {
+        statusSheetName,
+        detectedColumns: Object.keys(statusSheetColumns.columnIndexes),
+        columnCount: Object.keys(statusSheetColumns.columnIndexes).length
+      });
+      
+      // 各列の数式を設定（動的列検出使用）
+      const formulaMapping = {
+        assignee: generateDynamicVlookupFormula(statusSheetName, locationNumberCell, 'assignee', statusSheetColumns.columnIndexes),
+        lendingStatus: generateDynamicVlookupFormula(statusSheetName, locationNumberCell, 'status', statusSheetColumns.columnIndexes),
+        lendingDestination: generateDynamicVlookupFormula(statusSheetName, locationNumberCell, 'destination', statusSheetColumns.columnIndexes),
+        lendingDate: generateDynamicVlookupFormula(statusSheetName, locationNumberCell, 'timestamp', statusSheetColumns.columnIndexes, 'lendingOnly'),
+        userDeviceDeposit: generateDynamicVlookupFormula(statusSheetName, locationNumberCell, 'userDeviceDeposit', statusSheetColumns.columnIndexes, 'lendingOnly'),
+        remarks: generateDynamicVlookupFormula(statusSheetName, locationNumberCell, 'remarks', statusSheetColumns.columnIndexes, 'lendingOnly')
+      };
+      
+      // お預かり証No.は端末（SV/CL）かつ貸出中の場合のみ
+      if (deviceCategory === 'SV' || deviceCategory === 'CL') {
+        formulaMapping.depositReceiptNo = generateDynamicVlookupFormula(statusSheetName, locationNumberCell, 'depositReceiptNo', statusSheetColumns.columnIndexes, 'lendingOnly');
+      }
+      
+      // 数式を行データに設定
+      let formulasAdded = 0;
+      Object.keys(formulaMapping).forEach(fieldName => {
+        if (columnIndexes[fieldName] !== undefined && formulaMapping[fieldName]) {
+          rowData[columnIndexes[fieldName]] = formulaMapping[fieldName];
+          formulasAdded++;
+        }
+      });
+      
+      addFormLog('動的数式追加完了', {
+        deviceCategory,
+        statusSheetName,
+        currentRowNumber,
+        locationNumberCell,
+        formulasAdded,
+        totalFormulaFields: Object.keys(formulaMapping).length,
+        detectedStatusColumns: Object.keys(statusSheetColumns.columnIndexes),
+        targetColumns: Object.keys(formulaMapping).filter(key => 
+          columnIndexes[key] !== undefined
+        ),
+        generatedFormulas: Object.keys(formulaMapping).reduce((acc, key) => {
+          if (columnIndexes[key] !== undefined && formulaMapping[key]) {
+            acc[key] = formulaMapping[key];
+          }
+          return acc;
+        }, {})
+      });
+      
+    } else {
+      // ステータス収集シートの列検出に失敗した場合は数式なしで続行
+      addFormLog('ステータス収集シート列検出失敗、数式なしで続行', {
+        statusSheetName,
+        error: statusSheetColumns.error,
+        note: '基本データのみ追記します'
+             });
+     }
+   } else {
+     // ステータス収集シートが不要またはlocationNumber列が見つからない場合
+     addFormLog('数式スキップ', {
+       reason: !statusSheetName ? 'ステータス収集シート名が取得できません' : '拠点管理番号列が見つかりません',
+       deviceCategory: formData.deviceType,
+       statusSheetName,
+       hasLocationNumberColumn: columnIndexes.locationNumber !== undefined
+     });
+   }
+    
+    return rowData;
+    
+  } catch (error) {
+    addFormLog('数式付き行データ作成エラー', {
+      error: error.toString(),
+      deviceCategory: formData.deviceType,
+      note: '基本データのみで行データを作成します'
+    });
+    
+    // エラーが発生した場合は数式なしの基本行データを返す
+    return createRowData(formData, additionalData, columnIndexes, totalColumns);
   }
 }
 
@@ -2098,6 +2673,608 @@ function setSpreadsheetDestination(spreadsheetId) {
 /**
  * 現在のスプレッドシート設定を取得する関数
  */
+/**
+ * プリンタ・その他のスプレッドシート連携テスト関数
+ * @param {string} testLocationNumber - テスト用拠点管理番号
+ * @param {string} testLocation - テスト用拠点
+ * @param {string} testDeviceCategory - テスト用詳細カテゴリ（プリンタ または その他）
+ */
+function testPrinterSpreadsheetIntegration(testLocationNumber = 'PrinterTest_001', testLocation = 'osaka-printer', testDeviceCategory = 'プリンタ') {
+  console.log('=== プリンタ・その他 スプレッドシート連携テスト開始 ===');
+  
+  try {
+    // スプレッドシート設定の確認
+    const spreadsheetSettings = getSpreadsheetSettings();
+    console.log('スプレッドシート設定確認:', spreadsheetSettings);
+    
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      console.warn('⚠️ スプレッドシートIDが設定されていません。');
+      return {
+        success: false,
+        message: 'スプレッドシートIDが設定されていません',
+        error: 'SPREADSHEET_ID_DESTINATION が設定されていません'
+      };
+    }
+    
+    // テスト用プリンタフォームデータ
+    const testFormData = {
+      title: `プリンタスプレッドシート連携テスト_${testLocationNumber}`,
+      description: 'プリンタ・その他のスプレッドシート連携機能テスト用フォーム',
+      locationNumber: testLocationNumber,
+      deviceType: 'printer',
+      deviceCategory: testDeviceCategory,  // 「プリンタ」または「その他」
+      location: testLocation,
+      // プリンタ用attributes（必要な項目のみ）
+      attributes: {
+        assetNumber: '',  // プリンタには資産番号なし
+        model: 'PRINTER-MODEL-456',
+        serial: 'PRINTER-SER456789',
+        software: '',  // プリンタにはソフトなし
+        os: ''  // プリンタにはOSなし
+      }
+    };
+    
+    console.log('プリンタフォーム作成開始:', testFormData);
+    
+    // フォーム作成（スプレッドシート連携含む）
+    const result = createGoogleForm(testFormData);
+    
+    if (result.success) {
+      console.log('✅ プリンタフォーム作成成功');
+      console.log('📋 フォーム情報:', {
+        formId: result.data.formId,
+        title: result.data.title,
+        publicUrl: result.data.publicUrl
+      });
+      
+      // スプレッドシート連携結果の確認
+      if (result.data.spreadsheet?.success) {
+        console.log('✅ プリンタスプレッドシート連携成功');
+        console.log('📊 スプレッドシート情報:', {
+          sheetName: result.data.spreadsheet.sheetName,
+          spreadsheetId: result.data.spreadsheet.spreadsheetId,
+          detectedColumns: result.data.spreadsheet.detectedColumns,
+          deviceCategory: testDeviceCategory
+        });
+        
+        return {
+          success: true,
+          message: 'プリンタ・その他のスプレッドシート連携テスト完了',
+          formData: {
+            formId: result.data.formId,
+            publicUrl: result.data.publicUrl
+          },
+          spreadsheetData: {
+            sheetName: result.data.spreadsheet.sheetName,
+            spreadsheetId: result.data.spreadsheet.spreadsheetId,
+            rowAdded: true,
+            deviceCategory: testDeviceCategory
+          }
+        };
+        
+      } else {
+        console.error('❌ プリンタスプレッドシート連携失敗:', result.data.spreadsheet?.error);
+        return {
+          success: false,
+          message: 'プリンタフォームは作成されましたが、スプレッドシート連携に失敗しました',
+          error: result.data.spreadsheet?.error
+        };
+      }
+      
+    } else {
+      console.error('❌ プリンタフォーム作成失敗:', result.error);
+      return {
+        success: false,
+        message: 'プリンタフォーム作成に失敗しました',
+        error: result.error
+      };
+    }
+    
+  } catch (error) {
+    console.error('プリンタスプレッドシート連携テストエラー:', error.toString());
+    return {
+      success: false,
+      message: 'プリンタテストでエラーが発生しました',
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * ステータス収集シートの詳細状況確認関数
+ * @param {string} statusSheetName - 確認対象のシート名
+ */
+function debugStatusSheetStructure(statusSheetName = '端末ステータス収集シート') {
+  console.log('=== ステータス収集シート詳細確認開始 ===');
+  console.log('対象シート:', statusSheetName);
+  
+  try {
+    const spreadsheetSettings = getSpreadsheetSettings();
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      console.error('❌ スプレッドシート設定が見つかりません');
+      return { success: false, error: 'スプレッドシート設定なし' };
+    }
+    
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetSettings.settings.spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(statusSheetName);
+    
+    if (!sheet) {
+      console.error('❌ シートが見つかりません:', statusSheetName);
+      return { success: false, error: 'シートが見つかりません' };
+    }
+    
+    const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    
+    console.log('📊 シート基本情報:');
+    console.log('  - 最終行:', lastRow);
+    console.log('  - 最終列:', lastColumn);
+    console.log('  - シートURL:', spreadsheet.getUrl() + '#gid=' + sheet.getSheetId());
+    
+    if (lastRow === 0 || lastColumn === 0) {
+      console.warn('⚠️ シートが空です');
+      return { success: false, error: 'シートが空' };
+    }
+    
+    // 1行目と3行目のヘッダーを確認
+    const candidateRows = [1, 3].filter(rowNum => rowNum <= lastRow);
+    console.log('📋 ヘッダー候補行:', candidateRows);
+    
+    for (const rowNum of candidateRows) {
+      console.log(`\n--- ${rowNum}行目の内容 ---`);
+      const headerRow = sheet.getRange(rowNum, 1, 1, lastColumn).getValues()[0];
+      
+      console.log('列数:', headerRow.length);
+      console.log('内容（最初の15列）:', headerRow.slice(0, 15));
+      
+      // STATUS_SHEET_COLUMN_MAPPINGとのマッチング確認
+      console.log('\n🔍 列名マッチング確認:');
+      Object.keys(STATUS_SHEET_COLUMN_MAPPING).forEach(fieldName => {
+        const candidateNames = STATUS_SHEET_COLUMN_MAPPING[fieldName];
+        let found = false;
+        
+        for (let i = 0; i < headerRow.length; i++) {
+          const headerValue = headerRow[i] ? headerRow[i].toString().trim() : '';
+          
+          for (const candidateName of candidateNames) {
+            if (headerValue === candidateName) {
+              console.log(`  ✅ ${fieldName}: "${candidateName}" → ${getColumnLetter(i + 1)}列`);
+              found = true;
+              break;
+            }
+          }
+          
+          if (found) break;
+        }
+        
+        if (!found) {
+          console.log(`  ❌ ${fieldName}: 見つかりません (候補: ${candidateNames.join(', ')})`);
+        }
+      });
+    }
+    
+    // 列検出のテスト実行
+    console.log('\n🧪 実際の列検出テスト:');
+    const result = detectStatusSheetColumns(statusSheetName);
+    console.log('検出結果:', result);
+    
+    return {
+      success: true,
+      sheetInfo: {
+        lastRow,
+        lastColumn,
+        candidateRows
+      },
+      detectionResult: result
+    };
+    
+  } catch (error) {
+    console.error('❌ シート確認エラー:', error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * 数式生成の詳細テスト関数
+ * @param {string} testLocationNumber - テスト用拠点管理番号
+ * @param {string} testDeviceCategory - テスト用詳細カテゴリ
+ */
+function testFormulaGeneration(testLocationNumber = 'Formula_Test_001', testDeviceCategory = 'SV') {
+  console.log('=== 数式生成詳細テスト開始 ===');
+  
+  try {
+    const statusSheetName = getStatusCollectionSheetName(testDeviceCategory);
+    console.log('対象ステータス収集シート:', statusSheetName);
+    
+    // ステータス収集シートの列検出
+    const statusSheetColumns = detectStatusSheetColumns(statusSheetName);
+    
+    if (!statusSheetColumns.success) {
+      console.error('❌ ステータス収集シート列検出失敗:', statusSheetColumns.error);
+      return { success: false, error: statusSheetColumns.error };
+    }
+    
+    console.log('✅ ステータス収集シート列検出成功:', statusSheetColumns.columnIndexes);
+    
+    // テスト用のセル参照
+    const testLocationCell = 'Q10';  // 拠点管理番号があるセル
+    
+    // 各数式を生成してテスト
+    const formulaTests = {
+      assignee: generateDynamicVlookupFormula(statusSheetName, testLocationCell, 'assignee', statusSheetColumns.columnIndexes),
+      lendingStatus: generateDynamicVlookupFormula(statusSheetName, testLocationCell, 'status', statusSheetColumns.columnIndexes),
+      lendingDestination: generateDynamicVlookupFormula(statusSheetName, testLocationCell, 'destination', statusSheetColumns.columnIndexes),
+      lendingDate: generateDynamicVlookupFormula(statusSheetName, testLocationCell, 'timestamp', statusSheetColumns.columnIndexes, 'lendingOnly'),
+      userDeviceDeposit: generateDynamicVlookupFormula(statusSheetName, testLocationCell, 'userDeviceDeposit', statusSheetColumns.columnIndexes, 'lendingOnly'),
+      remarks: generateDynamicVlookupFormula(statusSheetName, testLocationCell, 'remarks', statusSheetColumns.columnIndexes, 'lendingOnly')
+    };
+    
+    // 端末の場合はお預かり証No.も追加
+    if (testDeviceCategory === 'SV' || testDeviceCategory === 'CL') {
+      formulaTests.depositReceiptNo = generateDynamicVlookupFormula(statusSheetName, testLocationCell, 'depositReceiptNo', statusSheetColumns.columnIndexes, 'lendingOnly');
+    }
+    
+    console.log('📋 生成された数式一覧:');
+    Object.keys(formulaTests).forEach(fieldName => {
+      const formula = formulaTests[fieldName];
+      console.log(`  - ${fieldName}: ${formula || '（生成失敗）'}`);
+    });
+    
+    // 数式の構文チェック
+    const validFormulas = Object.keys(formulaTests).filter(key => 
+      formulaTests[key] && formulaTests[key].startsWith('=')
+    );
+    
+    console.log(`✅ 有効な数式: ${validFormulas.length}個`);
+    console.log(`❌ 無効な数式: ${Object.keys(formulaTests).length - validFormulas.length}個`);
+    
+    return {
+      success: true,
+      statusSheetName,
+      detectedColumns: statusSheetColumns.columnIndexes,
+      generatedFormulas: formulaTests,
+      validFormulaCount: validFormulas.length,
+      totalFormulaCount: Object.keys(formulaTests).length
+    };
+    
+  } catch (error) {
+    console.error('数式生成テストエラー:', error.toString());
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * ステータス収集シートの動的列検出テスト関数
+ * @param {string} statusSheetName - テスト対象のステータス収集シート名
+ */
+function testStatusSheetColumnDetection(statusSheetName = '端末ステータス収集シート') {
+  console.log('=== ステータス収集シート動的列検出テスト開始 ===');
+  console.log('対象シート:', statusSheetName);
+  
+  try {
+    // ステータス収集シートの列検出を実行
+    const result = detectStatusSheetColumns(statusSheetName);
+    
+    if (result.success) {
+      console.log('✅ 動的列検出成功');
+      console.log('📊 検出結果:', {
+        headerRowIndex: result.headerRowIndex,
+        detectedColumns: result.columnIndexes,
+        columnCount: Object.keys(result.columnIndexes).length
+      });
+      
+      // 各列の詳細表示
+      console.log('📋 検出された列マッピング:');
+      Object.keys(result.columnIndexes).forEach(fieldName => {
+        const column = result.columnIndexes[fieldName];
+        const mapping = STATUS_SHEET_COLUMN_MAPPING[fieldName];
+        console.log(`  - ${fieldName}: ${column}列 (候補: ${mapping.join(', ')})`);
+      });
+      
+      // 数式生成のテスト
+      console.log('🧪 数式生成テスト:');
+      const testLocationCell = 'Q10';  // テスト用セル参照
+      
+      Object.keys(result.columnIndexes).forEach(fieldName => {
+        const formula = generateDynamicVlookupFormula(statusSheetName, testLocationCell, fieldName, result.columnIndexes);
+        console.log(`  - ${fieldName}: ${formula || '（数式生成なし）'}`);
+      });
+      
+      // 条件付き数式のテスト
+      console.log('🧪 条件付き数式生成テスト:');
+      const conditionalFields = ['timestamp', 'userDeviceDeposit', 'depositReceiptNo', 'remarks'];
+      conditionalFields.forEach(fieldName => {
+        if (result.columnIndexes[fieldName]) {
+          const formula = generateDynamicVlookupFormula(statusSheetName, testLocationCell, fieldName, result.columnIndexes, 'lendingOnly');
+          console.log(`  - ${fieldName} (貸出中のみ): ${formula || '（数式生成なし）'}`);
+        }
+      });
+      
+      return {
+        success: true,
+        message: 'ステータス収集シート動的列検出テスト完了',
+        detectedColumns: result.columnIndexes,
+        headerRowIndex: result.headerRowIndex,
+        columnCount: Object.keys(result.columnIndexes).length
+      };
+      
+    } else {
+      console.error('❌ 動的列検出失敗:', result.error);
+      return {
+        success: false,
+        message: 'ステータス収集シート動的列検出に失敗しました',
+        error: result.error
+      };
+    }
+    
+  } catch (error) {
+    console.error('ステータス収集シート動的列検出テストエラー:', error.toString());
+    return {
+      success: false,
+      message: 'ステータス収集シート動的列検出テストでエラーが発生しました',
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * 動的数式機能のテスト関数
+ * @param {string} testLocationNumber - テスト用拠点管理番号
+ * @param {string} testDeviceCategory - テスト用詳細カテゴリ（SV, CL, プリンタ, その他）
+ */
+function testDynamicFormulaIntegration(testLocationNumber = 'DynamicTest_001', testDeviceCategory = 'SV') {
+  console.log('=== 動的数式機能テスト開始 ===');
+  
+  try {
+    // スプレッドシート設定の確認
+    const spreadsheetSettings = getSpreadsheetSettings();
+    console.log('スプレッドシート設定確認:', spreadsheetSettings);
+    
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      console.warn('⚠️ スプレッドシートIDが設定されていません。');
+      return {
+        success: false,
+        message: 'スプレッドシートIDが設定されていません',
+        error: 'SPREADSHEET_ID_DESTINATION が設定されていません'
+      };
+    }
+    
+    // デバイスタイプを決定
+    const deviceType = (testDeviceCategory === 'SV' || testDeviceCategory === 'CL') ? 'terminal' : 'printer';
+    const location = deviceType === 'terminal' ? 'osaka-desktop' : 'osaka-printer';
+    const statusSheetName = getStatusCollectionSheetName(testDeviceCategory);
+    
+    // まず動的列検出をテスト
+    console.log('📊 ステータス収集シート動的列検出実行中...');
+    const columnDetectionResult = testStatusSheetColumnDetection(statusSheetName);
+    
+         if (!columnDetectionResult.success) {
+       console.error('❌ 動的列検出に失敗しました。フォーム作成時にエラーが発生する可能性があります');
+       console.warn('⚠️ ステータス収集シートの列構成を確認してください');
+     }
+    
+    // テスト用フォームデータ
+    const testFormData = {
+      title: `動的数式機能テスト_${testLocationNumber}_${testDeviceCategory}`,
+      description: '動的数式機能のテスト用フォーム（ステータス収集シートから動的に列を検出）',
+      locationNumber: testLocationNumber,
+      deviceType: deviceType,
+      deviceCategory: testDeviceCategory,
+      location: location,
+      // テスト用attributes
+      attributes: {
+        assetNumber: deviceType === 'terminal' ? 'DYNAMIC-ASSET-001' : '',
+        model: 'DYNAMIC-MODEL-123',
+        serial: 'DYNAMIC-SER456789',
+        software: deviceType === 'terminal' ? '動的数式テストソフト' : '',
+        os: deviceType === 'terminal' ? 'Windows 11' : ''
+      }
+    };
+    
+    console.log('動的数式テスト用フォーム作成開始:', testFormData);
+    
+    // フォーム作成（動的数式機能含む）
+    const result = createGoogleForm(testFormData);
+    
+    if (result.success) {
+      console.log('✅ 動的数式テスト用フォーム作成成功');
+      console.log('📋 フォーム情報:', {
+        formId: result.data.formId,
+        title: result.data.title,
+        publicUrl: result.data.publicUrl
+      });
+      
+      // スプレッドシート連携結果の確認
+      if (result.data.spreadsheet?.success) {
+        console.log('✅ 動的数式機能付きスプレッドシート連携成功');
+        console.log('📊 スプレッドシート情報:', {
+          sheetName: result.data.spreadsheet.sheetName,
+          spreadsheetId: result.data.spreadsheet.spreadsheetId,
+          detectedColumns: result.data.spreadsheet.detectedColumns,
+          deviceCategory: testDeviceCategory,
+          statusSheetName: statusSheetName
+        });
+        
+                 console.log('📋 動的数式機能の特徴:');
+         console.log('  ✨ ステータス収集シートのヘッダーから自動で列を検出');
+         console.log('  ✨ 列の順序が変わっても対応可能');
+         console.log('  ✨ 列名の変更に柔軟に対応（候補名リスト使用）');
+         console.log('  ✨ 列検出失敗時は明確なエラーメッセージを表示');
+         console.log('  ✨ デバイス種別に応じたシート自動選択');
+        
+        return {
+          success: true,
+          message: '動的数式機能テスト完了',
+          formData: {
+            formId: result.data.formId,
+            publicUrl: result.data.publicUrl
+          },
+          spreadsheetData: {
+            sheetName: result.data.spreadsheet.sheetName,
+            spreadsheetId: result.data.spreadsheet.spreadsheetId,
+            rowAdded: true,
+            deviceCategory: testDeviceCategory,
+            statusSheetName: statusSheetName,
+            dynamicFormulaEnabled: true,
+            columnDetectionResult: columnDetectionResult
+          }
+        };
+        
+      } else {
+        console.error('❌ 動的数式機能付きスプレッドシート連携失敗:', result.data.spreadsheet?.error);
+        return {
+          success: false,
+          message: 'フォームは作成されましたが、動的数式機能付きスプレッドシート連携に失敗しました',
+          error: result.data.spreadsheet?.error
+        };
+      }
+      
+    } else {
+      console.error('❌ 動的数式テスト用フォーム作成失敗:', result.error);
+      return {
+        success: false,
+        message: '動的数式テスト用フォーム作成に失敗しました',
+        error: result.error
+      };
+    }
+    
+  } catch (error) {
+    console.error('動的数式機能テストエラー:', error.toString());
+    return {
+      success: false,
+      message: '動的数式機能テストでエラーが発生しました',
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * 数式機能のテスト関数
+ * @param {string} testLocationNumber - テスト用拠点管理番号
+ * @param {string} testDeviceCategory - テスト用詳細カテゴリ（SV, CL, プリンタ, その他）
+ */
+function testFormulaIntegration(testLocationNumber = 'FormulaTest_001', testDeviceCategory = 'SV') {
+  console.log('=== 数式機能テスト開始 ===');
+  
+  try {
+    // スプレッドシート設定の確認
+    const spreadsheetSettings = getSpreadsheetSettings();
+    console.log('スプレッドシート設定確認:', spreadsheetSettings);
+    
+    if (!spreadsheetSettings.success || !spreadsheetSettings.settings.spreadsheetId) {
+      console.warn('⚠️ スプレッドシートIDが設定されていません。');
+      return {
+        success: false,
+        message: 'スプレッドシートIDが設定されていません',
+        error: 'SPREADSHEET_ID_DESTINATION が設定されていません'
+      };
+    }
+    
+    // デバイスタイプを決定
+    const deviceType = (testDeviceCategory === 'SV' || testDeviceCategory === 'CL') ? 'terminal' : 'printer';
+    const location = deviceType === 'terminal' ? 'osaka-desktop' : 'osaka-printer';
+    
+    // テスト用フォームデータ
+    const testFormData = {
+      title: `数式機能テスト_${testLocationNumber}_${testDeviceCategory}`,
+      description: '数式機能のテスト用フォーム',
+      locationNumber: testLocationNumber,
+      deviceType: deviceType,
+      deviceCategory: testDeviceCategory,
+      location: location,
+      // テスト用attributes
+      attributes: {
+        assetNumber: deviceType === 'terminal' ? 'FORMULA-ASSET-001' : '',
+        model: 'FORMULA-MODEL-123',
+        serial: 'FORMULA-SER456789',
+        software: deviceType === 'terminal' ? '数式テストソフト' : '',
+        os: deviceType === 'terminal' ? 'Windows 11' : ''
+      }
+    };
+    
+    console.log('数式テスト用フォーム作成開始:', testFormData);
+    
+    // フォーム作成（数式機能含む）
+    const result = createGoogleForm(testFormData);
+    
+    if (result.success) {
+      console.log('✅ 数式テスト用フォーム作成成功');
+      console.log('📋 フォーム情報:', {
+        formId: result.data.formId,
+        title: result.data.title,
+        publicUrl: result.data.publicUrl
+      });
+      
+      // スプレッドシート連携結果の確認
+      if (result.data.spreadsheet?.success) {
+        console.log('✅ 数式機能付きスプレッドシート連携成功');
+        console.log('📊 スプレッドシート情報:', {
+          sheetName: result.data.spreadsheet.sheetName,
+          spreadsheetId: result.data.spreadsheet.spreadsheetId,
+          detectedColumns: result.data.spreadsheet.detectedColumns,
+          deviceCategory: testDeviceCategory,
+          statusSheetName: getStatusCollectionSheetName(testDeviceCategory)
+        });
+        
+        console.log('📋 追加された数式情報:');
+        console.log('  - 担当者: ステータス収集シートB列から取得');
+        console.log('  - 貸出ステータス: ステータス収集シートE列から取得');
+        console.log('  - 貸出先: ステータス収集シートI列から取得');
+        console.log('  - 貸出日: 貸出中の場合のみC列から取得');
+        console.log('  - ユーザー預り機有: 貸出中の場合のみL列から取得');
+        if (testDeviceCategory === 'SV' || testDeviceCategory === 'CL') {
+          console.log('  - お預かり証No.: 端末かつ貸出中の場合のみP列から取得');
+        }
+        console.log('  - 備考: 貸出中の場合のみN列から取得');
+        
+        return {
+          success: true,
+          message: '数式機能テスト完了',
+          formData: {
+            formId: result.data.formId,
+            publicUrl: result.data.publicUrl
+          },
+          spreadsheetData: {
+            sheetName: result.data.spreadsheet.sheetName,
+            spreadsheetId: result.data.spreadsheet.spreadsheetId,
+            rowAdded: true,
+            deviceCategory: testDeviceCategory,
+            statusSheetName: getStatusCollectionSheetName(testDeviceCategory),
+            formulasEnabled: true
+          }
+        };
+        
+      } else {
+        console.error('❌ 数式機能付きスプレッドシート連携失敗:', result.data.spreadsheet?.error);
+        return {
+          success: false,
+          message: 'フォームは作成されましたが、数式機能付きスプレッドシート連携に失敗しました',
+          error: result.data.spreadsheet?.error
+        };
+      }
+      
+    } else {
+      console.error('❌ 数式テスト用フォーム作成失敗:', result.error);
+      return {
+        success: false,
+        message: '数式テスト用フォーム作成に失敗しました',
+        error: result.error
+      };
+    }
+    
+  } catch (error) {
+    console.error('数式機能テストエラー:', error.toString());
+    return {
+      success: false,
+      message: '数式機能テストでエラーが発生しました',
+      error: error.toString()
+    };
+  }
+}
+
 function getSpreadsheetSettings() {
   try {
     const properties = PropertiesService.getScriptProperties();
@@ -2174,6 +3351,7 @@ function testSpreadsheetIntegration(testLocationNumber = 'SpreadTest_001', testL
       description: 'スプレッドシート連携機能のテスト用フォーム',
       locationNumber: testLocationNumber,
       deviceType: 'terminal',
+      deviceCategory: 'SV',  // SV/CL形式で設定
       location: testLocation,
       // attributesオブジェクトに設定（フロントエンドと同じ構造）
       attributes: {
