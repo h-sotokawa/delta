@@ -24,10 +24,12 @@ const LOCATION_FOLDER_KEYS = {
 
 // 拠点別シート名マッピング
 const LOCATION_SHEET_NAMES = {
-  'osaka-desktop': '大阪',
-  'osaka-server': '大阪',
-  'kobe-terminal': '神戸',
-  'himeji-terminal': '姫路'
+  'osaka-desktop': '大阪(端末)',
+  'osaka-server': '大阪(端末)',
+  'kobe-terminal': '神戸(端末)',
+  'himeji-terminal': '姫路(端末)',
+  'osaka-printer': '大阪(プリンタ)',
+  'hyogo-printer': '兵庫(プリンタ)'
 };
 
 // スプレッドシート列マッピング（フィールド名 → 列名の候補リスト）
@@ -190,20 +192,60 @@ function detectHeaderRow(sheet) {
 }
 
 /**
+ * デバイスタイプに応じて必要なフィールドを取得する関数
+ * @param {string} deviceType - デバイスタイプ（SV, CL, プリンタ, その他）
+ * @return {Array} 必要なフィールド名の配列
+ */
+function getRequiredFieldsForDeviceType(deviceType) {
+  const allFields = Object.keys(SPREADSHEET_COLUMN_MAPPING);
+  
+  // プリンタ・その他の場合は特定の列を除外
+  if (deviceType === 'プリンタ' || deviceType === 'その他') {
+    const excludedFields = ['assetNumber', 'software', 'os', 'depositReceiptNo'];
+    const requiredFields = allFields.filter(field => !excludedFields.includes(field));
+    
+    addFormLog('プリンタ・その他用フィールド設定', {
+      deviceType,
+      allFields: allFields.length,
+      excludedFields: excludedFields,
+      requiredFields: requiredFields.length,
+      excludedCount: excludedFields.length
+    });
+    
+    return requiredFields;
+  }
+  
+  // 端末（SV, CL）の場合はすべてのフィールドが必要
+  addFormLog('端末用フィールド設定', {
+    deviceType,
+    requiredFields: allFields.length,
+    allFieldsIncluded: true
+  });
+  
+  return allFields;
+}
+
+/**
  * 不足しているヘッダーを検出する関数
  * @param {Object} currentColumnIndexes - 現在検出されている列インデックス
+ * @param {string} deviceType - デバイスタイプ（SV, CL, プリンタ, その他）
  * @return {Array} 不足しているフィールド名の配列
  */
-function detectMissingHeaders(currentColumnIndexes) {
-  const requiredFields = Object.keys(SPREADSHEET_COLUMN_MAPPING);
+function detectMissingHeaders(currentColumnIndexes, deviceType = null) {
+  const requiredFields = deviceType ? 
+    getRequiredFieldsForDeviceType(deviceType) : 
+    Object.keys(SPREADSHEET_COLUMN_MAPPING);
+    
   const missingFields = requiredFields.filter(fieldName => 
     currentColumnIndexes[fieldName] === undefined
   );
   
   addFormLog('不足ヘッダー検出', {
+    deviceType: deviceType || '未指定',
     requiredFields: requiredFields.length,
     currentFields: Object.keys(currentColumnIndexes).length,
-    missingFields: missingFields
+    missingFields: missingFields,
+    excludedForDevice: deviceType && (deviceType === 'プリンタ' || deviceType === 'その他')
   });
   
   return missingFields;
@@ -213,9 +255,10 @@ function detectMissingHeaders(currentColumnIndexes) {
  * シートの3行目に不足しているヘッダーを追加する関数
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - シートオブジェクト
  * @param {Array} missingFields - 不足しているフィールド名の配列
+ * @param {string} deviceType - デバイスタイプ（ログ用）
  * @return {Object} 追加結果
  */
-function addMissingHeadersToSheet(sheet, missingFields) {
+function addMissingHeadersToSheet(sheet, missingFields, deviceType = null) {
   try {
     if (!missingFields || missingFields.length === 0) {
       return {
@@ -313,9 +356,10 @@ function addMissingHeadersToSheet(sheet, missingFields) {
 /**
  * ヘッダー行を検出し、不足している場合は自動追加する関数
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - シートオブジェクト
+ * @param {string} deviceType - デバイスタイプ（SV, CL, プリンタ, その他）
  * @return {Object} ヘッダー情報（不足ヘッダー追加後）
  */
-function detectAndEnsureHeaders(sheet) {
+function detectAndEnsureHeaders(sheet, deviceType = null) {
   try {
     // 最初にヘッダー行を検出
     let headerInfo = detectHeaderRow(sheet);
@@ -323,11 +367,12 @@ function detectAndEnsureHeaders(sheet) {
     if (!headerInfo.found) {
       // ヘッダー行が見つからない場合、3行目にすべて作成
       addFormLog('ヘッダー行未検出、新規作成を開始', {
-        sheetName: sheet.getName()
+        sheetName: sheet.getName(),
+        deviceType: deviceType
       });
       
-      const allRequiredFields = Object.keys(SPREADSHEET_COLUMN_MAPPING);
-      const headerAddResult = addMissingHeadersToSheet(sheet, allRequiredFields);
+      const allRequiredFields = getRequiredFieldsForDeviceType(deviceType);
+      const headerAddResult = addMissingHeadersToSheet(sheet, allRequiredFields, deviceType);
       
       if (headerAddResult.success) {
         // ヘッダー追加後に再検出
@@ -354,16 +399,17 @@ function detectAndEnsureHeaders(sheet) {
     }
     
     // ヘッダー行は見つかったが、不足している列がある場合
-    const missingFields = detectMissingHeaders(headerInfo.columnIndexes);
+    const missingFields = detectMissingHeaders(headerInfo.columnIndexes, deviceType);
     
     if (missingFields.length > 0) {
       addFormLog('不足ヘッダーを自動追加開始', {
         sheetName: sheet.getName(),
+        deviceType: deviceType,
         missingFields: missingFields,
         currentColumns: Object.keys(headerInfo.columnIndexes)
       });
       
-      const headerAddResult = addMissingHeadersToSheet(sheet, missingFields);
+      const headerAddResult = addMissingHeadersToSheet(sheet, missingFields, deviceType);
       
       if (headerAddResult.success) {
         // ヘッダー追加後に再検出
@@ -489,7 +535,7 @@ function createGoogleForm(formConfig) {
         serial: formConfig.attributes?.serial || ''
       };
       
-      duplicateCheckResult = checkDuplicateValues(formConfig.location, checkData);
+      duplicateCheckResult = checkDuplicateValues(formConfig.location, checkData, formConfig.deviceCategory);
       
       if (!duplicateCheckResult.success) {
         addFormLog('重複チェック失敗', {
@@ -2332,7 +2378,7 @@ function addRowToSpreadsheet(location, formData, additionalData = {}) {
     }
     
     // ヘッダー行を動的に検出し、不足している場合は自動追加
-    const headerInfo = detectAndEnsureHeaders(sheet);
+    const headerInfo = detectAndEnsureHeaders(sheet, formData.deviceType);
     
     if (!headerInfo.found) {
       throw new Error(`シート「${sheetName}」でヘッダー行を検出できませんでした: ${headerInfo.error}`);
@@ -2630,9 +2676,10 @@ function generateDynamicVlookupFormula(statusSheetName, lookupValue, fieldName, 
  * @param {string} checkData.locationNumber - 拠点管理番号
  * @param {string} checkData.assetNumber - 資産管理番号
  * @param {string} checkData.serial - シリアル番号
+ * @param {string} deviceType - デバイスタイプ（SV, CL, プリンタ, その他）
  * @return {Object} チェック結果
  */
-function checkDuplicateValues(location, checkData) {
+function checkDuplicateValues(location, checkData, deviceType = null) {
   try {
     // スプレッドシート設定を取得
     const spreadsheetSettings = getSpreadsheetSettings();
@@ -2694,10 +2741,26 @@ function checkDuplicateValues(location, checkData) {
     const dataRange = sheet.getRange(headerInfo.rowIndex + 1, 1, lastRow - headerInfo.rowIndex, lastColumn);
     const dataValues = dataRange.getValues();
 
+    // デバイスタイプに応じて除外するフィールドを決定
+    const excludedFields = (deviceType === 'プリンタ' || deviceType === 'その他') 
+      ? ['assetNumber', 'software', 'os', 'depositReceiptNo'] 
+      : [];
+
     // 各フィールドの重複をチェック
     Object.keys(checkData).forEach(fieldName => {
       const value = checkData[fieldName];
       if (!value) return; // 空の値はスキップ
+
+      // プリンタ・その他の場合、除外対象フィールドはスキップ
+      if (excludedFields.includes(fieldName)) {
+        addFormLog('重複チェック: デバイスタイプにより除外', {
+          fieldName,
+          deviceType,
+          value,
+          excludedFields
+        });
+        return;
+      }
 
       const columnIndex = columnIndexes[fieldName];
       if (columnIndex === undefined) {
@@ -2743,6 +2806,8 @@ function checkDuplicateValues(location, checkData) {
 
     addFormLog('重複チェック完了', {
       sheetName,
+      deviceType: deviceType,
+      excludedFields: excludedFields,
       checkedFields,
       duplicatesFound: duplicates.length,
       duplicates: duplicates.map(d => ({
@@ -4305,8 +4370,8 @@ function testAutoHeaderAddition(testSheetName = null) {
         console.log(`    最終行: ${beforeState.lastRow}, 最終列: ${beforeState.lastColumn}`);
         console.log(`    検出されたヘッダー: ${beforeState.headerInfo.found ? Object.keys(beforeState.headerInfo.columnIndexes).length : 0}個`);
         
-        // 自動ヘッダー追加機能を実行
-        const headerResult = detectAndEnsureHeaders(sheet);
+        // 自動ヘッダー追加機能を実行（テスト用にSVを仮定）
+        const headerResult = detectAndEnsureHeaders(sheet, 'SV');
         
         if (headerResult.found) {
           console.log('  ✅ ヘッダー検出・追加成功');
