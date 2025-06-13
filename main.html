@@ -14,13 +14,19 @@
   window.onload = function() {
     showDebugInfo('ページ読み込み完了', {});
     
-    // オープニング画面を表示してデータ一括読み込みを開始
-    showOpeningScreenAndPreload();
-    
-    // スプレッドシートページの初期化（オープニング後に実行）
-    setTimeout(() => {
+    if (DEBUG_MODE) {
+      // デバッグモードの場合はオープニングをスキップして直接初期化
+      showDebugInfo('デバッグモード: オープニングスキップ', {});
       initializeLocations();
-    }, 1000);
+    } else {
+      // 本番モードの場合はオープニング画面を表示してデータ一括読み込みを開始
+      showOpeningScreenAndPreload();
+      
+      // スプレッドシートページの初期化（オープニング後に実行）
+      setTimeout(() => {
+        initializeLocations();
+      }, 1000);
+    }
     
     // デバッグモードがオフの場合はデバッグセクションを非表示
     if (!DEBUG_MODE) {
