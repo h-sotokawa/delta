@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install -y \
 # Google Apps Script開発用のclaspのインストール
 RUN npm install -g @google/clasp
 
+# Claude Codeのインストール
+RUN npm install -g @anthropic-ai/claude-code
+
 # nodeユーザーの設定
 RUN usermod -aG sudo node
 
