@@ -1,0 +1,97 @@
+{
+  "name": "Node.js Development Container",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  
+  // ワークスペースマウントのオプション
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  
+  // ポートフォワーディング
+  "forwardPorts": [3000, 3001, 5000, 8000, 8080],
+  
+  // 開発用拡張機能
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // JavaScript/TypeScript関連
+        "ms-vscode.vscode-typescript-next",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-json",
+        
+        // Node.js開発関連
+        "ms-vscode.vscode-node-debug2",
+        "christian-kohler.npm-intellisense",
+        "eg2.vscode-npm-script",
+        
+        // Git関連
+        "eamodio.gitlens",
+        "github.vscode-pull-request-github",
+        
+        // HTML/CSS関連
+        "formulahendry.auto-rename-tag",
+        "bradlc.vscode-tailwindcss",
+        
+        // 一般的な開発ツール
+        "ms-vscode.remote-containers",
+        "ms-vscode-remote.remote-containers",
+        "ms-vscode.vscode-docker",
+        "pkief.material-icon-theme",
+        "github.copilot",
+        "github.copilot-chat",
+        
+        // Google Apps Script開発用
+        "google.clasp"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "files.eol": "\n",
+        "git.autofetch": true
+      }
+    }
+  },
+  
+  // コンテナ起動時に実行するコマンド
+  "postCreateCommand": "npm install -g @google/clasp",
+  
+  // コンテナの機能
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "installOhMyZsh": false,
+      "username": "node",
+      "uid": "1000",
+      "gid": "1000"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    }
+  },
+  
+  // セキュリティ設定
+  "remoteUser": "node",
+  "containerUser": "node",
+  
+  // ライフサイクルコマンド
+  "initializeCommand": "echo 'Initializing Dev Container...'",
+  "onCreateCommand": "echo 'Dev Container created successfully!'",
+  
+  // マウント設定
+  "mounts": [
+    "source=${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.ssh,target=/home/node/.ssh,type=bind,consistency=cached"
+  ],
+  
+  // コンテナ設定
+  "runArgs": ["--init"],
+  "shutdownAction": "stopContainer"
+} 
