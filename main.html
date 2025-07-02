@@ -120,6 +120,25 @@
       }, 100);
     }
     
+    // 拠点マスタページの場合、拠点マスタ機能を初期化
+    if (pageId === 'location-master') {
+      if (DEBUG_MODE) {
+        showDebugInfo('showPage: 拠点マスタページ表示', { pageId });
+      }
+      setTimeout(() => {
+        if (typeof onLocationMasterPageShow === 'function') {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage遅延実行: 拠点マスタ機能初期化', {});
+          }
+          onLocationMasterPageShow();
+        } else {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage: onLocationMasterPageShow関数が見つからない', {});
+          }
+        }
+      }, 100);
+    }
+    
     // スクロール位置をトップに
     window.scrollTo(0, 0);
   }

@@ -41,20 +41,6 @@
       </div>
 
       <div class="form-group">
-        <label for="location-number">
-          <i class="fas fa-hashtag"></i>
-          拠点管理番号 <span class="required">*</span>
-        </label>
-        <div class="location-number-input">
-          <span id="location-prefix" class="location-prefix">選択してください_</span>
-                     <input type="text" id="location-suffix" name="locationSuffix" required
-                  placeholder="001" maxlength="50" disabled>
-          <input type="hidden" id="location-number" name="locationNumber">
-        </div>
-        <small class="help-text">拠点選択後、固有の管理番号を入力してください（例: 001, 002, ABC）</small>
-      </div>
-
-      <div class="form-group">
         <label for="device-category">
           <i class="fas fa-tag"></i>
           詳細カテゴリ <span class="required">*</span>
@@ -85,6 +71,25 @@
           <option value="">まず機種カテゴリを選択してください</option>
         </select>
         <small class="help-text">選択したカテゴリの機種が表示されます</small>
+      </div>
+
+      <div class="form-group">
+        <label for="location-number">
+          <i class="fas fa-hashtag"></i>
+          拠点管理番号 <span class="required">*</span>
+        </label>
+        <div class="location-number-preview">
+          <div id="location-number-display" class="location-number-display">
+            上記の項目を選択すると自動生成されます
+          </div>
+          <div class="location-number-input" style="display: none;">
+            <span id="location-prefix-generated" class="location-prefix-generated"></span>
+            <input type="text" id="location-suffix" name="locationSuffix" required
+                   placeholder="001" maxlength="50" disabled>
+          </div>
+          <input type="hidden" id="location-number" name="locationNumber">
+        </div>
+        <small class="help-text">上記の選択内容を基に拠点管理番号が自動生成されます。最後に固有の番号を入力してください（例: Osaka_SV_ThinkPad_001）</small>
       </div>
 
       <!-- 代替機属性情報 -->

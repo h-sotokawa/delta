@@ -1,0 +1,240 @@
+<!-- location-master-functions.html - 拠点マスタ管理ページの機能 -->
+<script>
+  // ========================================
+  // ページ初期化
+  // ========================================
+  function onLocationMasterPageShow() {
+    loadLocationList();
+  }
+
+  // ========================================
+  // 拠点一覧の読み込み
+  // ========================================
+  function loadLocationList() {
+    showLoading('拠点一覧を読み込み中...');
+    
+    google.script.run
+      .withSuccessHandler(function(locations) {
+        hideLoading();
+        displayLocationList(locations);
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showError('拠点一覧の読み込みに失敗しました: ' + error.message);
+      })
+      .getLocationMaster();
+  }
+
+  // ========================================
+  // 拠点一覧の表示
+  // ========================================
+  function displayLocationList(locations) {
+    const tbody = document.getElementById('locationTableBody');
+    tbody.innerHTML = '';
+
+    if (!locations || locations.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center">拠点データがありません</td></tr>';
+      return;
+    }
+
+    locations.forEach(function(location) {
+      const row = document.createElement('tr');
+      
+      const statusBadge = location.status === 'active' 
+        ? '<span class="badge badge-success">有効</span>'
+        : '<span class="badge badge-secondary">無効</span>';
+
+      row.innerHTML = `
+        <td>${escapeHtml(location.locationId)}</td>
+        <td>${escapeHtml(location.locationName)}</td>
+        <td>${escapeHtml(location.locationCode)}</td>
+        <td>${statusBadge}</td>
+        <td>${formatDate(location.createdAt)}</td>
+        <td>${formatDate(location.updatedAt)}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-primary" onclick="editLocation('${location.locationId}')">
+            <i class="fas fa-edit"></i> 編集
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteLocation('${location.locationId}')">
+            <i class="fas fa-trash"></i> 削除
+          </button>
+        </td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+  }
+
+  // ========================================
+  // 新規拠点追加モーダル表示
+  // ========================================
+  function showAddLocationModal() {
+    document.getElementById('modalTitle').textContent = '新規拠点追加';
+    document.getElementById('locationForm').reset();
+    document.getElementById('editLocationId').value = '';
+    document.getElementById('locationId').disabled = false;
+    document.getElementById('locationModal').style.display = 'block';
+  }
+
+  // ========================================
+  // 拠点編集モーダル表示
+  // ========================================
+  function editLocation(locationId) {
+    showLoading('拠点情報を読み込み中...');
+    
+    google.script.run
+      .withSuccessHandler(function(location) {
+        hideLoading();
+        if (location) {
+          showEditLocationModal(location);
+        } else {
+          showError('拠点情報が見つかりません');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showError('拠点情報の読み込みに失敗しました: ' + error.message);
+      })
+      .getLocationById(locationId);
+  }
+
+  function showEditLocationModal(location) {
+    document.getElementById('modalTitle').textContent = '拠点編集';
+    document.getElementById('editLocationId').value = location.locationId;
+    document.getElementById('locationId').value = location.locationId;
+    document.getElementById('locationId').disabled = true;
+    document.getElementById('locationName').value = location.locationName;
+    document.getElementById('locationCode').value = location.locationCode;
+    document.getElementById('locationStatus').value = location.status;
+    document.getElementById('locationModal').style.display = 'block';
+  }
+
+  // ========================================
+  // モーダルを閉じる
+  // ========================================
+  function closeLocationModal() {
+    document.getElementById('locationModal').style.display = 'none';
+  }
+
+  // ========================================
+  // 拠点保存
+  // ========================================
+  function saveLocation() {
+    const form = document.getElementById('locationForm');
+    const formData = new FormData(form);
+    
+    // バリデーション
+    if (!validateLocationForm(formData)) {
+      return;
+    }
+
+    const locationData = {
+      locationId: formData.get('locationId'),
+      locationName: formData.get('locationName'),
+      locationCode: formData.get('locationCode'),
+      status: formData.get('status')
+    };
+
+    const isEdit = formData.get('editLocationId');
+    const operation = isEdit ? '更新' : '追加';
+    
+    showLoading(`拠点を${operation}中...`);
+
+    const apiCall = isEdit ? 'updateLocation' : 'addLocation';
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        closeLocationModal();
+        showSuccess(`拠点が正常に${operation}されました`);
+        loadLocationList();
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showError(`拠点の${operation}に失敗しました: ` + error.message);
+      })
+      [apiCall](locationData);
+  }
+
+  // ========================================
+  // フォームバリデーション
+  // ========================================
+  function validateLocationForm(formData) {
+    const locationId = formData.get('locationId');
+    const locationName = formData.get('locationName');
+    const locationCode = formData.get('locationCode');
+
+    if (!locationId || !locationId.match(/^[a-z0-9_-]+$/)) {
+      showError('拠点IDは小文字英数字、ハイフン、アンダースコアのみ使用可能です');
+      return false;
+    }
+
+    if (!locationName) {
+      showError('拠点名を入力してください');
+      return false;
+    }
+
+    if (!locationCode || !locationCode.match(/^[A-Z0-9]+$/)) {
+      showError('拠点コードは大文字英数字のみ使用可能です');
+      return false;
+    }
+
+    return true;
+  }
+
+  // ========================================
+  // 拠点削除
+  // ========================================
+  function deleteLocation(locationId) {
+    if (!confirm(`拠点「${locationId}」を削除してもよろしいですか？\n\nこの操作は元に戻せません。`)) {
+      return;
+    }
+
+    showLoading('拠点を削除中...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        showSuccess('拠点が正常に削除されました');
+        loadLocationList();
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showError('拠点の削除に失敗しました: ' + error.message);
+      })
+      .deleteLocation(locationId);
+  }
+
+  // ========================================
+  // 拠点一覧更新
+  // ========================================
+  function refreshLocationList() {
+    loadLocationList();
+  }
+
+  // ========================================
+  // ユーティリティ関数
+  // ========================================
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ja-JP') + ' ' + date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ========================================
+  // モーダル外クリックで閉じる
+  // ========================================
+  window.onclick = function(event) {
+    const modal = document.getElementById('locationModal');
+    if (event.target === modal) {
+      closeLocationModal();
+    }
+  };
+</script>

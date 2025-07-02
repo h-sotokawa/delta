@@ -19,6 +19,7 @@
     <?!= include('opening-screen-styles'); ?>
     <?!= include('form-creator-styles'); ?>
     <?!= include('model-master-styles'); ?>
+    <?!= include('location-master-styles'); ?>
   </head>
   <body>
     <!-- オープニング画面 -->
@@ -43,6 +44,11 @@
       <?!= include('model-master'); ?>
     </div>
     
+    <!-- 拠点マスタ管理ページ -->
+    <div id="location-master" class="page-content">
+      <?!= include('location-master'); ?>
+    </div>
+    
     <!-- レポートページ（準備中） -->
     <div id="reports" class="page-content">
       <?!= include('coming-soon'); ?>
@@ -60,5 +66,6 @@
     <?!= include('drag-drop-functions'); ?>
     <?!= include('form-creator-functions'); ?>
     <?!= include('model-master-functions'); ?>
+    <?!= include('location-master-functions'); ?>
   </body>
 </html> 

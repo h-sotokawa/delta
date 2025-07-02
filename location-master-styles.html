@@ -1,0 +1,301 @@
+<!-- location-master-styles.html - 拠点マスタ管理ページのスタイル -->
+<style>
+  /* ========================================
+     拠点マスタ管理ページ全体のスタイル
+     ======================================== */
+  .location-master-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    margin-bottom: 30px;
+    text-align: center;
+  }
+
+  .page-header h1 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 2.2rem;
+  }
+
+  .page-header p {
+    color: #7f8c8d;
+    font-size: 1.1rem;
+  }
+
+  /* ========================================
+     操作ボタンエリア
+     ======================================== */
+  .action-buttons {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .action-buttons .btn {
+    min-width: 120px;
+  }
+
+  /* ========================================
+     拠点一覧テーブル
+     ======================================== */
+  .location-list-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  #locationTable {
+    margin: 0;
+    width: 100%;
+  }
+
+  #locationTable th {
+    background-color: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+    border-top: none;
+    padding: 15px 12px;
+    white-space: nowrap;
+  }
+
+  #locationTable td {
+    padding: 12px;
+    vertical-align: middle;
+    border-top: 1px solid #dee2e6;
+  }
+
+  #locationTable tbody tr:hover {
+    background-color: #f8f9fa;
+  }
+
+  /* ========================================
+     ステータスバッジ
+     ======================================== */
+  .badge {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 0.75em;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+  }
+
+  .badge-success {
+    color: #fff;
+    background-color: #28a745;
+  }
+
+  .badge-secondary {
+    color: #fff;
+    background-color: #6c757d;
+  }
+
+  /* ========================================
+     操作ボタン
+     ======================================== */
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+    margin-right: 5px;
+  }
+
+  .btn-outline-primary {
+    color: #007bff;
+    border-color: #007bff;
+    background-color: transparent;
+  }
+
+  .btn-outline-primary:hover {
+    color: #fff;
+    background-color: #007bff;
+    border-color: #007bff;
+  }
+
+  .btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+    background-color: transparent;
+  }
+
+  .btn-outline-danger:hover {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+  }
+
+  /* ========================================
+     モーダルスタイル
+     ======================================== */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+  }
+
+  .modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    animation: modalSlideIn 0.3s ease;
+  }
+
+  @keyframes modalSlideIn {
+    from {
+      transform: translateY(-50px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.25rem;
+  }
+
+  .close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .close:hover,
+  .close:focus {
+    color: #000;
+    text-decoration: none;
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  .modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  /* ========================================
+     フォームスタイル
+     ======================================== */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .required {
+    color: #dc3545;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+  }
+
+  .form-group input:disabled {
+    background-color: #e9ecef;
+    opacity: 1;
+  }
+
+  .help-text {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.875rem;
+    color: #6c757d;
+  }
+
+  /* ========================================
+     レスポンシブ対応
+     ======================================== */
+  @media (max-width: 768px) {
+    .location-master-container {
+      padding: 15px;
+    }
+
+    .page-header h1 {
+      font-size: 1.8rem;
+    }
+
+    .action-buttons {
+      justify-content: center;
+    }
+
+    .modal-content {
+      width: 95%;
+      margin: 10% auto;
+    }
+
+    #locationTable {
+      font-size: 0.875rem;
+    }
+
+    #locationTable th,
+    #locationTable td {
+      padding: 8px 6px;
+    }
+  }
+
+  /* ========================================
+     テキスト配置
+     ======================================== */
+  .text-center {
+    text-align: center;
+  }
+</style>
