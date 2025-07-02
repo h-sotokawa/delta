@@ -16,10 +16,12 @@
     google.script.run
       .withSuccessHandler(function(locations) {
         hideLoading();
+        console.log('取得した拠点データ:', locations); // デバッグ用
         displayLocationList(locations);
       })
       .withFailureHandler(function(error) {
         hideLoading();
+        console.error('拠点一覧読み込みエラー:', error); // デバッグ用
         showError('拠点一覧の読み込みに失敗しました: ' + error.message);
       })
       .getLocationMaster();
@@ -39,6 +41,7 @@
 
     locations.forEach(function(location) {
       const row = document.createElement('tr');
+      row.setAttribute('data-location-id', location.locationId);
       
       const statusBadge = location.status === 'active' 
         ? '<span class="badge badge-success">有効</span>'
@@ -148,6 +151,11 @@
         closeLocationModal();
         showSuccess(`拠点が正常に${operation}されました`);
         loadLocationList();
+        
+        // 少し遅延してから該当行をハイライト
+        setTimeout(() => {
+          highlightLocationRow(locationData.locationId);
+        }, 500);
       })
       .withFailureHandler(function(error) {
         hideLoading();
@@ -206,10 +214,56 @@
   }
 
   // ========================================
+  // 拠点行のハイライト
+  // ========================================
+  function highlightLocationRow(locationId) {
+    const targetRow = document.querySelector(`tr[data-location-id="${locationId}"]`);
+    if (targetRow) {
+      targetRow.classList.add('highlight');
+      
+      // 3秒後にハイライトを解除
+      setTimeout(() => {
+        targetRow.classList.remove('highlight');
+      }, 3000);
+    }
+  }
+
+  // ========================================
   // 拠点一覧更新
   // ========================================
   function refreshLocationList() {
-    loadLocationList();
+    console.log('refreshLocationList called'); // デバッグ用
+    
+    // 更新ボタンにアニメーション効果を追加
+    const refreshButton = document.querySelector('.btn-info');
+    console.log('refreshButton found:', refreshButton); // デバッグ用
+    
+    if (refreshButton) {
+      refreshButton.disabled = true;
+      
+      // アイコンを回転するように変更
+      const icon = refreshButton.querySelector('i');
+      console.log('icon found:', icon); // デバッグ用
+      
+      if (icon) {
+        icon.classList.add('fa-spin');
+        console.log('fa-spin added to icon'); // デバッグ用
+      }
+      
+      // データを更新
+      loadLocationList();
+      
+      // 1秒後にボタンを元に戻す
+      setTimeout(() => {
+        refreshButton.disabled = false;
+        if (icon) {
+          icon.classList.remove('fa-spin');
+          console.log('fa-spin removed from icon'); // デバッグ用
+        }
+      }, 1000);
+    } else {
+      console.error('refresh button not found!'); // デバッグ用
+    }
   }
 
   // ========================================
@@ -222,10 +276,111 @@
     return div.innerHTML;
   }
 
-  function formatDate(dateString) {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ja-JP') + ' ' + date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  function formatDate(dateValue) {
+    if (!dateValue) return '';
+    
+    try {
+      // 既に文字列の場合
+      if (typeof dateValue === 'string') {
+        // 先頭のアポストロフィがある場合は除去
+        return dateValue.startsWith("'") ? dateValue.substring(1) : dateValue;
+      }
+      
+      // Dateオブジェクトの場合は年月日形式にフォーマット
+      if (dateValue instanceof Date) {
+        const year = dateValue.getFullYear();
+        const month = (dateValue.getMonth() + 1).toString().padStart(2, '0');
+        const day = dateValue.getDate().toString().padStart(2, '0');
+        return `${year}/${month}/${day}`;
+      }
+      
+      return dateValue.toString();
+    } catch (error) {
+      console.error('日付フォーマットエラー:', error, dateValue);
+      return '';
+    }
+  }
+
+  // ========================================
+  // UI通知関数
+  // ========================================
+  function showLocationPopupMessage(message, type = 'info') {
+    const popup = document.getElementById('popupMessage');
+    if (!popup) {
+      console.log(type + ': ' + message);
+      return;
+    }
+    
+    popup.textContent = message;
+    popup.className = 'popup-message show';
+    
+    // メッセージタイプに応じてクラスを追加
+    if (type === 'success') {
+      popup.classList.add('success');
+    } else if (type === 'error') {
+      popup.classList.add('error');
+    } else if (type === 'info') {
+      popup.classList.add('info');
+    }
+    
+    popup.style.display = 'block';
+    
+    setTimeout(() => {
+      popup.classList.remove('show');
+      setTimeout(() => {
+        popup.style.display = 'none';
+        popup.className = 'popup-message'; // クラスをリセット
+      }, 600);
+    }, 3000);
+  }
+
+  function showLoading(message) {
+    // ポップアップメッセージを表示
+    showLocationPopupMessage(message, 'info');
+    
+    // 保存ボタンをローディング状態に変更
+    const saveButton = document.querySelector('#locationModal .modal-footer .btn-primary');
+    if (saveButton) {
+      saveButton.disabled = true;
+      saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 処理中...';
+    }
+    
+    // フォーム全体を無効化
+    const form = document.getElementById('locationForm');
+    if (form) {
+      const inputs = form.querySelectorAll('input, select');
+      inputs.forEach(input => input.disabled = true);
+    }
+  }
+
+  function hideLoading() {
+    // 保存ボタンを元の状態に戻す
+    const saveButton = document.querySelector('#locationModal .modal-footer .btn-primary');
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.innerHTML = '<i class="fas fa-save"></i> 保存';
+    }
+    
+    // フォームの無効化を解除
+    const form = document.getElementById('locationForm');
+    if (form) {
+      const inputs = form.querySelectorAll('input, select');
+      inputs.forEach(input => input.disabled = false);
+      
+      // 編集モードの場合、拠点IDは無効のまま
+      const editLocationId = document.getElementById('editLocationId').value;
+      if (editLocationId) {
+        document.getElementById('locationId').disabled = true;
+      }
+    }
+  }
+
+  function showSuccess(message) {
+    showLocationPopupMessage(message, 'success');
+  }
+
+  function showError(message) {
+    showLocationPopupMessage(message, 'error');
   }
 
   // ========================================

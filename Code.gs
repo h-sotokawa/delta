@@ -113,30 +113,39 @@ function getLocationMaster() {
   
   try {
     const sheet = getLocationMasterSheet();
+    addLog('拠点マスタシート取得完了', { sheetName: sheet.getName() });
+    
     const data = sheet.getDataRange().getValues();
+    addLog('シートデータ取得完了', { rowCount: data.length, data: data });
     
     if (data.length <= 1) {
       // ヘッダー行のみまたはデータなし
+      addLog('データなし: ヘッダー行のみ');
       return [];
     }
     
     const locations = [];
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
+      addLog('行データ処理中', { rowIndex: i, row: row });
+      
       if (row[0]) { // 拠点IDが存在する行のみ
-        locations.push({
+        const today = "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
+        const location = {
           locationId: row[0],
           locationName: row[1],
           locationCode: row[2],
           status: row[3] || 'active',
-          createdAt: row[4] || new Date(),
-          updatedAt: row[5] || new Date()
-        });
+          createdAt: row[4] || today,
+          updatedAt: row[5] || today
+        };
+        locations.push(location);
+        addLog('拠点データ追加', location);
       }
     }
     
     endPerformanceTimer(startTime, '拠点マスタ一覧取得');
-    addLog('拠点マスタ一覧取得完了', { count: locations.length });
+    addLog('拠点マスタ一覧取得完了', { count: locations.length, locations: locations });
     
     return locations;
   } catch (error) {
@@ -169,11 +178,11 @@ function getLocationMasterSheet() {
     headerRange.setBackground('#f0f0f0');
     
     // 初期データを追加（既存の拠点）
-    const now = new Date();
+    const today = "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
     const initialData = [
-      ['osaka', '大阪', 'OSA', 'active', now, now],
-      ['kobe', '神戸', 'KOB', 'active', now, now],
-      ['himeji', '姫路', 'HIM', 'active', now, now]
+      ['osaka', '大阪', 'OSA', 'active', today, today],
+      ['kobe', '神戸', 'KOB', 'active', today, today],
+      ['himeji', '姫路', 'HIM', 'active', today, today]
     ];
     
     if (initialData.length > 0) {
@@ -198,13 +207,14 @@ function getLocationById(locationId) {
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
       if (row[0] === locationId) {
+        const today = "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
         const location = {
           locationId: row[0],
           locationName: row[1],
           locationCode: row[2],
           status: row[3] || 'active',
-          createdAt: row[4] || new Date(),
-          updatedAt: row[5] || new Date()
+          createdAt: row[4] || today,
+          updatedAt: row[5] || today
         };
         
         endPerformanceTimer(startTime, '拠点情報取得');
@@ -242,7 +252,7 @@ function addLocation(locationData) {
     }
     
     const sheet = getLocationMasterSheet();
-    const now = new Date();
+    const today = "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
     
     // 新しい行を追加
     const newRow = [
@@ -250,8 +260,8 @@ function addLocation(locationData) {
       locationData.locationName,
       locationData.locationCode,
       locationData.status || 'active',
-      now,
-      now
+      today,
+      today
     ];
     
     sheet.appendRow(newRow);
@@ -285,13 +295,14 @@ function updateLocation(locationData) {
       if (row[0] === locationData.locationId) {
         // 該当行を更新
         const range = sheet.getRange(i + 1, 1, 1, 6);
+        const today = "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
         const updatedRow = [
           locationData.locationId,
           locationData.locationName,
           locationData.locationCode,
           locationData.status || 'active',
           row[4], // 作成日は保持
-          new Date() // 更新日を現在時刻に設定
+          today // 更新日を現在日付に設定
         ];
         
         range.setValues([updatedRow]);

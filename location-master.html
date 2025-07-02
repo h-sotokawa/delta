@@ -1,5 +1,8 @@
 <!-- location-master.html - 拠点マスタ管理ページ -->
 <div class="location-master-container">
+  <!-- ポップアップメッセージ -->
+  <div id="popupMessage" class="popup-message"></div>
+  
   <div class="page-header">
     <h1><i class="fas fa-map-marker-alt"></i> 拠点マスタ管理</h1>
     <p>システムで使用する拠点情報を管理します</p>
@@ -11,7 +14,7 @@
       <i class="fas fa-plus"></i>
       新規拠点追加
     </button>
-    <button type="button" class="btn btn-secondary" onclick="refreshLocationList()">
+    <button type="button" class="btn btn-info" onclick="refreshLocationList()">
       <i class="fas fa-sync-alt"></i>
       更新
     </button>
