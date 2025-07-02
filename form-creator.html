@@ -65,6 +65,28 @@
         <small class="help-text">選択した代替機種別に応じたカテゴリが表示されます</small>
       </div>
 
+      <div class="form-group">
+        <label for="model-category">
+          <i class="fas fa-list"></i>
+          機種カテゴリ
+        </label>
+        <select id="model-category" name="modelCategory" onchange="updateModelsByCategory()" disabled>
+          <option value="">機種カテゴリを選択してください</option>
+        </select>
+        <small class="help-text">機種マスタから登録されたカテゴリを選択できます</small>
+      </div>
+
+      <div class="form-group">
+        <label for="model-select">
+          <i class="fas fa-laptop"></i>
+          機種選択
+        </label>
+        <select id="model-select" name="modelSelect" onchange="updateSelectedModel()" disabled>
+          <option value="">まず機種カテゴリを選択してください</option>
+        </select>
+        <small class="help-text">選択したカテゴリの機種が表示されます</small>
+      </div>
+
       <!-- 代替機属性情報 -->
       <div class="device-attributes-section">
         <div class="section-header">

@@ -18,6 +18,7 @@
     <?!= include('spreadsheet-styles'); ?>
     <?!= include('opening-screen-styles'); ?>
     <?!= include('form-creator-styles'); ?>
+    <?!= include('model-master-styles'); ?>
   </head>
   <body>
     <!-- オープニング画面 -->
@@ -37,6 +38,11 @@
       <?!= include('form-creator'); ?>
     </div>
     
+    <!-- 機種マスタ管理ページ -->
+    <div id="model-master" class="page-content">
+      <?!= include('model-master'); ?>
+    </div>
+    
     <!-- レポートページ（準備中） -->
     <div id="reports" class="page-content">
       <?!= include('coming-soon'); ?>
@@ -53,5 +59,6 @@
     <?!= include('spreadsheet-functions'); ?>
     <?!= include('drag-drop-functions'); ?>
     <?!= include('form-creator-functions'); ?>
+    <?!= include('model-master-functions'); ?>
   </body>
 </html> 

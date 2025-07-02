@@ -34,6 +34,124 @@
   }
 
   // ========================================
+  // 機種マスタ関連機能
+  // ========================================
+  
+  // 機種カテゴリ一覧を読み込む
+  function loadModelCategories() {
+    const modelCategorySelect = document.getElementById('model-category');
+    
+    if (!modelCategorySelect) {
+      console.error('機種カテゴリ選択要素が見つかりません');
+      return;
+    }
+    
+    // Google Apps Scriptから機種カテゴリを取得
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('機種カテゴリ取得結果:', result);
+        
+        if (result.success) {
+          modelCategorySelect.innerHTML = '<option value="">機種カテゴリを選択してください</option>';
+          
+          result.categories.forEach(function(category) {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            modelCategorySelect.appendChild(option);
+          });
+          
+          modelCategorySelect.disabled = false;
+        } else {
+          console.error('機種カテゴリの取得に失敗:', result.error);
+          modelCategorySelect.innerHTML = '<option value="">機種カテゴリの読み込みに失敗しました</option>';
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('機種カテゴリ取得でエラー:', error);
+        modelCategorySelect.innerHTML = '<option value="">エラーが発生しました</option>';
+      })
+      .getAvailableCategories();
+  }
+  
+  // カテゴリ別機種一覧を更新
+  function updateModelsByCategory() {
+    const modelCategorySelect = document.getElementById('model-category');
+    const modelSelect = document.getElementById('model-select');
+    
+    if (!modelCategorySelect || !modelSelect) {
+      console.error('必要な要素が見つかりません');
+      return;
+    }
+    
+    const selectedCategory = modelCategorySelect.value;
+    console.log('選択されたカテゴリ:', selectedCategory);
+    
+    if (!selectedCategory) {
+      modelSelect.innerHTML = '<option value="">まず機種カテゴリを選択してください</option>';
+      modelSelect.disabled = true;
+      return;
+    }
+    
+    // Google Apps Scriptからカテゴリ別機種を取得
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('カテゴリ別機種取得結果:', result);
+        
+        if (result.success) {
+          modelSelect.innerHTML = '<option value="">機種を選択してください</option>';
+          
+          result.models.forEach(function(model) {
+            const option = document.createElement('option');
+            option.value = JSON.stringify({
+              modelName: model.modelName,
+              manufacturer: model.manufacturer,
+              category: model.category
+            });
+            option.textContent = model.displayName;
+            modelSelect.appendChild(option);
+          });
+          
+          modelSelect.disabled = false;
+        } else {
+          console.error('カテゴリ別機種の取得に失敗:', result.error);
+          modelSelect.innerHTML = '<option value="">機種の読み込みに失敗しました</option>';
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('カテゴリ別機種取得でエラー:', error);
+        modelSelect.innerHTML = '<option value="">エラーが発生しました</option>';
+      })
+      .getModelMasterByCategory(selectedCategory);
+  }
+  
+  // 機種選択時の処理
+  function updateSelectedModel() {
+    const modelSelect = document.getElementById('model-select');
+    
+    if (!modelSelect) {
+      console.error('機種選択要素が見つかりません');
+      return;
+    }
+    
+    const selectedValue = modelSelect.value;
+    console.log('選択された機種:', selectedValue);
+    
+    if (selectedValue) {
+      try {
+        const modelData = JSON.parse(selectedValue);
+        console.log('選択された機種データ:', modelData);
+        
+        // 選択された機種情報をフォームに反映する処理をここに追加
+        // 例: 型番フィールドがあれば自動入力など
+        
+      } catch (error) {
+        console.error('機種データの解析エラー:', error);
+      }
+    }
+  }
+
+  // ========================================
   // 拠点選択機能
   // ========================================
   function getLocationDisplayName(locationValue) {
@@ -197,6 +315,9 @@
     
     // 詳細カテゴリの選択肢を更新
     deviceCategorySelect.innerHTML = '<option value="">詳細カテゴリを選択してください</option>';
+    
+    // 機種カテゴリを有効化して読み込み
+    loadModelCategories();
     
     if (selectedLocation && deviceCategoryOptions[selectedLocation]) {
       deviceCategoryOptions[selectedLocation].forEach(function(option) {

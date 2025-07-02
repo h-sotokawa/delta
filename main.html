@@ -101,6 +101,25 @@
       }, 100);
     }
     
+    // 機種マスタページの場合、機種マスタ機能を初期化
+    if (pageId === 'model-master') {
+      if (DEBUG_MODE) {
+        showDebugInfo('showPage: 機種マスタページ表示', { pageId });
+      }
+      setTimeout(() => {
+        if (typeof onModelMasterPageShow === 'function') {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage遅延実行: 機種マスタ機能初期化', {});
+          }
+          onModelMasterPageShow();
+        } else {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage: onModelMasterPageShow関数が見つからない', {});
+          }
+        }
+      }, 100);
+    }
+    
     // スクロール位置をトップに
     window.scrollTo(0, 0);
   }

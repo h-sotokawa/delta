@@ -5,10 +5,11 @@ const LOCATION_NAMES = {
   'himeji': '姫路'
 };
 
-// 端末・プリンタマスタシート名
+// 端末・プリンタ・機種マスタシート名
 const MASTER_SHEET_NAMES = {
   terminal: '端末マスタ',
-  printer: 'プリンタマスタ'
+  printer: 'プリンタマスタ',
+  model: '機種マスタ'
 };
 
 // 旧拠点から新拠点へのマッピング（互換性維持用）
@@ -27,6 +28,8 @@ function getTargetSheetName(deviceType) {
     return MASTER_SHEET_NAMES.terminal;
   } else if (deviceType === 'printer') {
     return MASTER_SHEET_NAMES.printer;
+  } else if (deviceType === 'model') {
+    return MASTER_SHEET_NAMES.model;
   }
   // デフォルトは端末マスタ
   return MASTER_SHEET_NAMES.terminal;
@@ -1140,6 +1143,330 @@ function getDestinationSheets() {
 }
 
 // サマリーシートの詳細診断を行う関数
+// 機種マスタ管理機能
+function getModelMasterData() {
+  const startTime = startPerformanceTimer();
+  addLog('getModelMasterData関数が呼び出されました');
+  
+  try {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+    if (!spreadsheetId) {
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません');
+    }
+
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAMES.model);
+    
+    if (!sheet) {
+      throw new Error('機種マスタシートが見つかりません。シートを作成してください。');
+    }
+
+    const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    
+    if (lastRow === 0) {
+      return {
+        success: true,
+        data: [],
+        message: '機種マスタにデータがありません'
+      };
+    }
+    
+    const range = sheet.getRange(1, 1, lastRow, lastColumn);
+    const data = range.getValues();
+    
+    const responseTime = endPerformanceTimer(startTime, '機種マスタ取得');
+    
+    return {
+      success: true,
+      data: data,
+      metadata: {
+        spreadsheetName: spreadsheet.getName(),
+        sheetName: sheet.getName(),
+        lastRow: lastRow,
+        lastColumn: lastColumn,
+        responseTime: responseTime
+      }
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, '機種マスタ取得エラー');
+    return {
+      success: false,
+      error: error.toString(),
+      errorDetails: {
+        message: error.message,
+        stack: error.stack
+      }
+    };
+  }
+}
+
+function addModelMasterData(modelData) {
+  const startTime = startPerformanceTimer();
+  addLog('addModelMasterData関数が呼び出されました', modelData);
+  
+  try {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+    if (!spreadsheetId) {
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません');
+    }
+
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    let sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAMES.model);
+    
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet(MASTER_SHEET_NAMES.model);
+      const headers = ['機種名', 'メーカー', 'カテゴリ', '作成日時', '更新日時', '備考'];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+
+    const lastRow = sheet.getLastRow();
+    const nextRow = lastRow + 1;
+    const currentTime = new Date();
+    
+    const newRowData = [
+      modelData.modelName || '',
+      modelData.manufacturer || '',
+      modelData.category || '',
+      currentTime,
+      currentTime,
+      modelData.remarks || ''
+    ];
+    
+    sheet.getRange(nextRow, 1, 1, newRowData.length).setValues([newRowData]);
+    
+    const responseTime = endPerformanceTimer(startTime, '機種マスタ追加');
+    
+    return {
+      success: true,
+      message: '機種マスタに新しいデータを追加しました',
+      data: {
+        rowIndex: nextRow - 1,
+        modelData: newRowData,
+        updateTime: responseTime
+      }
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, '機種マスタ追加エラー');
+    return {
+      success: false,
+      error: error.toString(),
+      errorDetails: {
+        message: error.message,
+        stack: error.stack
+      }
+    };
+  }
+}
+
+function updateModelMasterData(rowIndex, modelData) {
+  const startTime = startPerformanceTimer();
+  addLog('updateModelMasterData関数が呼び出されました', { rowIndex, modelData });
+  
+  try {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+    if (!spreadsheetId) {
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません');
+    }
+
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAMES.model);
+    
+    if (!sheet) {
+      throw new Error('機種マスタシートが見つかりません');
+    }
+
+    const actualRow = rowIndex + 1;
+    const currentTime = new Date();
+    
+    const oldData = sheet.getRange(actualRow, 1, 1, 6).getValues()[0];
+    
+    const updatedRowData = [
+      modelData.modelName || oldData[0],
+      modelData.manufacturer || oldData[1],
+      modelData.category || oldData[2],
+      oldData[3],
+      currentTime,
+      modelData.remarks || oldData[5]
+    ];
+    
+    sheet.getRange(actualRow, 1, 1, updatedRowData.length).setValues([updatedRowData]);
+    
+    const responseTime = endPerformanceTimer(startTime, '機種マスタ更新');
+    
+    return {
+      success: true,
+      message: '機種マスタを更新しました',
+      data: {
+        rowIndex: rowIndex,
+        oldData: oldData,
+        newData: updatedRowData,
+        updateTime: responseTime
+      }
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, '機種マスタ更新エラー');
+    return {
+      success: false,
+      error: error.toString(),
+      errorDetails: {
+        message: error.message,
+        stack: error.stack
+      }
+    };
+  }
+}
+
+function deleteModelMasterData(rowIndex) {
+  const startTime = startPerformanceTimer();
+  addLog('deleteModelMasterData関数が呼び出されました', { rowIndex });
+  
+  try {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+    if (!spreadsheetId) {
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません');
+    }
+
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAMES.model);
+    
+    if (!sheet) {
+      throw new Error('機種マスタシートが見つかりません');
+    }
+
+    const actualRow = rowIndex + 1;
+    const deletedData = sheet.getRange(actualRow, 1, 1, 6).getValues()[0];
+    
+    sheet.deleteRow(actualRow);
+    
+    const responseTime = endPerformanceTimer(startTime, '機種マスタ削除');
+    
+    return {
+      success: true,
+      message: '機種マスタからデータを削除しました',
+      data: {
+        rowIndex: rowIndex,
+        deletedData: deletedData,
+        updateTime: responseTime
+      }
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, '機種マスタ削除エラー');
+    return {
+      success: false,
+      error: error.toString(),
+      errorDetails: {
+        message: error.message,
+        stack: error.stack
+      }
+    };
+  }
+}
+
+// フォーム作成時に機種マスタのデータを取得する関数
+function getModelMasterForForm() {
+  try {
+    const result = getModelMasterData();
+    
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+        models: []
+      };
+    }
+    
+    const models = [];
+    if (result.data && result.data.length > 1) {
+      for (let i = 1; i < result.data.length; i++) {
+        const row = result.data[i];
+        models.push({
+          modelName: row[0] || '',
+          manufacturer: row[1] || '',
+          category: row[2] || '',
+          displayName: `${row[1] || ''} ${row[0] || ''}`.trim()
+        });
+      }
+    }
+    
+    return {
+      success: true,
+      models: models,
+      totalCount: models.length
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString(),
+      models: []
+    };
+  }
+}
+
+// カテゴリ別に機種マスタを取得する関数
+function getModelMasterByCategory(category) {
+  try {
+    const result = getModelMasterForForm();
+    
+    if (!result.success) {
+      return result;
+    }
+    
+    const filteredModels = result.models.filter(model => 
+      model.category === category
+    );
+    
+    return {
+      success: true,
+      models: filteredModels,
+      totalCount: filteredModels.length,
+      category: category
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString(),
+      models: []
+    };
+  }
+}
+
+// 機種マスタから利用可能なカテゴリ一覧を取得する関数
+function getAvailableCategories() {
+  try {
+    const result = getModelMasterForForm();
+    
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+        categories: []
+      };
+    }
+    
+    const categories = [...new Set(result.models.map(model => model.category))].filter(cat => cat);
+    
+    return {
+      success: true,
+      categories: categories,
+      totalCount: categories.length
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString(),
+      categories: []
+    };
+  }
+}
+
 function diagnoseSummarySheet() {
   const startTime = Date.now();
   const diagnosticLogs = [];
