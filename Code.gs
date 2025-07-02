@@ -1,15 +1,36 @@
-// 拠点名の日本語表示用マッピング
+// 拠点名の日本語表示用マッピング（3拠点に統合）
 const LOCATION_NAMES = {
-  'osaka_desktop': '大阪(デスクトップ)',
-  'osaka_notebook': '大阪(ノート、サーバー)',
-  'kobe': '神戸(端末)',
-  'himeji': '姫路(端末)',
-  'osaka_printer': '大阪(プリンタ、その他)',
-  'hyogo_printer': '兵庫(プリンタ、その他)'
+  'osaka': '大阪',
+  'kobe': '神戸', 
+  'himeji': '姫路'
 };
 
-// メインの代替機一覧シート名
-const TARGET_SHEET_NAME = 'main';
+// 端末・プリンタマスタシート名
+const MASTER_SHEET_NAMES = {
+  terminal: '端末マスタ',
+  printer: 'プリンタマスタ'
+};
+
+// 旧拠点から新拠点へのマッピング（互換性維持用）
+const LEGACY_LOCATION_MAPPING = {
+  'osaka_desktop': 'osaka',
+  'osaka_notebook': 'osaka', 
+  'osaka_printer': 'osaka',
+  'kobe': 'kobe',
+  'himeji': 'himeji',
+  'hyogo_printer': 'kobe'
+};
+
+// デバイスタイプに応じてマスタシートを決定する関数
+function getTargetSheetName(deviceType) {
+  if (deviceType === 'terminal' || deviceType === 'desktop' || deviceType === 'notebook') {
+    return MASTER_SHEET_NAMES.terminal;
+  } else if (deviceType === 'printer') {
+    return MASTER_SHEET_NAMES.printer;
+  }
+  // デフォルトは端末マスタ
+  return MASTER_SHEET_NAMES.terminal;
+}
 
 // デバッグモード（本番環境ではfalseに設定）
 const DEBUG = false;
@@ -138,23 +159,33 @@ function include(filename) {
   }
 }
 
-// 拠点ごとのスプレッドシートIDをスクリプトプロパティから取得
+// 旧拠点から新拠点への変換関数
+function convertLegacyLocation(location) {
+  return LEGACY_LOCATION_MAPPING[location] || location;
+}
+
+// 統一スプレッドシートIDをスクリプトプロパティから取得
 function getSpreadsheetIdFromProperty(location) {
-  const propertyKeys = {
-    'osaka_desktop': 'SPREADSHEET_ID_SOURCE_OSAKA_DESKTOP',
-    'osaka_notebook': 'SPREADSHEET_ID_SOURCE_OSAKA_LAPTOP',
-    'kobe': 'SPREADSHEET_ID_SOURCE_KOBE',
-    'himeji': 'SPREADSHEET_ID_SOURCE_HIMEJI',
-    'osaka_printer': 'SPREADSHEET_ID_SOURCE_OSAKA_PRINTER',
-    'hyogo_printer': 'SPREADSHEET_ID_SOURCE_HYOGO_PRINTER'
-  };
+  // 旧拠点名を新拠点名に変換
+  const normalizedLocation = convertLegacyLocation(location);
   
-  const propertyKey = propertyKeys[location];
-  if (!propertyKey) {
-    return null;
+  // 全拠点で統一スプレッドシートを使用
+  return PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+}
+
+// フロントエンド用の拠点一覧を取得
+function getLocations() {
+  try {
+    return {
+      success: true,
+      locations: LOCATION_NAMES
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString()
+    };
   }
-  
-  return PropertiesService.getScriptProperties().getProperty(propertyKey);
 }
 
 // 高速化された日付フォーマット関数
@@ -171,25 +202,31 @@ function formatDateFast(date) {
   return `${year}/${month < 10 ? '0' + month : month}/${day < 10 ? '0' + day : day} ${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
 }
 
-function getSpreadsheetData(location, queryType) {
+function getSpreadsheetData(location, queryType, deviceType = 'terminal') {
   const startTime = startPerformanceTimer();
-  addLog('getSpreadsheetData関数が呼び出されました', { location, queryType });
+  addLog('getSpreadsheetData関数が呼び出されました', { location, queryType, deviceType });
   
   try {
-    // 選択された拠点のスプレッドシートIDをスクリプトプロパティから取得
+    // 旧拠点名を新拠点名に変換
+    const normalizedLocation = convertLegacyLocation(location);
+    
+    // 統一スプレッドシートIDを取得
     const spreadsheetId = getSpreadsheetIdFromProperty(location);
     if (!spreadsheetId) {
-      throw new Error('スクリプトプロパティにスプレッドシートIDが設定されていません: ' + location);
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません: ' + location);
     }
 
     addLog('使用するスプレッドシートID', spreadsheetId);
     
+    // デバイスタイプに応じてマスタシートを決定
+    const targetSheetName = getTargetSheetName(deviceType);
+    
     // スプレッドシートを開く
     const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-    const sheet = spreadsheet.getSheetByName(TARGET_SHEET_NAME);
+    const sheet = spreadsheet.getSheetByName(targetSheetName);
     
     if (!sheet) {
-      throw new Error('シート「' + TARGET_SHEET_NAME + '」が見つかりません。');
+      throw new Error('シート「' + targetSheetName + '」が見つかりません。');
     }
 
     // データを取得
@@ -290,22 +327,28 @@ function checkSpreadsheetIdExists(location) {
 }
 
 // 部分データ取得機能（ページネーション対応）
-function getSpreadsheetDataPaginated(location, queryType, startRow = 1, maxRows = 100) {
-  addLog('getSpreadsheetDataPaginated関数が呼び出されました', { location, queryType, startRow, maxRows });
+function getSpreadsheetDataPaginated(location, queryType, startRow = 1, maxRows = 100, deviceType = 'terminal') {
+  addLog('getSpreadsheetDataPaginated関数が呼び出されました', { location, queryType, startRow, maxRows, deviceType });
   
   try {
-    // 選択された拠点のスプレッドシートIDをスクリプトプロパティから取得
+    // 旧拠点名を新拠点名に変換
+    const normalizedLocation = convertLegacyLocation(location);
+    
+    // 統一スプレッドシートIDを取得
     const spreadsheetId = getSpreadsheetIdFromProperty(location);
     if (!spreadsheetId) {
-      throw new Error('スクリプトプロパティにスプレッドシートIDが設定されていません: ' + location);
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません: ' + location);
     }
 
+    // デバイスタイプに応じてマスタシートを決定
+    const targetSheetName = getTargetSheetName(deviceType);
+    
     // スプレッドシートを開く
     const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-    const sheet = spreadsheet.getSheetByName(TARGET_SHEET_NAME);
+    const sheet = spreadsheet.getSheetByName(targetSheetName);
     
     if (!sheet) {
-      throw new Error('シート「' + TARGET_SHEET_NAME + '」が見つかりません。');
+      throw new Error('シート「' + targetSheetName + '」が見つかりません。');
     }
 
     const totalRows = sheet.getLastRow();
@@ -378,18 +421,25 @@ function getSpreadsheetDataPaginated(location, queryType, startRow = 1, maxRows 
 }
 
 // ステータス更新関数
-function updateMachineStatus(rowIndex, newStatus, location) {
+function updateMachineStatus(rowIndex, newStatus, location, deviceType = 'terminal') {
   const startTime = startPerformanceTimer();
   
   try {
-    // location引数で指定された拠点のスプレッドシートIDをスクリプトプロパティから取得
+    // 旧拠点名を新拠点名に変換
+    const normalizedLocation = convertLegacyLocation(location);
+    
+    // 統一スプレッドシートIDを取得
     const spreadsheetId = getSpreadsheetIdFromProperty(location);
     addLog('updateMachineStatus: ステータスを変更するスプレッドシートID', spreadsheetId);
     if (!spreadsheetId) {
-      throw new Error('スクリプトプロパティにスプレッドシートIDが設定されていません: ' + location);
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません: ' + location);
     }
+    
+    // デバイスタイプに応じてマスタシートを決定
+    const targetSheetName = getTargetSheetName(deviceType);
+    
     const ss = SpreadsheetApp.openById(spreadsheetId);
-    const sheet = ss.getSheetByName(TARGET_SHEET_NAME);
+    const sheet = ss.getSheetByName(targetSheetName);
     
     // 行インデックスを1から始まる形式に変換（ヘッダー行を考慮）
     const actualRow = rowIndex + 1;
@@ -439,17 +489,24 @@ function updateMachineStatus(rowIndex, newStatus, location) {
 }
 
 // 複数行のステータスを一括更新する関数
-function updateMultipleStatuses(updates, location) {
+function updateMultipleStatuses(updates, location, deviceType = 'terminal') {
   const startTime = startPerformanceTimer();
   
   try {
+    // 旧拠点名を新拠点名に変換
+    const normalizedLocation = convertLegacyLocation(location);
+    
+    // 統一スプレッドシートIDを取得
     const spreadsheetId = getSpreadsheetIdFromProperty(location);
     if (!spreadsheetId) {
-      throw new Error('スクリプトプロパティにスプレッドシートIDが設定されていません: ' + location);
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません: ' + location);
     }
     
+    // デバイスタイプに応じてマスタシートを決定
+    const targetSheetName = getTargetSheetName(deviceType);
+    
     const ss = SpreadsheetApp.openById(spreadsheetId);
-    const sheet = ss.getSheetByName(TARGET_SHEET_NAME);
+    const sheet = ss.getSheetByName(targetSheetName);
     
     const results = [];
     
@@ -510,15 +567,22 @@ function updateMultipleStatuses(updates, location) {
 }
 
 // データ整合性チェック機能
-function checkDataConsistency(location) {
+function checkDataConsistency(location, deviceType = 'terminal') {
   try {
+    // 旧拠点名を新拠点名に変換
+    const normalizedLocation = convertLegacyLocation(location);
+    
+    // 統一スプレッドシートIDを取得
     const spreadsheetId = getSpreadsheetIdFromProperty(location);
     if (!spreadsheetId) {
-      throw new Error('スクリプトプロパティにスプレッドシートIDが設定されていません: ' + location);
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません: ' + location);
     }
     
+    // デバイスタイプに応じてマスタシートを決定
+    const targetSheetName = getTargetSheetName(deviceType);
+    
     const ss = SpreadsheetApp.openById(spreadsheetId);
-    const sheet = ss.getSheetByName(TARGET_SHEET_NAME);
+    const sheet = ss.getSheetByName(targetSheetName);
     
     const lastRow = sheet.getLastRow();
     const lastColumn = sheet.getLastColumn();
@@ -653,10 +717,13 @@ function getLocationSheetData(location, locationSheetName, queryType) {
   addLog('getLocationSheetData関数が呼び出されました', { location, locationSheetName, queryType });
   
   try {
-    // 選択された拠点のスプレッドシートIDをスクリプトプロパティから取得
+    // 旧拠点名を新拠点名に変換
+    const normalizedLocation = convertLegacyLocation(location);
+    
+    // 統一スプレッドシートIDを取得
     const spreadsheetId = getSpreadsheetIdFromProperty(location);
     if (!spreadsheetId) {
-      throw new Error('スクリプトプロパティにスプレッドシートIDが設定されていません: ' + location);
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません: ' + location);
     }
 
     addLog('使用するスプレッドシートID', spreadsheetId);

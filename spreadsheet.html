@@ -21,6 +21,13 @@
       <select id="location" onchange="handleLocationChange()">
         <option value="">拠点を選択してください</option>
       </select>
+      
+      <label for="deviceType">データ種別：</label>
+      <select id="deviceType" onchange="handleDeviceTypeChange()">
+        <option value="terminal">端末マスタ</option>
+        <option value="printer">プリンタマスタ</option>
+      </select>
+      
       <button id="refreshButton" class="refresh-button" onclick="refreshCurrentLocation()" disabled>
         <i class="fas fa-sync-alt"></i>
         更新

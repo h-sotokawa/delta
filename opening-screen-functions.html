@@ -10,14 +10,21 @@
   let totalLocations = 0;
   let completedLocations = 0;
   
-  // LOCATION_NAMES の定義（Code.gsと同じ）
+  // LOCATION_NAMES の定義（Code.gsと同じ・3拠点に統合）
   const LOCATION_NAMES_CLIENT = {
-    'osaka_desktop': '大阪(デスクトップ)',
-    'osaka_notebook': '大阪(ノート、サーバー)',
-    'kobe': '神戸(端末)',
-    'himeji': '姫路(端末)',
-    'osaka_printer': '大阪(プリンタ、その他)',
-    'hyogo_printer': '兵庫(プリンタ、その他)'
+    'osaka': '大阪',
+    'kobe': '神戸',
+    'himeji': '姫路'
+  };
+
+  // 旧拠点から新拠点へのマッピング（互換性維持用）
+  const LEGACY_LOCATION_MAPPING_CLIENT = {
+    'osaka_desktop': 'osaka',
+    'osaka_notebook': 'osaka',
+    'osaka_printer': 'osaka',
+    'kobe': 'kobe',
+    'himeji': 'himeji',
+    'hyogo_printer': 'kobe'
   };
 
   // オープニング画面を表示してデータを一括読み込み
@@ -133,7 +140,7 @@
             loadNextLocation();
           }, 500);
         })
-        .getSpreadsheetData(location, 'all');
+        .getSpreadsheetData(location, 'all', 'terminal');
     }
     
     // 最初の拠点から開始

@@ -27,10 +27,21 @@
       .getLocations();
   }
 
+  // デバイスタイプ変更時の処理
+  function handleDeviceTypeChange() {
+    const locationSelect = document.getElementById('location');
+    if (locationSelect && locationSelect.value) {
+      // 拠点が既に選択されている場合は再読み込み
+      handleLocationChange();
+    }
+  }
+
   // 拠点が変更されたときの処理
   function handleLocationChange() {
     const locationSelect = document.getElementById('location');
     const selectedLocation = locationSelect.value;
+    const deviceTypeSelect = document.getElementById('deviceType');
+    const selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
     const querySelector = document.querySelector('.query-selector');
     const refreshButton = document.getElementById('refreshButton');
     const errorDiv = document.getElementById('error');
@@ -67,7 +78,7 @@
         displayLocationUpdateTime(selectedLocation);
         
         const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
-        loadSpreadsheet(selectedLocation, queryType);
+        loadSpreadsheet(selectedLocation, queryType, selectedDeviceType);
         return;
         
       } else if (loadStatus === 'error') {
@@ -121,7 +132,7 @@
         const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
         
         // データ取得を実行
-        loadSpreadsheetDirectly(selectedLocation, queryType);
+        loadSpreadsheetDirectly(selectedLocation, queryType, selectedDeviceType);
         return;
       }
       
@@ -143,9 +154,9 @@
   }
 
   // 直接データ取得（バックグラウンド読み込み完了を待たない）
-  function loadSpreadsheetDirectly(location, queryType) {
+  function loadSpreadsheetDirectly(location, queryType, deviceType = 'terminal') {
     if (DEBUG_MODE) {
-      showDebugInfo('直接データ取得開始', { location, queryType });
+      showDebugInfo('直接データ取得開始', { location, queryType, deviceType });
     }
     
     const errorDiv = document.getElementById('error');
@@ -207,7 +218,7 @@
           errorDiv.textContent = 'エラーが発生しました: ' + error;
           tableContainer.innerHTML = '';
         })
-        .getSpreadsheetData(location, queryType);
+        .getSpreadsheetData(location, queryType, deviceType);
     } catch (error) {
       if (DEBUG_MODE) {
         showDebugInfo('直接データ取得クライアントエラー', { error });
@@ -222,15 +233,17 @@
   function handleQueryChange() {
     if (currentLocation) {
       const queryType = document.querySelector('input[name="queryType"]:checked').value;
-      loadSpreadsheet(currentLocation, queryType);
+      const deviceTypeSelect = document.getElementById('deviceType');
+      const selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
+      loadSpreadsheet(currentLocation, queryType, selectedDeviceType);
     }
   }
 
   // スプレッドシートデータを読み込む
-  function loadSpreadsheet(location, queryType) {
+  function loadSpreadsheet(location, queryType, deviceType = 'terminal') {
     // プリロードされたデータがある場合はそれを使用
     if (typeof loadSpreadsheetWithPreload === 'function') {
-      loadSpreadsheetWithPreload(location, queryType);
+      loadSpreadsheetWithPreload(location, queryType, deviceType);
       return;
     }
     
@@ -308,7 +321,7 @@
           errorDiv.textContent = 'エラーが発生しました: ' + error;
           tableContainer.innerHTML = '';
         })
-        .getSpreadsheetData(location, queryType);
+        .getSpreadsheetData(location, queryType, deviceType);
     } catch (error) {
       if (DEBUG_MODE) {
         showDebugInfo('クライアントサイドエラー', {
@@ -1017,6 +1030,8 @@
 
     const refreshButton = document.getElementById('refreshButton');
     const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
+    const deviceTypeSelect = document.getElementById('deviceType');
+    const selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
     
     // ボタンのローディング状態を設定
     if (refreshButton) {
@@ -1100,7 +1115,7 @@
           errorDiv.textContent = 'エラーが発生しました: ' + error;
           tableContainer.innerHTML = '';
         })
-        .getSpreadsheetData(currentLocation, queryType);
+        .getSpreadsheetData(currentLocation, queryType, selectedDeviceType);
     } catch (error) {
       showDebugInfo('更新処理エラー', { error });
       loadingDiv.style.display = 'none';
