@@ -9,6 +9,13 @@
     loadFilterCategories();
   }
 
+  // 更新ボタンがクリックされた時の処理（HTMLから直接呼ばれる）
+  function refreshModelData() {
+    console.log('機種データの手動更新が要求されました');
+    loadModelList();
+    loadFilterCategories();
+  }
+
   // ========================================
   // 機種追加機能
   // ========================================
@@ -57,6 +64,8 @@
           showMessage('機種を登録しました', 'success');
           resetModelForm();
           loadModelList();
+          // 新しいカテゴリが追加された可能性があるため、フィルタのカテゴリ一覧を更新
+          loadFilterCategories();
         } else {
           showMessage('機種の登録に失敗しました: ' + result.error, 'error');
         }
@@ -85,6 +94,8 @@
       </div>
     `;
 
+    console.log('機種マスタデータの取得を開始します');
+
     google.script.run
       .withSuccessHandler(function(result) {
         console.log('機種一覧取得結果:', result);
@@ -92,10 +103,17 @@
       })
       .withFailureHandler(function(error) {
         console.error('機種一覧取得でエラー:', error);
+        console.error('エラーの詳細:', {
+          message: error.message,
+          stack: error.stack,
+          toString: error.toString()
+        });
+        
         container.innerHTML = `
           <div class="error-placeholder">
             <i class="fas fa-exclamation-triangle"></i>
             <p>機種一覧の読み込みに失敗しました</p>
+            <p class="error-details">エラー: ${error.toString()}</p>
             <button class="btn btn-primary" onclick="loadModelList()">再読み込み</button>
           </div>
         `;
@@ -106,22 +124,46 @@
   function displayModelList(result) {
     const container = document.getElementById('model-list-container');
     
-    if (!result.success) {
+    console.log('displayModelList: 結果の表示処理開始', result);
+    
+    if (!result) {
+      console.error('displayModelList: 結果がnullまたはundefined');
       container.innerHTML = `
         <div class="error-placeholder">
           <i class="fas fa-exclamation-triangle"></i>
-          <p>データの取得に失敗しました: ${result.error}</p>
+          <p>データが取得できませんでした</p>
+          <button class="btn btn-primary" onclick="loadModelList()">再読み込み</button>
+        </div>
+      `;
+      return;
+    }
+
+    if (!result.success) {
+      console.error('displayModelList: 処理が失敗', result.error);
+      container.innerHTML = `
+        <div class="error-placeholder">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>データの取得に失敗しました</p>
+          <p class="error-details">${result.error || '不明なエラー'}</p>
+          <button class="btn btn-primary" onclick="loadModelList()">再読み込み</button>
         </div>
       `;
       return;
     }
 
     if (!result.data || result.data.length <= 1) {
+      console.log('displayModelList: データなしまたはヘッダーのみ', {
+        hasData: !!result.data,
+        dataLength: result.data ? result.data.length : 0,
+        message: result.message
+      });
+      
       container.innerHTML = `
         <div class="empty-placeholder">
           <i class="fas fa-database"></i>
           <p>登録されている機種がありません</p>
           <p>上のフォームから機種を登録してください</p>
+          ${result.message ? `<p class="info-message">${result.message}</p>` : ''}
         </div>
       `;
       return;
@@ -133,11 +175,12 @@
         <table class="model-table" id="modelTable">
           <thead>
             <tr>
+              <th>機種ID</th>
               <th>機種名</th>
               <th>メーカー</th>
               <th>カテゴリ</th>
-              <th>作成日時</th>
-              <th>更新日時</th>
+              <th>作成日</th>
+              <th>更新日</th>
               <th>備考</th>
               <th>操作</th>
             </tr>
@@ -148,21 +191,27 @@
     // データ行を追加（ヘッダー行をスキップ）
     for (let i = 1; i < result.data.length; i++) {
       const row = result.data[i];
-      const rowIndex = i - 1; // ヘッダー行を除いたインデックス
+      const actualRowNumber = i + 1; // スプレッドシートの実際の行番号（1から始まる）
+      
+      // エスケープ処理（機種ID追加により列番号を調整）
+      const escapedModelName = (row[1] || '').toString().replace(/'/g, "\\'").replace(/"/g, '\\"');
+      const escapedManufacturer = (row[2] || '').toString().replace(/'/g, "\\'").replace(/"/g, '\\"');
       
       tableHtml += `
-        <tr data-category="${row[2]}" data-search="${(row[0] + ' ' + row[1]).toLowerCase()}">
-          <td>${row[0] || ''}</td>
+        <tr data-category="${row[3]}" 
+            data-search="${(row[1] + ' ' + row[2]).toLowerCase()}">
+          <td class="model-id">${row[0] || ''}</td>
           <td>${row[1] || ''}</td>
           <td>${row[2] || ''}</td>
-          <td>${formatDate(row[3])}</td>
+          <td>${row[3] || ''}</td>
           <td>${formatDate(row[4])}</td>
-          <td>${row[5] || ''}</td>
+          <td>${formatDate(row[5])}</td>
+          <td>${row[6] || ''}</td>
           <td class="action-buttons">
-            <button class="btn btn-sm btn-info" onclick="editModel(${rowIndex}, ${JSON.stringify(row).replace(/"/g, '&quot;')})">
+            <button class="btn btn-sm btn-info" onclick="editModel(${actualRowNumber}, ${JSON.stringify(row).replace(/"/g, '&quot;')})">
               <i class="fas fa-edit"></i>
             </button>
-            <button class="btn btn-sm btn-danger" onclick="confirmDeleteModel(${rowIndex}, '${row[0]}')">
+            <button class="btn btn-sm btn-danger" onclick="confirmDeleteModel(${actualRowNumber}, '${escapedModelName}', '${escapedManufacturer}', 'dummy')">
               <i class="fas fa-trash"></i>
             </button>
           </td>
@@ -186,10 +235,13 @@
   // フィルタリング機能
   // ========================================
   function loadFilterCategories() {
+    const filterSelect = document.getElementById('filter-category');
+    const currentSelection = filterSelect ? filterSelect.value : '';
+    
     google.script.run
       .withSuccessHandler(function(result) {
-        if (result.success) {
-          const filterSelect = document.getElementById('filter-category');
+        if (result.success && filterSelect) {
+          // 現在の選択を一時保存
           filterSelect.innerHTML = '<option value="">すべてのカテゴリ</option>';
           
           result.categories.forEach(function(category) {
@@ -197,6 +249,17 @@
             option.value = category;
             option.textContent = category;
             filterSelect.appendChild(option);
+          });
+          
+          // 以前の選択を復元（まだ存在する場合）
+          if (currentSelection && result.categories.includes(currentSelection)) {
+            filterSelect.value = currentSelection;
+          }
+          
+          console.log('カテゴリフィルタを更新しました:', {
+            totalCategories: result.categories.length,
+            categories: result.categories,
+            restoredSelection: currentSelection
           });
         }
       })
@@ -239,14 +302,23 @@
   // ========================================
   // 編集機能
   // ========================================
-  function editModel(rowIndex, rowData) {
-    console.log('編集対象:', rowIndex, rowData);
+  function editModel(actualRowNumber, rowData) {
+    console.log('編集対象:', actualRowNumber, rowData);
     
-    document.getElementById('edit-row-index').value = rowIndex;
-    document.getElementById('edit-model-name').value = rowData[0] || '';
-    document.getElementById('edit-manufacturer').value = rowData[1] || '';
-    document.getElementById('edit-category').value = rowData[2] || '';
-    document.getElementById('edit-remarks').value = rowData[5] || '';
+    // バックエンド用のインデックスに変換
+    const backendRowIndex = actualRowNumber - 2; // ヘッダー行とスプレッドシートの1-based indexを考慮
+    
+    document.getElementById('edit-row-index').value = backendRowIndex;
+    document.getElementById('edit-model-id').value = rowData[0] || ''; // 機種ID (読み取り専用)
+    document.getElementById('edit-model-name').value = rowData[1] || '';
+    document.getElementById('edit-manufacturer').value = rowData[2] || '';
+    document.getElementById('edit-category').value = rowData[3] || '';
+    document.getElementById('edit-remarks').value = rowData[6] || '';
+    
+    // 編集前の値を検証用に保存（機種名とメーカーは列1と2に変更）
+    document.getElementById('editModelModal').setAttribute('data-original-model', rowData[1] || '');
+    document.getElementById('editModelModal').setAttribute('data-original-manufacturer', rowData[2] || '');
+    document.getElementById('editModelModal').setAttribute('data-actual-row', actualRowNumber);
     
     document.getElementById('editModelModal').style.display = 'block';
   }
@@ -277,6 +349,8 @@
           showMessage('機種情報を更新しました', 'success');
           closeEditModal();
           loadModelList();
+          // カテゴリが変更された可能性があるため、フィルタのカテゴリ一覧を更新
+          loadFilterCategories();
         } else {
           showMessage('機種の更新に失敗しました: ' + result.error, 'error');
         }
@@ -291,22 +365,30 @@
   // ========================================
   // 削除機能
   // ========================================
-  function confirmDeleteModel(rowIndex, modelName) {
-    if (confirm(`機種「${modelName}」を削除しますか？\n\nこの操作は取り消せません。`)) {
-      deleteModel(rowIndex);
+  function confirmDeleteModel(actualRowNumber, modelName, manufacturer, rowId) {
+    const displayText = `機種「${manufacturer} ${modelName}」を削除しますか？\n\nこの操作は取り消せません。`;
+    
+    if (confirm(displayText)) {
+      deleteModel(modelName, manufacturer);
     }
   }
 
-  function deleteModel(rowIndex) {
-    console.log('機種削除:', rowIndex);
+  function deleteModel(modelName, manufacturer) {
+    console.log('機種削除実行:', {
+      modelName,
+      manufacturer
+    });
 
+    // 機種名とメーカー名を直接バックエンドに渡す
     google.script.run
       .withSuccessHandler(function(result) {
         console.log('機種削除結果:', result);
         
         if (result.success) {
-          showMessage('機種を削除しました', 'success');
+          showMessage(`機種「${manufacturer} ${modelName}」を削除しました`, 'success');
           loadModelList();
+          // 削除されたカテゴリが最後の機種だった場合、フィルタのカテゴリ一覧から削除される可能性があるため更新
+          loadFilterCategories();
         } else {
           showMessage('機種の削除に失敗しました: ' + result.error, 'error');
         }
@@ -315,7 +397,73 @@
         console.error('機種削除でエラー:', error);
         showMessage('エラーが発生しました: ' + error.toString(), 'error');
       })
-      .deleteModelMasterData(rowIndex);
+      .deleteModelMasterData(modelName, manufacturer);
+  }
+
+  // ========================================
+  // 診断機能
+  // ========================================
+  function runDiagnosis() {
+    console.log('機種マスタ診断を開始します');
+    showMessage('機種マスタの診断を実行中...', 'info');
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('診断結果:', result);
+        
+        if (result.success) {
+          showMessage('診断が完了しました', 'success');
+          console.log('診断詳細:', result.diagnostics);
+          console.log('シート情報:', result.sheetInfo);
+          console.log('関数テスト結果:', result.functionResult);
+          
+          // 診断後に自動でリストを再読み込み
+          setTimeout(() => {
+            loadModelList();
+          }, 1000);
+        } else {
+          showMessage('診断でエラーが発生しました: ' + result.error, 'error');
+          console.error('診断エラー:', result.diagnostics);
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('診断実行でエラー:', error);
+        showMessage('診断の実行に失敗しました: ' + error.toString(), 'error');
+      })
+      .diagnoseModelMaster();
+  }
+
+  // 日付修正機能
+  function fixDateFormats() {
+    if (!confirm('既存の日付データを年月日形式に修正しますか？\n\n時刻付きで記録されている日付が年月日のみに変更されます。')) {
+      return;
+    }
+    
+    console.log('既存日付データの修正を開始します');
+    showMessage('既存の日付データを修正中...', 'info');
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('日付修正結果:', result);
+        
+        if (result.success) {
+          showMessage(result.message, 'success');
+          console.log('修正件数:', result.updatedCount);
+          
+          // 修正後にリストを再読み込み
+          setTimeout(() => {
+            loadModelList();
+          }, 1000);
+        } else {
+          showMessage('日付修正でエラーが発生しました: ' + result.error, 'error');
+          console.error('日付修正エラー:', result);
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('日付修正実行でエラー:', error);
+        showMessage('日付修正の実行に失敗しました: ' + error.toString(), 'error');
+      })
+      .fixExistingDateFormats();
   }
 
   // ========================================
@@ -325,16 +473,23 @@
     if (!dateValue) return '';
     
     try {
+      // 既に文字列の場合
       if (typeof dateValue === 'string') {
-        return dateValue;
+        // 先頭のアポストロフィがある場合は除去
+        return dateValue.startsWith("'") ? dateValue.substring(1) : dateValue;
       }
       
+      // Dateオブジェクトの場合は年月日形式にフォーマット
       if (dateValue instanceof Date) {
-        return dateValue.toLocaleString('ja-JP');
+        const year = dateValue.getFullYear();
+        const month = (dateValue.getMonth() + 1).toString().padStart(2, '0');
+        const day = dateValue.getDate().toString().padStart(2, '0');
+        return `${year}/${month}/${day}`;
       }
       
       return dateValue.toString();
     } catch (error) {
+      console.error('日付フォーマットエラー:', error, dateValue);
       return '';
     }
   }
@@ -349,8 +504,13 @@
     // メッセージ要素を作成
     const messageElement = document.createElement('div');
     messageElement.className = `message-toast ${type}`;
+    
+    let iconClass = 'fa-exclamation-triangle';
+    if (type === 'success') iconClass = 'fa-check-circle';
+    else if (type === 'info') iconClass = 'fa-info-circle';
+    
     messageElement.innerHTML = `
-      <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
+      <i class="fas ${iconClass}"></i>
       <span>${message}</span>
     `;
     

@@ -199,6 +199,16 @@
     border-top: 1px solid #ecf0f1;
   }
 
+  .model-id {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #2c3e50;
+    background-color: #f8f9fa;
+    padding: 8px 12px !important;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
   /* ========================================
    * プレースホルダースタイル
    * ======================================== */
@@ -228,6 +238,21 @@
 
   .error-placeholder i {
     color: #e74c3c;
+  }
+
+  .error-details,
+  .info-message {
+    font-size: 0.9em;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.05);
+    border-left: 4px solid #e74c3c;
+  }
+
+  .info-message {
+    border-left-color: #3498db;
+    color: #2c3e50;
   }
 
   /* ========================================
@@ -321,6 +346,10 @@
     background: linear-gradient(135deg, #e74c3c, #c0392b);
   }
 
+  .message-toast.info {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+  }
+
   .message-toast i {
     font-size: 1.2em;
   }
@@ -384,6 +413,16 @@
 
   .btn-danger:hover {
     background: linear-gradient(135deg, #c0392b, #a93226);
+    transform: translateY(-1px);
+  }
+
+  .btn-warning {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+  }
+
+  .btn-warning:hover {
+    background: linear-gradient(135deg, #e67e22, #d35400);
     transform: translateY(-1px);
   }
 

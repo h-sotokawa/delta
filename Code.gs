@@ -1143,6 +1143,80 @@ function getDestinationSheets() {
 }
 
 // サマリーシートの詳細診断を行う関数
+// 機種ID自動生成機能
+function generateNextModelId() {
+  const startTime = startPerformanceTimer();
+  addLog('generateNextModelId関数が呼び出されました');
+  
+  try {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+    if (!spreadsheetId) {
+      throw new Error('スプレッドシートIDが設定されていません');
+    }
+
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    let sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAMES.model);
+    
+    if (!sheet) {
+      // シートが存在しない場合は M00001 から開始
+      addLog('機種マスタシートが存在しないため、M00001から開始');
+      return 'M00001';
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      // データがない場合は M00001 から開始
+      addLog('データが存在しないため、M00001から開始');
+      return 'M00001';
+    }
+    
+    // 既存の機種IDを取得して最大値を見つける
+    const idRange = sheet.getRange(2, 1, lastRow - 1, 1); // A列の2行目以降
+    const idValues = idRange.getValues().flat();
+    
+    let maxNumber = 0;
+    const modelIdPattern = /^M(\d{5})$/;
+    
+    for (const id of idValues) {
+      if (id && typeof id === 'string') {
+        const match = id.match(modelIdPattern);
+        if (match) {
+          const number = parseInt(match[1], 10);
+          if (number > maxNumber) {
+            maxNumber = number;
+          }
+        }
+      }
+    }
+    
+    // 次の番号を生成
+    const nextNumber = maxNumber + 1;
+    const nextId = 'M' + nextNumber.toString().padStart(5, '0');
+    
+    addLog('機種ID生成完了', {
+      maxNumber: maxNumber,
+      nextNumber: nextNumber,
+      nextId: nextId,
+      existingIds: idValues.length
+    });
+    
+    const responseTime = endPerformanceTimer(startTime, '機種ID生成');
+    
+    return nextId;
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, '機種ID生成エラー');
+    addLog('機種ID生成でエラーが発生', {
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack
+    });
+    
+    // エラーの場合もデフォルトIDを返す
+    return 'M001';
+  }
+}
+
 // 機種マスタ管理機能
 function getModelMasterData() {
   const startTime = startPerformanceTimer();
@@ -1155,21 +1229,78 @@ function getModelMasterData() {
     }
 
     const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-    const sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAMES.model);
+    let sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAMES.model);
     
     if (!sheet) {
-      throw new Error('機種マスタシートが見つかりません。シートを作成してください。');
+      addLog('機種マスタシートが存在しないため新規作成します');
+      sheet = spreadsheet.insertSheet(MASTER_SHEET_NAMES.model);
+      const headers = ['機種ID', '機種名', 'メーカー', 'カテゴリ', '作成日', '更新日', '備考'];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      
+      // 列フォーマットを設定
+      const dateColumn1 = sheet.getRange('E:E'); // 作成日列（機種ID追加により1列ずれる）
+      const dateColumn2 = sheet.getRange('F:F'); // 更新日列
+      dateColumn1.setNumberFormat('@'); // @は文字列フォーマット
+      dateColumn2.setNumberFormat('@');
+      
+      addLog('新規シート作成時にフォーマット設定完了');
+      
+      return {
+        success: true,
+        data: [headers],
+        message: '機種マスタシートを新規作成しました',
+        metadata: {
+          spreadsheetName: spreadsheet.getName(),
+          sheetName: sheet.getName(),
+          lastRow: 1,
+          lastColumn: headers.length,
+          responseTime: endPerformanceTimer(startTime, '機種マスタ作成')
+        }
+      };
     }
 
     const lastRow = sheet.getLastRow();
     const lastColumn = sheet.getLastColumn();
     
-    if (lastRow === 0) {
+    if (lastRow === 0 || lastColumn === 0) {
+      const headers = ['機種ID', '機種名', 'メーカー', 'カテゴリ', '作成日', '更新日', '備考'];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      
+      // 列フォーマットを設定
+      const dateColumn1 = sheet.getRange('E:E'); // 作成日列（機種ID追加により1列ずれる）
+      const dateColumn2 = sheet.getRange('F:F'); // 更新日列
+      dateColumn1.setNumberFormat('@'); // @は文字列フォーマット
+      dateColumn2.setNumberFormat('@');
+      
+      addLog('ヘッダー追加時にフォーマット設定完了');
+      
       return {
         success: true,
-        data: [],
-        message: '機種マスタにデータがありません'
+        data: [headers],
+        message: '機種マスタにヘッダーを追加しました',
+        metadata: {
+          spreadsheetName: spreadsheet.getName(),
+          sheetName: sheet.getName(),
+          lastRow: 1,
+          lastColumn: headers.length,
+          responseTime: endPerformanceTimer(startTime, '機種マスタ初期化')
+        }
       };
+    }
+    
+    // 既存シートの日付列フォーマットをチェック・修正
+    const dateColumn1 = sheet.getRange('E:E'); // 作成日列（機種ID追加により1列ずれる）
+    const dateColumn2 = sheet.getRange('F:F'); // 更新日列
+    const currentFormat1 = dateColumn1.getNumberFormat();
+    const currentFormat2 = dateColumn2.getNumberFormat();
+    
+    if (currentFormat1 !== '@' || currentFormat2 !== '@') {
+      addLog('既存シートの日付フォーマットを文字列に修正します', {
+        currentFormat1: currentFormat1,
+        currentFormat2: currentFormat2
+      });
+      dateColumn1.setNumberFormat('@'); // @は文字列フォーマット
+      dateColumn2.setNumberFormat('@');
     }
     
     const range = sheet.getRange(1, 1, lastRow, lastColumn);
@@ -1191,6 +1322,12 @@ function getModelMasterData() {
     
   } catch (error) {
     endPerformanceTimer(startTime, '機種マスタ取得エラー');
+    addLog('機種マスタ取得でエラーが発生', {
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack
+    });
+    
     return {
       success: false,
       error: error.toString(),
@@ -1217,24 +1354,72 @@ function addModelMasterData(modelData) {
     
     if (!sheet) {
       sheet = spreadsheet.insertSheet(MASTER_SHEET_NAMES.model);
-      const headers = ['機種名', 'メーカー', 'カテゴリ', '作成日時', '更新日時', '備考'];
+      const headers = ['機種ID', '機種名', 'メーカー', 'カテゴリ', '作成日', '更新日', '備考'];
       sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     }
 
     const lastRow = sheet.getLastRow();
+    
+    // 機種名の重複チェック
+    if (lastRow > 1) {
+      const existingData = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
+      for (let i = 0; i < existingData.length; i++) {
+        const existingModelName = existingData[i][1]; // 機種名は2列目（インデックス1）
+        const existingManufacturer = existingData[i][2]; // メーカーは3列目（インデックス2）
+        
+        if (existingModelName === modelData.modelName && existingManufacturer === modelData.manufacturer) {
+          addLog('機種名重複エラー', {
+            existingModelName: existingModelName,
+            existingManufacturer: existingManufacturer,
+            newModelName: modelData.modelName,
+            newManufacturer: modelData.manufacturer
+          });
+          
+          return {
+            success: false,
+            error: `機種名「${modelData.modelName}」（メーカー：${modelData.manufacturer}）は既に登録されています。`,
+            errorType: 'DUPLICATE_MODEL'
+          };
+        }
+      }
+    }
+    
     const nextRow = lastRow + 1;
-    const currentTime = new Date();
+    const currentDate = new Date();
+    const dateString = Utilities.formatDate(currentDate, Session.getScriptTimeZone(), 'yyyy/MM/dd');
+    
+    // 機種IDを自動生成
+    const modelId = generateNextModelId();
+    
+    // 文字列として確実に保存するため、先頭にアポストロフィを付ける（Sheetsでは表示されない）
+    const formattedDateString = "'" + dateString;
     
     const newRowData = [
+      modelId, // 機種ID（自動生成）
       modelData.modelName || '',
       modelData.manufacturer || '',
       modelData.category || '',
-      currentTime,
-      currentTime,
+      formattedDateString,
+      formattedDateString,
       modelData.remarks || ''
     ];
     
-    sheet.getRange(nextRow, 1, 1, newRowData.length).setValues([newRowData]);
+    // データを設定
+    const range = sheet.getRange(nextRow, 1, 1, newRowData.length);
+    range.setValues([newRowData]);
+    
+    // 日付列を文字列として明示的に設定
+    const dateRange1 = sheet.getRange(nextRow, 5); // 作成日列（機種ID追加により1列ずれる）
+    const dateRange2 = sheet.getRange(nextRow, 6); // 更新日列
+    dateRange1.setNumberFormat('@'); // @は文字列フォーマット
+    dateRange2.setNumberFormat('@');
+    
+    addLog('新規データ追加完了', {
+      rowNumber: nextRow,
+      modelId: modelId,
+      dateString: dateString,
+      rawData: newRowData
+    });
     
     const responseTime = endPerformanceTimer(startTime, '機種マスタ追加');
     
@@ -1243,6 +1428,7 @@ function addModelMasterData(modelData) {
       message: '機種マスタに新しいデータを追加しました',
       data: {
         rowIndex: nextRow - 1,
+        modelId: modelId,
         modelData: newRowData,
         updateTime: responseTime
       }
@@ -1279,20 +1465,69 @@ function updateModelMasterData(rowIndex, modelData) {
     }
 
     const actualRow = rowIndex + 1;
-    const currentTime = new Date();
+    const currentDate = new Date();
+    const dateString = Utilities.formatDate(currentDate, Session.getScriptTimeZone(), 'yyyy/MM/dd');
     
-    const oldData = sheet.getRange(actualRow, 1, 1, 6).getValues()[0];
+    // 文字列として確実に保存するため、先頭にアポストロフィを付ける
+    const formattedDateString = "'" + dateString;
+    
+    const oldData = sheet.getRange(actualRow, 1, 1, 7).getValues()[0]; // 機種ID列追加により7列に変更
+    
+    // 機種名の重複チェック（自分自身以外との重複をチェック）
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      const existingData = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
+      for (let i = 0; i < existingData.length; i++) {
+        const existingRow = i + 2; // スプレッドシートの実際の行番号
+        const existingModelName = existingData[i][1]; // 機種名は2列目（インデックス1）
+        const existingManufacturer = existingData[i][2]; // メーカーは3列目（インデックス2）
+        
+        // 自分自身以外で同じ機種名・メーカーの組み合わせがある場合はエラー
+        if (existingRow !== actualRow && 
+            existingModelName === modelData.modelName && 
+            existingManufacturer === modelData.manufacturer) {
+          addLog('機種名重複エラー（更新時）', {
+            existingRow: existingRow,
+            existingModelName: existingModelName,
+            existingManufacturer: existingManufacturer,
+            updatingRow: actualRow,
+            newModelName: modelData.modelName,
+            newManufacturer: modelData.manufacturer
+          });
+          
+          return {
+            success: false,
+            error: `機種名「${modelData.modelName}」（メーカー：${modelData.manufacturer}）は既に登録されています。`,
+            errorType: 'DUPLICATE_MODEL'
+          };
+        }
+      }
+    }
     
     const updatedRowData = [
-      modelData.modelName || oldData[0],
-      modelData.manufacturer || oldData[1],
-      modelData.category || oldData[2],
-      oldData[3],
-      currentTime,
-      modelData.remarks || oldData[5]
+      oldData[0], // 機種IDは変更しない
+      modelData.modelName || oldData[1],
+      modelData.manufacturer || oldData[2],
+      modelData.category || oldData[3],
+      oldData[4], // 作成日は変更しない
+      formattedDateString, // 更新日のみ変更
+      modelData.remarks || oldData[6]
     ];
     
-    sheet.getRange(actualRow, 1, 1, updatedRowData.length).setValues([updatedRowData]);
+    // データを設定
+    const range = sheet.getRange(actualRow, 1, 1, updatedRowData.length);
+    range.setValues([updatedRowData]);
+    
+    // 更新日列を文字列として明示的に設定
+    const dateRange = sheet.getRange(actualRow, 6); // 更新日列（機種ID追加により1列ずれる）
+    dateRange.setNumberFormat('@'); // @は文字列フォーマット
+    
+    addLog('データ更新完了', {
+      rowNumber: actualRow,
+      dateString: dateString,
+      oldData: oldData,
+      newData: updatedRowData
+    });
     
     const responseTime = endPerformanceTimer(startTime, '機種マスタ更新');
     
@@ -1320,14 +1555,14 @@ function updateModelMasterData(rowIndex, modelData) {
   }
 }
 
-function deleteModelMasterData(rowIndex) {
+function deleteModelMasterData(modelName, manufacturer) {
   const startTime = startPerformanceTimer();
-  addLog('deleteModelMasterData関数が呼び出されました', { rowIndex });
+  addLog('deleteModelMasterData関数が呼び出されました', { modelName, manufacturer });
   
   try {
     const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
     if (!spreadsheetId) {
-      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません');
+      throw new Error('スプレッドシートIDが設定されていません');
     }
 
     const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
@@ -1337,31 +1572,91 @@ function deleteModelMasterData(rowIndex) {
       throw new Error('機種マスタシートが見つかりません');
     }
 
-    const actualRow = rowIndex + 1;
-    const deletedData = sheet.getRange(actualRow, 1, 1, 6).getValues()[0];
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      throw new Error('削除対象のデータがありません');
+    }
     
-    sheet.deleteRow(actualRow);
+    // 全データを取得してターゲット行を検索
+    const data = sheet.getRange(2, 1, lastRow - 1, 7).getValues(); // ヘッダー行を除く（機種ID列追加により7列に変更）
+    let targetRowNumber = -1;
+    let deletedData = null;
+    
+    addLog('削除対象を検索中', {
+      searchModelName: modelName,
+      searchManufacturer: manufacturer,
+      totalRows: data.length
+    });
+    
+    // 機種名とメーカー名で一致する行を検索（機種IDが追加されたため列番号を調整）
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowModelName = row[1] ? row[1].toString().trim() : ''; // 機種名は1列目（0-based）
+      const rowManufacturer = row[2] ? row[2].toString().trim() : ''; // メーカーは2列目
+      
+      addLog(`行${i + 2}をチェック`, {
+        rowModelId: row[0],
+        rowModelName,
+        rowManufacturer,
+        searchModelName: modelName.trim(),
+        searchManufacturer: manufacturer.trim()
+      });
+      
+      if (rowModelName === modelName.trim() && rowManufacturer === manufacturer.trim()) {
+        targetRowNumber = i + 2; // スプレッドシートの実際の行番号（ヘッダー行を考慮）
+        deletedData = row;
+        addLog('削除対象を発見', {
+          targetRowNumber,
+          deletedData
+        });
+        break;
+      }
+    }
+    
+    if (targetRowNumber === -1) {
+      throw new Error(`指定された機種が見つかりませんでした。機種名: ${modelName}, メーカー: ${manufacturer}`);
+    }
+    
+    // 行を削除
+    sheet.deleteRow(targetRowNumber);
     
     const responseTime = endPerformanceTimer(startTime, '機種マスタ削除');
+    
+    addLog('削除完了', {
+      deletedRowNumber: targetRowNumber,
+      deletedData: deletedData
+    });
     
     return {
       success: true,
       message: '機種マスタからデータを削除しました',
       data: {
-        rowIndex: rowIndex,
+        deletedRowNumber: targetRowNumber,
         deletedData: deletedData,
+        modelName: modelName,
+        manufacturer: manufacturer,
         updateTime: responseTime
       }
     };
     
   } catch (error) {
     endPerformanceTimer(startTime, '機種マスタ削除エラー');
+    addLog('機種マスタ削除でエラーが発生', {
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack,
+      modelName: modelName,
+      manufacturer: manufacturer
+    });
+    
     return {
       success: false,
       error: error.toString(),
       errorDetails: {
         message: error.message,
-        stack: error.stack
+        stack: error.stack,
+        modelName: modelName,
+        manufacturer: manufacturer
       }
     };
   }
@@ -1463,6 +1758,217 @@ function getAvailableCategories() {
       success: false,
       error: error.toString(),
       categories: []
+    };
+  }
+}
+
+// 機種マスタの診断機能
+function diagnoseModelMaster() {
+  const startTime = Date.now();
+  const diagnosticLogs = [];
+  
+  function addDiagnosticLog(message, data = {}) {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      message: message,
+      data: data
+    };
+    diagnosticLogs.push(logEntry);
+    console.log(`[MODEL-MASTER-DIAGNOSTIC] ${message}`, data);
+  }
+  
+  try {
+    addDiagnosticLog('機種マスタ診断開始');
+    
+    // スプレッドシートID確認
+    const properties = PropertiesService.getScriptProperties();
+    const spreadsheetId = properties.getProperty('SPREADSHEET_ID_DESTINATION');
+    
+    addDiagnosticLog('スプレッドシートID確認', {
+      spreadsheetId: spreadsheetId ? '設定済み' : '未設定',
+      idLength: spreadsheetId ? spreadsheetId.length : 0
+    });
+    
+    if (!spreadsheetId) {
+      return {
+        success: false,
+        error: 'SPREADSHEET_ID_DESTINATIONが設定されていません',
+        diagnostics: diagnosticLogs,
+        executionTime: Date.now() - startTime + 'ms'
+      };
+    }
+    
+    // スプレッドシートを開く
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    addDiagnosticLog('スプレッドシート取得成功', {
+      name: spreadsheet.getName(),
+      url: spreadsheet.getUrl()
+    });
+    
+    // 全シート取得
+    const allSheets = spreadsheet.getSheets();
+    const sheetInfo = allSheets.map(sheet => ({
+      name: sheet.getName(),
+      id: sheet.getSheetId(),
+      lastRow: sheet.getLastRow(),
+      lastColumn: sheet.getLastColumn(),
+      hidden: sheet.isSheetHidden()
+    }));
+    
+    addDiagnosticLog('全シート情報', {
+      totalSheets: allSheets.length,
+      sheets: sheetInfo,
+      targetSheetName: MASTER_SHEET_NAMES.model
+    });
+    
+    // 機種マスタシート確認
+    let modelSheet = spreadsheet.getSheetByName(MASTER_SHEET_NAMES.model);
+    let sheetCreated = false;
+    
+    if (!modelSheet) {
+      addDiagnosticLog('機種マスタシートが見つかりません。新規作成します');
+      modelSheet = spreadsheet.insertSheet(MASTER_SHEET_NAMES.model);
+      const headers = ['機種名', 'メーカー', 'カテゴリ', '作成日', '更新日', '備考'];
+      modelSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      sheetCreated = true;
+    }
+    
+    addDiagnosticLog('機種マスタシート情報', {
+      name: modelSheet.getName(),
+      id: modelSheet.getSheetId(),
+      lastRow: modelSheet.getLastRow(),
+      lastColumn: modelSheet.getLastColumn(),
+      isHidden: modelSheet.isSheetHidden(),
+      wasCreated: sheetCreated
+    });
+    
+    // getModelMasterData関数の実際の呼び出しテスト
+    addDiagnosticLog('getModelMasterData関数テスト開始');
+    const result = getModelMasterData();
+    
+    addDiagnosticLog('getModelMasterData関数テスト結果', {
+      success: result.success,
+      hasData: result.data ? true : false,
+      dataLength: result.data ? result.data.length : 0,
+      error: result.error || 'なし',
+      message: result.message || 'なし'
+    });
+    
+    return {
+      success: true,
+      message: '機種マスタ診断完了',
+      diagnostics: diagnosticLogs,
+      sheetInfo: {
+        name: modelSheet.getName(),
+        lastRow: modelSheet.getLastRow(),
+        lastColumn: modelSheet.getLastColumn(),
+        wasCreated: sheetCreated
+      },
+      functionResult: result,
+      executionTime: Date.now() - startTime + 'ms'
+    };
+    
+  } catch (error) {
+    addDiagnosticLog('診断中にエラー発生', {
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack
+    });
+    
+    return {
+      success: false,
+      error: error.toString(),
+      diagnostics: diagnosticLogs,
+      executionTime: Date.now() - startTime + 'ms'
+    };
+  }
+}
+
+// 既存の日付データを年月日形式に修正する関数
+function fixExistingDateFormats() {
+  const startTime = startPerformanceTimer();
+  addLog('既存の日付データ修正を開始します');
+  
+  try {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+    if (!spreadsheetId) {
+      throw new Error('スクリプトプロパティにSPREADSHEET_ID_DESTINATIONが設定されていません');
+    }
+
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAMES.model);
+    
+    if (!sheet) {
+      return {
+        success: false,
+        error: '機種マスタシートが見つかりません'
+      };
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return {
+        success: true,
+        message: '修正対象のデータがありません',
+        updatedCount: 0
+      };
+    }
+
+    let updatedCount = 0;
+    
+    // 2行目から最後まで（ヘッダー行を除く）をチェック
+    for (let row = 2; row <= lastRow; row++) {
+      const createdDateCell = sheet.getRange(row, 5); // 機種ID追加により1列ずれる
+      const updatedDateCell = sheet.getRange(row, 6);
+      
+      const createdValue = createdDateCell.getValue();
+      const updatedValue = updatedDateCell.getValue();
+      
+      // 作成日の修正
+      if (createdValue instanceof Date) {
+        const dateString = Utilities.formatDate(createdValue, Session.getScriptTimeZone(), 'yyyy/MM/dd');
+        const formattedDateString = "'" + dateString; // 文字列として確実に保存
+        createdDateCell.setValue(formattedDateString);
+        createdDateCell.setNumberFormat('@'); // 文字列フォーマット
+        updatedCount++;
+        addLog(`行${row}の作成日を修正: ${createdValue} → ${dateString}`);
+      }
+      
+      // 更新日の修正
+      if (updatedValue instanceof Date) {
+        const dateString = Utilities.formatDate(updatedValue, Session.getScriptTimeZone(), 'yyyy/MM/dd');
+        const formattedDateString = "'" + dateString; // 文字列として確実に保存
+        updatedDateCell.setValue(formattedDateString);
+        updatedDateCell.setNumberFormat('@'); // 文字列フォーマット
+        updatedCount++;
+        addLog(`行${row}の更新日を修正: ${updatedValue} → ${dateString}`);
+      }
+    }
+    
+    const responseTime = endPerformanceTimer(startTime, '日付データ修正');
+    
+    return {
+      success: true,
+      message: `${updatedCount}個の日付データを修正しました`,
+      updatedCount: updatedCount,
+      responseTime: responseTime
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, '日付データ修正エラー');
+    addLog('日付データ修正でエラーが発生', {
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack
+    });
+    
+    return {
+      success: false,
+      error: error.toString(),
+      errorDetails: {
+        message: error.message,
+        stack: error.stack
+      }
     };
   }
 }
