@@ -139,6 +139,25 @@
       }, 100);
     }
     
+    // 設定ページの場合、設定機能を初期化
+    if (pageId === 'settings') {
+      if (DEBUG_MODE) {
+        showDebugInfo('showPage: 設定ページ表示', { pageId });
+      }
+      setTimeout(() => {
+        if (typeof onSettingsPageShow === 'function') {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage遅延実行: 設定機能初期化', {});
+          }
+          onSettingsPageShow();
+        } else {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage: onSettingsPageShow関数が見つからない', {});
+          }
+        }
+      }, 100);
+    }
+    
     // スクロール位置をトップに
     window.scrollTo(0, 0);
   }
@@ -152,7 +171,13 @@
     const debugInfo = document.getElementById('debugInfo');
     const timestamp = new Date().toISOString();
     const debugMessage = `[${timestamp}] ${message}\n${JSON.stringify(data, null, 2)}\n\n`;
-    debugInfo.textContent = (debugInfo.textContent || '') + debugMessage;
+    
+    if (debugInfo) {
+      debugInfo.textContent = (debugInfo.textContent || '') + debugMessage;
+    } else {
+      // Fallback to console if debugInfo element doesn't exist
+      console.log(`[DEBUG] ${message}`, data);
+    }
   }
 
   function showServerLogs(logs) {
@@ -162,7 +187,13 @@
     const debugInfo = document.getElementById('debugInfo');
     logs.forEach(log => {
       const debugMessage = `[SERVER ${log.timestamp}] ${log.message}\n${JSON.stringify(log.data, null, 2)}\n\n`;
-      debugInfo.textContent = (debugInfo.textContent || '') + debugMessage;
+      
+      if (debugInfo) {
+        debugInfo.textContent = (debugInfo.textContent || '') + debugMessage;
+      } else {
+        // Fallback to console if debugInfo element doesn't exist
+        console.log(`[SERVER DEBUG] ${log.message}`, log.data);
+      }
     });
   }
 
@@ -170,27 +201,34 @@
     if (!DEBUG_MODE) return;
     
     const debugInfo = document.getElementById('debugInfo');
-    debugInfo.textContent = '';
+    if (debugInfo) {
+      debugInfo.textContent = '';
+    }
   }
 
   function toggleDebugMode() {
     if (!DEBUG_MODE) return;
     
     const debugInfo = document.getElementById('debugInfo');
-    debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+    if (debugInfo) {
+      debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+    }
   }
 
   function exportDebugInfo() {
     if (!DEBUG_MODE) return;
     
-    const debugInfo = document.getElementById('debugInfo').textContent;
-    const blob = new Blob([debugInfo], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `debug_log_${new Date().getTime()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const debugInfo = document.getElementById('debugInfo');
+    if (debugInfo) {
+      const debugText = debugInfo.textContent;
+      const blob = new Blob([debugText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `debug_log_${new Date().getTime()}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   }
 
   // ========================================

@@ -4,7 +4,7 @@
   // ページ初期化
   // ========================================
   function onSettingsPageShow() {
-    if (DEBUG_MODE) {
+    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
       showDebugInfo('設定ページ初期化開始', {});
     }
     
@@ -30,7 +30,7 @@
     document.getElementById(tabId + '-tab').classList.add('active');
     document.getElementById(tabId + '-settings').classList.add('active');
     
-    if (DEBUG_MODE) {
+    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
       showDebugInfo('設定タブ切り替え', { tabId });
     }
   }
@@ -46,7 +46,7 @@
         hideSettingsLoading();
         displayFormStorageSettings(settings);
         
-        if (DEBUG_MODE) {
+        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
           showDebugInfo('フォーム保存先設定読み込み完了', settings);
         }
       })
@@ -54,7 +54,7 @@
         hideSettingsLoading();
         showSettingsError('設定の読み込みに失敗しました: ' + error.message);
         
-        if (DEBUG_MODE) {
+        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
           showDebugInfo('フォーム保存先設定読み込みエラー', error);
         }
       })
@@ -107,7 +107,7 @@
         hideSettingsLoading();
         showSettingsSuccess('フォーム保存先設定が正常に保存されました');
         
-        if (DEBUG_MODE) {
+        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
           showDebugInfo('フォーム保存先設定保存完了', result);
         }
       })
@@ -115,7 +115,7 @@
         hideSettingsLoading();
         showSettingsError('設定の保存に失敗しました: ' + error.message);
         
-        if (DEBUG_MODE) {
+        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
           showDebugInfo('フォーム保存先設定保存エラー', error);
         }
       })
@@ -270,7 +270,7 @@
   // ユーティリティ関数
   // ========================================
   function showDebugInfo(message, data) {
-    if (DEBUG_MODE) {
+    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
       console.log('[Settings Debug]', message, data);
     }
   }
