@@ -187,16 +187,11 @@
     const form = document.getElementById('formStorageSettingsForm');
     if (!form) return;
     
-    // 各フィールドに設定値を反映
-    const fields = ['terminalFolderId', 'printerFolderId', 'otherFolderId', 'defaultFolderId'];
-    
-    fields.forEach(fieldId => {
-      const input = document.getElementById(fieldId);
-      if (input && settings) {
-        const settingKey = fieldId.replace('FolderId', '');
-        input.value = settings[settingKey] || '';
-      }
-    });
+    // 拠点フォルダIDフィールドに設定値を反映
+    const locationFolderInput = document.getElementById('locationFolderId');
+    if (locationFolderInput && settings) {
+      locationFolderInput.value = settings.locationFolder || '';
+    }
   }
 
   // ========================================
@@ -213,17 +208,16 @@
     }
     
     // フォームデータを収集
-    const settings = {
-      terminal: document.getElementById('terminalFolderId').value.trim(),
-      printer: document.getElementById('printerFolderId').value.trim(),
-      other: document.getElementById('otherFolderId').value.trim(),
-      default: document.getElementById('defaultFolderId').value.trim()
-    };
+    const locationFolderId = document.getElementById('locationFolderId').value.trim();
     
     // バリデーション
-    if (!validateFormStorageSettings(settings)) {
+    if (!validateFormStorageSettings(locationFolderId)) {
       return;
     }
+    
+    const settings = {
+      locationFolder: locationFolderId
+    };
     
     showSettingsLoading('設定を保存中...');
     
@@ -250,23 +244,19 @@
   // ========================================
   // フォーム保存先設定のバリデーション
   // ========================================
-  function validateFormStorageSettings(settings) {
-    // 少なくとも1つのフォルダIDが設定されている必要がある
-    const hasAtLeastOne = Object.values(settings).some(value => value.length > 0);
-    
-    if (!hasAtLeastOne) {
-      showSettingsError('少なくとも1つのフォルダIDを設定してください');
+  function validateFormStorageSettings(locationFolderId) {
+    // フォルダIDが設定されている必要がある
+    if (!locationFolderId) {
+      showSettingsError('フォルダIDを設定してください');
       return false;
     }
     
     // フォルダIDの形式チェック
     const folderIdPattern = /^[a-zA-Z0-9_-]+$/;
     
-    for (const [key, value] of Object.entries(settings)) {
-      if (value && !folderIdPattern.test(value)) {
-        showSettingsError(`${key}のフォルダIDの形式が正しくありません`);
-        return false;
-      }
+    if (!folderIdPattern.test(locationFolderId)) {
+      showSettingsError('フォルダIDの形式が正しくありません');
+      return false;
     }
     
     return true;
@@ -337,10 +327,10 @@
       form.reset();
       
       // バリデーションクラスを削除
-      const inputs = form.querySelectorAll('input');
-      inputs.forEach(input => {
+      const input = document.getElementById('locationFolderId');
+      if (input) {
         input.classList.remove('valid', 'invalid');
-      });
+      }
     }
     
     showSettingsSuccess('設定をリセットしました');

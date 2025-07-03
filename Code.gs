@@ -2423,10 +2423,7 @@ function getFormStorageSettings(locationId) {
     
     const properties = PropertiesService.getScriptProperties();
     const settings = {
-      terminal: properties.getProperty(`FORM_FOLDER_${locationId.toUpperCase()}_TERMINAL`) || '',
-      printer: properties.getProperty(`FORM_FOLDER_${locationId.toUpperCase()}_PRINTER`) || '',
-      other: properties.getProperty(`FORM_FOLDER_${locationId.toUpperCase()}_OTHER`) || '',
-      default: properties.getProperty(`FORM_FOLDER_${locationId.toUpperCase()}_DEFAULT`) || ''
+      locationFolder: properties.getProperty(`FORM_FOLDER_${locationId.toUpperCase()}`) || ''
     };
     
     endPerformanceTimer(startTime, 'フォーム保存先設定取得');
@@ -2457,29 +2454,11 @@ function saveFormStorageSettings(locationId, settings) {
     const properties = PropertiesService.getScriptProperties();
     const locationPrefix = `FORM_FOLDER_${locationId.toUpperCase()}`;
     
-    // 各カテゴリの設定を拠点別に保存
-    if (settings.terminal) {
-      properties.setProperty(`${locationPrefix}_TERMINAL`, settings.terminal);
+    // 拠点のフォルダ設定を保存
+    if (settings.locationFolder) {
+      properties.setProperty(locationPrefix, settings.locationFolder);
     } else {
-      properties.deleteProperty(`${locationPrefix}_TERMINAL`);
-    }
-    
-    if (settings.printer) {
-      properties.setProperty(`${locationPrefix}_PRINTER`, settings.printer);
-    } else {
-      properties.deleteProperty(`${locationPrefix}_PRINTER`);
-    }
-    
-    if (settings.other) {
-      properties.setProperty(`${locationPrefix}_OTHER`, settings.other);
-    } else {
-      properties.deleteProperty(`${locationPrefix}_OTHER`);
-    }
-    
-    if (settings.default) {
-      properties.setProperty(`${locationPrefix}_DEFAULT`, settings.default);
-    } else {
-      properties.deleteProperty(`${locationPrefix}_DEFAULT`);
+      properties.deleteProperty(locationPrefix);
     }
     
     endPerformanceTimer(startTime, 'フォーム保存先設定保存');
@@ -2542,46 +2521,23 @@ function getFormStorageFolderId(locationId, deviceCategory) {
     }
     
     const settings = getFormStorageSettings(locationId);
-    let folderId = '';
-    let categoryUsed = '';
-    
-    // デバイスカテゴリに応じてフォルダIDを決定
-    switch (deviceCategory) {
-      case 'SV':
-      case 'CL':
-        folderId = settings.terminal;
-        categoryUsed = 'terminal';
-        break;
-      case 'プリンタ':
-        folderId = settings.printer;
-        categoryUsed = 'printer';
-        break;
-      case 'その他':
-        folderId = settings.other;
-        categoryUsed = 'other';
-        break;
-      default:
-        folderId = settings.default;
-        categoryUsed = 'default';
-        break;
-    }
-    
-    // フォールバック処理
-    if (!folderId && categoryUsed !== 'default') {
-      folderId = settings.default;
-      categoryUsed = 'default';
-    }
+    const folderId = settings.locationFolder;
+    const categoryUsed = 'location';
     
     // 保存先未設定エラーチェック
     if (!folderId) {
-      const locationNames = {
-        'osaka': '大阪',
-        'kobe': '神戸',
-        'himeji': '姫路'
-      };
-      const locationName = locationNames[locationId] || locationId;
+      // 拠点マスタから拠点名を取得
+      let locationName = locationId;
+      try {
+        const location = getLocationById(locationId);
+        if (location) {
+          locationName = location.locationName;
+        }
+      } catch (e) {
+        // 拠点マスタが取得できない場合はIDをそのまま使用
+      }
       
-      throw new Error(`${locationName}拠点の${deviceCategory}カテゴリ用フォーム保存先が設定されていません。設定画面で保存先を設定してください。`);
+      throw new Error(`${locationName}拠点のフォーム保存先が設定されていません。設定画面で保存先を設定してください。`);
     }
     
     endPerformanceTimer(startTime, 'フォーム保存先フォルダID取得');
@@ -2593,7 +2549,7 @@ function getFormStorageFolderId(locationId, deviceCategory) {
       locationId: locationId,
       category: deviceCategory,
       categoryUsed: categoryUsed,
-      usedDefault: categoryUsed === 'default'
+      usedDefault: false
     };
   } catch (error) {
     endPerformanceTimer(startTime, 'フォーム保存先フォルダID取得エラー');

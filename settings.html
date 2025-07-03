@@ -53,19 +53,19 @@
     <form id="formStorageSettingsForm" style="display: none;">
       <div class="settings-grid">
         
-        <!-- 端末フォーム保存先 -->
+        <!-- 拠点フォーム保存先 -->
         <div class="setting-item">
-          <label for="terminalFolderId">
-            <i class="fas fa-server"></i>
-            端末フォーム保存先
-            <span class="setting-description">SV・CLカテゴリのフォーム保存先</span>
+          <label for="locationFolderId">
+            <i class="fas fa-folder"></i>
+            フォーム保存先
+            <span class="setting-description">この拠点で作成される全フォームの保存先</span>
           </label>
           <div class="input-group">
-            <input type="text" id="terminalFolderId" name="terminalFolderId" 
+            <input type="text" id="locationFolderId" name="locationFolderId" 
                    placeholder="Google Drive フォルダID" 
                    pattern="[a-zA-Z0-9_-]+" 
                    title="Google DriveフォルダIDを入力してください">
-            <button type="button" class="btn btn-info btn-sm" onclick="validateFolderId('terminalFolderId')">
+            <button type="button" class="btn btn-info btn-sm" onclick="validateFolderId('locationFolderId')">
               <i class="fas fa-check"></i>
               検証
             </button>
@@ -74,66 +74,6 @@
             例: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms<br>
             フォルダURLの/folders/の後の部分をコピーしてください
           </small>
-        </div>
-
-        <!-- プリンタフォーム保存先 -->
-        <div class="setting-item">
-          <label for="printerFolderId">
-            <i class="fas fa-print"></i>
-            プリンタフォーム保存先
-            <span class="setting-description">プリンタカテゴリのフォーム保存先</span>
-          </label>
-          <div class="input-group">
-            <input type="text" id="printerFolderId" name="printerFolderId" 
-                   placeholder="Google Drive フォルダID" 
-                   pattern="[a-zA-Z0-9_-]+" 
-                   title="Google DriveフォルダIDを入力してください">
-            <button type="button" class="btn btn-info btn-sm" onclick="validateFolderId('printerFolderId')">
-              <i class="fas fa-check"></i>
-              検証
-            </button>
-          </div>
-          <small class="help-text">プリンタ関連のフォームが保存されます</small>
-        </div>
-
-        <!-- その他フォーム保存先 -->
-        <div class="setting-item">
-          <label for="otherFolderId">
-            <i class="fas fa-box"></i>
-            その他フォーム保存先
-            <span class="setting-description">その他カテゴリのフォーム保存先</span>
-          </label>
-          <div class="input-group">
-            <input type="text" id="otherFolderId" name="otherFolderId" 
-                   placeholder="Google Drive フォルダID" 
-                   pattern="[a-zA-Z0-9_-]+" 
-                   title="Google DriveフォルダIDを入力してください">
-            <button type="button" class="btn btn-info btn-sm" onclick="validateFolderId('otherFolderId')">
-              <i class="fas fa-check"></i>
-              検証
-            </button>
-          </div>
-          <small class="help-text">その他機器のフォームが保存されます</small>
-        </div>
-
-        <!-- デフォルト保存先 -->
-        <div class="setting-item">
-          <label for="defaultFolderId">
-            <i class="fas fa-folder"></i>
-            デフォルト保存先
-            <span class="setting-description">上記以外、または未分類のフォーム保存先</span>
-          </label>
-          <div class="input-group">
-            <input type="text" id="defaultFolderId" name="defaultFolderId" 
-                   placeholder="Google Drive フォルダID" 
-                   pattern="[a-zA-Z0-9_-]+" 
-                   title="Google DriveフォルダIDを入力してください">
-            <button type="button" class="btn btn-info btn-sm" onclick="validateFolderId('defaultFolderId')">
-              <i class="fas fa-check"></i>
-              検証
-            </button>
-          </div>
-          <small class="help-text">カテゴリが特定できない場合のフォールバック先</small>
         </div>
 
       </div>
