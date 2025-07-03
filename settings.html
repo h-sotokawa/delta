@@ -1,0 +1,160 @@
+<!-- settings.html - システム設定ページ -->
+<div class="settings-container">
+  <!-- ポップアップメッセージ -->
+  <div id="settingsPopupMessage" class="popup-message"></div>
+  
+  <div class="page-header">
+    <h1><i class="fas fa-cog"></i> システム設定</h1>
+    <p>フォーム作成やマスタデータに関する設定を管理します</p>
+  </div>
+
+  <!-- 設定カテゴリタブ -->
+  <div class="settings-tabs">
+    <button class="tab-button active" onclick="showSettingsTab('form-storage')" id="form-storage-tab">
+      <i class="fas fa-folder"></i>
+      フォーム保存先
+    </button>
+    <button class="tab-button" onclick="showSettingsTab('general')" id="general-tab">
+      <i class="fas fa-cogs"></i>
+      一般設定
+    </button>
+  </div>
+
+  <!-- フォーム保存先設定 -->
+  <div id="form-storage-settings" class="settings-section active">
+    <div class="section-header">
+      <h2><i class="fas fa-folder-open"></i> フォーム保存先設定</h2>
+      <p>作成されるGoogle Formsの保存先フォルダを詳細カテゴリごとに設定できます</p>
+    </div>
+
+    <form id="formStorageSettingsForm">
+      <div class="settings-grid">
+        
+        <!-- 端末フォーム保存先 -->
+        <div class="setting-item">
+          <label for="terminalFolderId">
+            <i class="fas fa-server"></i>
+            端末フォーム保存先
+            <span class="setting-description">SV・CLカテゴリのフォーム保存先</span>
+          </label>
+          <div class="input-group">
+            <input type="text" id="terminalFolderId" name="terminalFolderId" 
+                   placeholder="Google Drive フォルダID" 
+                   pattern="[a-zA-Z0-9_-]+" 
+                   title="Google DriveフォルダIDを入力してください">
+            <button type="button" class="btn btn-info btn-sm" onclick="validateFolderId('terminalFolderId')">
+              <i class="fas fa-check"></i>
+              検証
+            </button>
+          </div>
+          <small class="help-text">
+            例: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms<br>
+            フォルダURLの/folders/の後の部分をコピーしてください
+          </small>
+        </div>
+
+        <!-- プリンタフォーム保存先 -->
+        <div class="setting-item">
+          <label for="printerFolderId">
+            <i class="fas fa-print"></i>
+            プリンタフォーム保存先
+            <span class="setting-description">プリンタカテゴリのフォーム保存先</span>
+          </label>
+          <div class="input-group">
+            <input type="text" id="printerFolderId" name="printerFolderId" 
+                   placeholder="Google Drive フォルダID" 
+                   pattern="[a-zA-Z0-9_-]+" 
+                   title="Google DriveフォルダIDを入力してください">
+            <button type="button" class="btn btn-info btn-sm" onclick="validateFolderId('printerFolderId')">
+              <i class="fas fa-check"></i>
+              検証
+            </button>
+          </div>
+          <small class="help-text">プリンタ関連のフォームが保存されます</small>
+        </div>
+
+        <!-- その他フォーム保存先 -->
+        <div class="setting-item">
+          <label for="otherFolderId">
+            <i class="fas fa-box"></i>
+            その他フォーム保存先
+            <span class="setting-description">その他カテゴリのフォーム保存先</span>
+          </label>
+          <div class="input-group">
+            <input type="text" id="otherFolderId" name="otherFolderId" 
+                   placeholder="Google Drive フォルダID" 
+                   pattern="[a-zA-Z0-9_-]+" 
+                   title="Google DriveフォルダIDを入力してください">
+            <button type="button" class="btn btn-info btn-sm" onclick="validateFolderId('otherFolderId')">
+              <i class="fas fa-check"></i>
+              検証
+            </button>
+          </div>
+          <small class="help-text">その他機器のフォームが保存されます</small>
+        </div>
+
+        <!-- デフォルト保存先 -->
+        <div class="setting-item">
+          <label for="defaultFolderId">
+            <i class="fas fa-folder"></i>
+            デフォルト保存先
+            <span class="setting-description">上記以外、または未分類のフォーム保存先</span>
+          </label>
+          <div class="input-group">
+            <input type="text" id="defaultFolderId" name="defaultFolderId" 
+                   placeholder="Google Drive フォルダID" 
+                   pattern="[a-zA-Z0-9_-]+" 
+                   title="Google DriveフォルダIDを入力してください">
+            <button type="button" class="btn btn-info btn-sm" onclick="validateFolderId('defaultFolderId')">
+              <i class="fas fa-check"></i>
+              検証
+            </button>
+          </div>
+          <small class="help-text">カテゴリが特定できない場合のフォールバック先</small>
+        </div>
+
+      </div>
+
+      <!-- 保存ボタン -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="resetFormStorageSettings()">
+          <i class="fas fa-undo"></i>
+          リセット
+        </button>
+        <button type="button" class="btn btn-success" onclick="saveFormStorageSettings()">
+          <i class="fas fa-save"></i>
+          設定を保存
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 一般設定 -->
+  <div id="general-settings" class="settings-section">
+    <div class="section-header">
+      <h2><i class="fas fa-cogs"></i> 一般設定</h2>
+      <p>システム全体の動作に関する設定</p>
+    </div>
+    
+    <div class="coming-soon">
+      <i class="fas fa-tools"></i>
+      <h3>準備中</h3>
+      <p>一般設定機能は今後のアップデートで追加予定です</p>
+    </div>
+  </div>
+
+  <!-- フォルダID取得ヘルプ -->
+  <div class="help-section">
+    <h3><i class="fas fa-question-circle"></i> Google Drive フォルダIDの取得方法</h3>
+    <ol>
+      <li>Google Driveで保存先にしたいフォルダを開きます</li>
+      <li>ブラウザのアドレスバーのURLを確認します</li>
+      <li>URL中の <code>/folders/</code> の後にある長い英数字の文字列をコピーします</li>
+      <li>例: <code>https://drive.google.com/drive/folders/<strong>1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms</strong></code></li>
+    </ol>
+    <div class="help-note">
+      <i class="fas fa-info-circle"></i>
+      フォルダは事前に作成し、Google Apps Scriptからアクセス可能であることを確認してください
+    </div>
+  </div>
+</div>

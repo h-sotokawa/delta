@@ -535,12 +535,12 @@ function createGoogleForm(formConfig) {
         serial: formConfig.attributes?.serial || ''
       };
       
-      duplicateCheckResult = checkDuplicateValues(formConfig.location, checkData, formConfig.deviceCategory);
+      duplicateCheckResult = checkDuplicateValues(formConfig.deviceCategory, checkData);
       
       if (!duplicateCheckResult.success) {
         addFormLog('重複チェック失敗', {
           error: duplicateCheckResult.error,
-          location: formConfig.location
+          deviceCategory: formConfig.deviceCategory
         });
         
         return {
@@ -551,7 +551,7 @@ function createGoogleForm(formConfig) {
       } else if (duplicateCheckResult.hasDuplicates) {
         addFormLog('重複データ検出（フォーム作成前）', {
           duplicates: duplicateCheckResult.duplicates,
-          location: formConfig.location
+          deviceCategory: formConfig.deviceCategory
         });
         
         // 重複詳細メッセージを生成（シンプル版）
@@ -588,14 +588,14 @@ function createGoogleForm(formConfig) {
       } else {
         addFormLog('重複チェック完了（重複なし）- フォーム作成を開始', {
           checkedFields: Object.keys(checkData),
-          location: formConfig.location
+          deviceCategory: formConfig.deviceCategory
         });
       }
       
     } catch (duplicateCheckError) {
       addFormLog('重複チェック処理でエラー（フォーム作成前）', {
         error: duplicateCheckError.toString(),
-        location: formConfig.location
+        deviceCategory: formConfig.deviceCategory
       });
       
       return {
@@ -771,7 +771,7 @@ function createGoogleForm(formConfig) {
         convertedSpreadsheetData: spreadsheetFormData
       });
       
-      spreadsheetResult = addRowToSpreadsheet(formConfig.location, spreadsheetFormData, additionalData);
+      spreadsheetResult = addRowToSpreadsheet(formConfig.deviceCategory, spreadsheetFormData, additionalData);
       
       if (spreadsheetResult.success) {
         addFormLog('スプレッドシート連携成功', {
@@ -781,14 +781,14 @@ function createGoogleForm(formConfig) {
       } else {
         addFormLog('スプレッドシート連携失敗', {
           error: spreadsheetResult.error,
-          location: formConfig.location
+          deviceCategory: formConfig.deviceCategory
         });
       }
       
     } catch (spreadsheetError) {
       addFormLog('スプレッドシート連携処理でエラー', {
         error: spreadsheetError.toString(),
-        location: formConfig.location,
+        deviceCategory: formConfig.deviceCategory,
         formId: form.getId()
       });
       // スプレッドシート連携エラーはフォーム作成自体は継続
@@ -2350,8 +2350,8 @@ function testLocationNumberValidation() {
  * @param {Object} formData - フォームデータ
  * @param {Object} additionalData - 追加データ
  */
-function addRowToSpreadsheet(location, formData, additionalData = {}) {
-  addFormLog('スプレッドシート行追加開始', { location, formData, additionalData });
+function addRowToSpreadsheet(deviceCategory, formData, additionalData = {}) {
+  addFormLog('スプレッドシート行追加開始', { deviceCategory, formData, additionalData });
   
   try {
     // スプレッドシートIDを取得
@@ -2365,10 +2365,10 @@ function addRowToSpreadsheet(location, formData, additionalData = {}) {
     // スプレッドシートを開く
     const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
     
-    // 拠点別シート名を取得
-    const sheetName = LOCATION_SHEET_NAMES[location];
+    // デバイスカテゴリ別シート名を取得
+    const sheetName = getTargetSheetNameByCategory(deviceCategory);
     if (!sheetName) {
-      throw new Error(`未知の拠点: ${location}`);
+      throw new Error(`未知のデバイスカテゴリ: ${deviceCategory}`);
     }
     
     // シートを取得（存在しない場合はエラー）
@@ -2441,7 +2441,7 @@ function addRowToSpreadsheet(location, formData, additionalData = {}) {
     
   } catch (error) {
     addFormLog('スプレッドシート行追加エラー', {
-      location,
+      deviceCategory,
       error: error.toString(),
       stack: error.stack
     });
@@ -2671,15 +2671,14 @@ function generateDynamicVlookupFormula(statusSheetName, lookupValue, fieldName, 
 
 /**
  * 重複値をチェックする関数
- * @param {string} location - 拠点識別子
+ * @param {string} deviceCategory - デバイスカテゴリ（SV, CL, プリンタ, その他）
  * @param {Object} checkData - チェック対象データ
  * @param {string} checkData.locationNumber - 拠点管理番号
  * @param {string} checkData.assetNumber - 資産管理番号
  * @param {string} checkData.serial - シリアル番号
- * @param {string} deviceType - デバイスタイプ（SV, CL, プリンタ, その他）
  * @return {Object} チェック結果
  */
-function checkDuplicateValues(location, checkData, deviceType = null) {
+function checkDuplicateValues(deviceCategory, checkData) {
   try {
     // スプレッドシート設定を取得
     const spreadsheetSettings = getSpreadsheetSettings();
@@ -2690,12 +2689,12 @@ function checkDuplicateValues(location, checkData, deviceType = null) {
       };
     }
 
-    // 拠点に対応するシート名を取得
-    const sheetName = LOCATION_SHEET_NAMES[location];
+    // デバイスカテゴリに対応するシート名を取得
+    const sheetName = getTargetSheetNameByCategory(deviceCategory);
     if (!sheetName) {
       return {
         success: false,
-        error: `拠点 '${location}' に対応するシートが見つかりません`
+        error: `デバイスカテゴリ '${deviceCategory}' に対応するシートが見つかりません`
       };
     }
 
@@ -3568,12 +3567,12 @@ function testStatusSheetColumnDetection(statusSheetName = '端末ステータス
 
 /**
  * 重複チェック機能のテスト関数
- * @param {string} testLocation - テスト対象拠点（osaka-desktop, kobe-terminal等）
+ * @param {string} testDeviceCategory - テスト対象デバイスカテゴリ（SV, CL, プリンタ, その他）
  * @param {Object} testData - テストデータ
  */
-function testDuplicateCheck(testLocation = 'osaka-desktop', testData = null) {
+function testDuplicateCheck(testDeviceCategory = 'SV', testData = null) {
   console.log('=== 重複チェック機能テスト開始 ===');
-  console.log('対象拠点:', testLocation);
+  console.log('対象デバイスカテゴリ:', testDeviceCategory);
   
   // デフォルトテストデータ
   const defaultTestData = {
@@ -3586,7 +3585,7 @@ function testDuplicateCheck(testLocation = 'osaka-desktop', testData = null) {
   console.log('チェック対象データ:', checkData);
   
   try {
-    const result = checkDuplicateValues(testLocation, checkData);
+    const result = checkDuplicateValues(testDeviceCategory, checkData);
     
     if (result.success) {
       console.log('✅ 重複チェック実行成功');

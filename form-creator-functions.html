@@ -5,6 +5,12 @@
   // ========================================
   function onFormCreatorPageShow() {
     // フォーム作成ページ表示時の処理
+    if (DEBUG_MODE) {
+      showDebugInfo('フォーム作成ページ初期化開始', {});
+    }
+    
+    // 拠点マスタを読み込み
+    loadLocationMasterForForm();
   }
 
   // ========================================
@@ -201,7 +207,49 @@
   // ========================================
   // 拠点選択機能
   // ========================================
+  
+  // 拠点マスタから拠点一覧を取得
+  function loadLocationMasterForForm() {
+    google.script.run
+      .withSuccessHandler(function(locations) {
+        console.log('拠点マスタ取得成功:', locations);
+        updateLocationOptions(locations);
+      })
+      .withFailureHandler(function(error) {
+        console.error('拠点マスタ取得エラー:', error);
+        showDebugInfo('拠点マスタ取得エラー', { error: error.message });
+        // エラー時は従来のハードコードされた拠点を使用
+        updateDeviceType();
+      })
+      .getLocationMaster();
+  }
+  
+  // 拠点オプションを更新
+  function updateLocationOptions(locations) {
+    // アクティブな拠点のみフィルタ
+    const activeLocations = locations.filter(location => location.status === 'active');
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('アクティブ拠点一覧', activeLocations);
+    }
+    
+    // グローバル変数として保存（他の関数で使用）
+    window.formCreatorLocations = activeLocations;
+    
+    // 拠点選択を更新
+    updateDeviceType();
+  }
+  
   function getLocationDisplayName(locationValue) {
+    // 新しい拠点マスタベースの表示名取得
+    if (window.formCreatorLocations) {
+      const location = window.formCreatorLocations.find(loc => loc.locationId === locationValue);
+      if (location) {
+        return location.locationName;
+      }
+    }
+    
+    // フォールバック: 従来のハードコードされた名前
     const locationNames = {
       'osaka-desktop': '大阪(デスクトップ)',
       'osaka-server': '大阪(サーバー、ノート)',
@@ -213,59 +261,97 @@
     
     return locationNames[locationValue] || '未選択拠点';
   }
+  
+  // 拠点コード（プレフィックス）を取得
+  function getLocationPrefix(locationValue) {
+    // 拠点マスタからプレフィックス取得
+    if (window.formCreatorLocations) {
+      const location = window.formCreatorLocations.find(loc => loc.locationId === locationValue);
+      if (location && location.locationCode) {
+        return location.locationCode;
+      }
+    }
+    
+    // フォールバック: 従来のハードコードされたプレフィックス
+    const locationPrefixes = {
+      'osaka-desktop': 'Osaka',
+      'osaka-server': 'Osaka', 
+      'kobe-terminal': 'Kobe',
+      'himeji-terminal': 'Hime',
+      'osaka-printer': 'Osaka',
+      'hyogo-printer': 'Kobe'
+    };
+    
+    return locationPrefixes[locationValue] || 'Unknown';
+  }
   // 代替機種別選択時の処理
   function updateDeviceType() {
-    // console.log('updateDeviceType 関数が呼び出されました');
-    
     const deviceTypeSelect = document.getElementById('device-type');
     const locationSelect = document.getElementById('location-select');
     const deviceCategorySelect = document.getElementById('device-category');
     
-    // console.log('要素取得結果:', { 
-    //   deviceTypeSelect: !!deviceTypeSelect,
-    //   locationSelect: !!locationSelect,
-    //   deviceCategorySelect: !!deviceCategorySelect
-    // });
-    
     if (!deviceTypeSelect || !locationSelect || !deviceCategorySelect) {
-      // console.error('必要な要素が見つかりません');
+      console.error('必要な要素が見つかりません');
       return;
     }
     
     const selectedType = deviceTypeSelect.value;
-    // console.log('選択された代替機種別:', selectedType);
     
-    // 代替機種別に基づく拠点の選択肢マッピング
-    const locationOptions = {
-      'terminal': [
-        { value: 'osaka-desktop', text: '大阪(デスクトップ)' },
-        { value: 'osaka-server', text: '大阪(サーバー、ノート)' },
-        { value: 'kobe-terminal', text: '神戸(端末)' },
-        { value: 'himeji-terminal', text: '姫路(端末)' }
-      ],
-      'printer': [
-        { value: 'osaka-printer', text: '大阪(プリンタ、その他)' },
-        { value: 'hyogo-printer', text: '兵庫(プリンタ、その他)' }
-      ]
-    };
+    if (DEBUG_MODE) {
+      showDebugInfo('代替機種別選択', { selectedType });
+    }
+    
+    // 拠点選択肢を構築
+    let locationOptions = [];
+    
+    if (window.formCreatorLocations && window.formCreatorLocations.length > 0) {
+      // 拠点マスタから取得した拠点を使用
+      locationOptions = window.formCreatorLocations.map(location => ({
+        value: location.locationId,
+        text: location.locationName
+      }));
+      
+      if (DEBUG_MODE) {
+        showDebugInfo('拠点マスタから拠点選択肢を生成', locationOptions);
+      }
+    } else {
+      // フォールバック: 従来のハードコードされた拠点
+      const fallbackLocationOptions = {
+        'terminal': [
+          { value: 'osaka-desktop', text: '大阪(デスクトップ)' },
+          { value: 'osaka-server', text: '大阪(サーバー、ノート)' },
+          { value: 'kobe-terminal', text: '神戸(端末)' },
+          { value: 'himeji-terminal', text: '姫路(端末)' }
+        ],
+        'printer': [
+          { value: 'osaka-printer', text: '大阪(プリンタ、その他)' },
+          { value: 'hyogo-printer', text: '兵庫(プリンタ、その他)' }
+        ]
+      };
+      
+      locationOptions = fallbackLocationOptions[selectedType] || [];
+    }
     
     // 拠点選択肢を更新
-    // console.log('拠点選択肢を更新中...');
     locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
     
-    if (selectedType && locationOptions[selectedType]) {
-      // console.log('利用可能な拠点:', locationOptions[selectedType]);
-      locationOptions[selectedType].forEach(function(option) {
+    if (selectedType && locationOptions.length > 0) {
+      locationOptions.forEach(function(option) {
         const optionElement = document.createElement('option');
         optionElement.value = option.value;
         optionElement.textContent = option.text;
         locationSelect.appendChild(optionElement);
       });
       locationSelect.disabled = false;
-      // console.log('拠点選択を有効化しました');
+      
+      if (DEBUG_MODE) {
+        showDebugInfo('拠点選択肢更新完了', { count: locationOptions.length });
+      }
     } else {
-      // console.log('選択された代替機種別に対応する拠点がありません');
       locationSelect.disabled = true;
+      if (DEBUG_MODE) {
+        showDebugInfo('拠点選択肢なし', { selectedType, locationOptionsLength: locationOptions.length });
+      }
     }
     
     // 詳細カテゴリと管理番号をリセット
@@ -280,10 +366,13 @@
          // 属性フォームを更新
      updateAttributesForm();
      
+     // 拠点管理番号を更新
+     updateCombinedLocationNumber();
+     
      if (DEBUG_MODE) {
        showDebugInfo('代替機種別選択更新', { 
         selectedType, 
-        locationOptions: locationOptions[selectedType] || []
+        locationOptionsCount: locationOptions.length
       });
     }
   }
@@ -299,29 +388,17 @@
     const deviceType = deviceTypeSelect.value;
     const selectedLocation = locationSelect.value;
     
-    // 拠点に基づく詳細カテゴリの選択肢マッピング
+    if (DEBUG_MODE) {
+      showDebugInfo('拠点選択時の処理', { deviceType, selectedLocation });
+    }
+    
+    // 機器種別に基づく詳細カテゴリの選択肢（拠点に依存しない）
     const deviceCategoryOptions = {
-      'osaka-desktop': [
+      'terminal': [
         { value: 'SV', text: 'SV（サーバー）' },
         { value: 'CL', text: 'CL（クライアント）' }
       ],
-      'osaka-server': [
-        { value: 'SV', text: 'SV（サーバー）' },
-        { value: 'CL', text: 'CL（クライアント）' }
-      ],
-      'kobe-terminal': [
-        { value: 'SV', text: 'SV（サーバー）' },
-        { value: 'CL', text: 'CL（クライアント）' }
-      ],
-      'himeji-terminal': [
-        { value: 'SV', text: 'SV（サーバー）' },
-        { value: 'CL', text: 'CL（クライアント）' }
-      ],
-      'osaka-printer': [
-        { value: 'プリンタ', text: 'プリンタ' },
-        { value: 'その他', text: 'その他' }
-      ],
-      'hyogo-printer': [
+      'printer': [
         { value: 'プリンタ', text: 'プリンタ' },
         { value: 'その他', text: 'その他' }
       ]
@@ -344,16 +421,28 @@
       modelSelect.disabled = true;
     }
     
-    if (selectedLocation && deviceCategoryOptions[selectedLocation]) {
-      deviceCategoryOptions[selectedLocation].forEach(function(option) {
+    // 拠点が選択されていて、機器種別も選択されている場合
+    if (selectedLocation && deviceType && deviceCategoryOptions[deviceType]) {
+      deviceCategoryOptions[deviceType].forEach(function(option) {
         const optionElement = document.createElement('option');
         optionElement.value = option.value;
         optionElement.textContent = option.text;
         deviceCategorySelect.appendChild(optionElement);
       });
       deviceCategorySelect.disabled = false;
+      
+      if (DEBUG_MODE) {
+        showDebugInfo('詳細カテゴリ選択肢更新', { 
+          deviceType, 
+          options: deviceCategoryOptions[deviceType] 
+        });
+      }
     } else {
       deviceCategorySelect.disabled = true;
+      
+      if (DEBUG_MODE) {
+        showDebugInfo('詳細カテゴリ無効化', { selectedLocation, deviceType });
+      }
     }
     
     // 属性フォームを更新
@@ -387,19 +476,20 @@
       return;
     }
     
+    if (DEBUG_MODE) {
+      showDebugInfo('拠点管理番号更新開始', {
+        location: locationSelect?.value,
+        deviceCategory: deviceCategorySelect?.value,
+        model: modelSelect?.value
+      });
+    }
+    
     // 選択された値を取得
     const location = locationSelect ? locationSelect.value : '';
     const deviceCategory = deviceCategorySelect ? deviceCategorySelect.value : '';
     
-    // 拠点に基づくプレフィックスマッピング
-    const locationPrefixes = {
-      'osaka-desktop': 'Osaka',
-      'osaka-server': 'Osaka', 
-      'kobe-terminal': 'Kobe',
-      'himeji-terminal': 'Hime',
-      'osaka-printer': 'Osaka',
-      'hyogo-printer': 'Kobe'
-    };
+    // 拠点プレフィックスを取得（拠点マスタベース）
+    const locationPrefix = getLocationPrefix(location);
     
     // 詳細カテゴリの日本語→英語変換マッピング
     const categoryMapping = {
@@ -457,16 +547,13 @@
     if (!location) {
       previewText = '拠点を選択してください';
     } else if (!deviceCategory) {
-      const prefix = locationPrefixes[location] || '???';
-      previewText = `${prefix}_[Category]_[Model]_[Number]`;
+      previewText = `${locationPrefix}_[Category]_[Model]_[Number]`;
     } else if (!modelInfo) {
-      const prefix = locationPrefixes[location] || '???';
       const englishCategory = categoryMapping[deviceCategory] || deviceCategory;
-      previewText = `${prefix}_${englishCategory}_[Model]_[Number]`;
+      previewText = `${locationPrefix}_${englishCategory}_[Model]_[Number]`;
     } else {
-      const prefix = locationPrefixes[location] || '???';
       const englishCategory = categoryMapping[deviceCategory] || deviceCategory;
-      previewText = `${prefix}_${englishCategory}_${modelInfo}_[Number]`;
+      previewText = `${locationPrefix}_${englishCategory}_${modelInfo}_[Number]`;
       isComplete = true;
     }
     
@@ -484,9 +571,8 @@
       
       // プレフィックス部分を設定（英語変換適用、番号は末尾）
       if (locationPrefixGenerated) {
-        const prefix = locationPrefixes[location] || '???';
         const englishCategory = categoryMapping[deviceCategory] || deviceCategory;
-        locationPrefixGenerated.textContent = `${prefix}_${englishCategory}_${modelInfo}_`;
+        locationPrefixGenerated.textContent = `${locationPrefix}_${englishCategory}_${modelInfo}_`;
       }
       
       // 入力欄を有効化
@@ -497,6 +583,13 @@
         // デフォルト値設定
         if (!locationSuffixInput.value) {
           locationSuffixInput.value = '001';
+        }
+        
+        if (DEBUG_MODE) {
+          showDebugInfo('拠点管理番号入力フィールド有効化', {
+            inputEnabled: !locationSuffixInput.disabled,
+            defaultValue: locationSuffixInput.value
+          });
         }
         
         // 最終的な拠点管理番号を生成
@@ -530,14 +623,8 @@
     const deviceCategory = deviceCategorySelect.value;
     const suffix = locationSuffixInput.value.trim();
     
-    const locationPrefixes = {
-      'osaka-desktop': 'Osaka',
-      'osaka-server': 'Osaka', 
-      'kobe-terminal': 'Kobe',
-      'himeji-terminal': 'Hime',
-      'osaka-printer': 'Osaka',
-      'hyogo-printer': 'Kobe'
-    };
+    // 拠点プレフィックスを取得（拠点マスタベース）
+    const locationPrefix = getLocationPrefix(location);
     
     // 詳細カテゴリの日本語→英語変換マッピング
     const categoryMapping = {
@@ -580,9 +667,8 @@
     }
     
     if (location && deviceCategory && modelInfo && suffix) {
-      const prefix = locationPrefixes[location] || '???';
       const englishCategory = categoryMapping[deviceCategory] || deviceCategory;
-      const finalNumber = `${prefix}_${englishCategory}_${modelInfo}_${suffix}`;
+      const finalNumber = `${locationPrefix}_${englishCategory}_${modelInfo}_${suffix}`;
       locationNumberInput.value = finalNumber;
       console.log('最終拠点管理番号:', finalNumber);
     } else {
@@ -1009,6 +1095,27 @@
       attributes: attributeData,
       questions: getDeviceQuestions(location, deviceCategory, attributeData)
     };
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('フォーム設定データ', {
+        deviceCategory: deviceCategory,
+        targetSheet: getTargetSheetByCategory(deviceCategory),
+        location: location,
+        locationNumber: locationNumber
+      });
+    }
+    
+    // 詳細カテゴリに基づくマスタシート分岐の説明
+    function getTargetSheetByCategory(category) {
+      if (category === 'SV' || category === 'CL') {
+        return '端末マスタ';
+      } else if (category === 'プリンタ') {
+        return 'プリンタマスタ';
+      } else if (category === 'その他') {
+        return 'その他マスタ';
+      }
+      return '端末マスタ';
+    }
     
     // 質問データを解析
     const questionData = {};

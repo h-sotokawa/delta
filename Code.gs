@@ -9,6 +9,7 @@ const LOCATION_NAMES = {
 const MASTER_SHEET_NAMES = {
   terminal: '端末マスタ',
   printer: 'プリンタマスタ',
+  other: 'その他マスタ',
   model: '機種マスタ'
 };
 
@@ -22,13 +23,28 @@ const LEGACY_LOCATION_MAPPING = {
   'hyogo_printer': 'kobe'
 };
 
-// デバイスタイプに応じてマスタシートを決定する関数
+// デバイスタイプに応じてマスタシートを決定する関数（既存の互換性維持）
 function getTargetSheetName(deviceType) {
   if (deviceType === 'terminal' || deviceType === 'desktop' || deviceType === 'notebook') {
     return MASTER_SHEET_NAMES.terminal;
   } else if (deviceType === 'printer') {
     return MASTER_SHEET_NAMES.printer;
   } else if (deviceType === 'model') {
+    return MASTER_SHEET_NAMES.model;
+  }
+  // デフォルトは端末マスタ
+  return MASTER_SHEET_NAMES.terminal;
+}
+
+// 詳細カテゴリに応じてマスタシートを決定する関数（フォーム作成用）
+function getTargetSheetNameByCategory(deviceCategory) {
+  if (deviceCategory === 'SV' || deviceCategory === 'CL') {
+    return MASTER_SHEET_NAMES.terminal;
+  } else if (deviceCategory === 'プリンタ') {
+    return MASTER_SHEET_NAMES.printer;
+  } else if (deviceCategory === 'その他') {
+    return MASTER_SHEET_NAMES.other;
+  } else if (deviceCategory === 'model') {
     return MASTER_SHEET_NAMES.model;
   }
   // デフォルトは端末マスタ

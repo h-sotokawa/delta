@@ -1,0 +1,277 @@
+<!-- settings-functions.html - システム設定ページの機能 -->
+<script>
+  // ========================================
+  // ページ初期化
+  // ========================================
+  function onSettingsPageShow() {
+    if (DEBUG_MODE) {
+      showDebugInfo('設定ページ初期化開始', {});
+    }
+    
+    // フォーム保存先設定を読み込み
+    loadFormStorageSettings();
+  }
+
+  // ========================================
+  // 設定タブ切り替え
+  // ========================================
+  function showSettingsTab(tabId) {
+    // 全てのタブボタンからactiveクラスを削除
+    document.querySelectorAll('.tab-button').forEach(tab => {
+      tab.classList.remove('active');
+    });
+    
+    // 全ての設定セクションを非表示
+    document.querySelectorAll('.settings-section').forEach(section => {
+      section.classList.remove('active');
+    });
+    
+    // 選択されたタブとセクションをアクティブ化
+    document.getElementById(tabId + '-tab').classList.add('active');
+    document.getElementById(tabId + '-settings').classList.add('active');
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('設定タブ切り替え', { tabId });
+    }
+  }
+
+  // ========================================
+  // フォーム保存先設定の読み込み
+  // ========================================
+  function loadFormStorageSettings() {
+    showSettingsLoading('設定を読み込み中...');
+    
+    google.script.run
+      .withSuccessHandler(function(settings) {
+        hideSettingsLoading();
+        displayFormStorageSettings(settings);
+        
+        if (DEBUG_MODE) {
+          showDebugInfo('フォーム保存先設定読み込み完了', settings);
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideSettingsLoading();
+        showSettingsError('設定の読み込みに失敗しました: ' + error.message);
+        
+        if (DEBUG_MODE) {
+          showDebugInfo('フォーム保存先設定読み込みエラー', error);
+        }
+      })
+      .getFormStorageSettings();
+  }
+
+  // ========================================
+  // フォーム保存先設定の表示
+  // ========================================
+  function displayFormStorageSettings(settings) {
+    const form = document.getElementById('formStorageSettingsForm');
+    if (!form) return;
+    
+    // 各フィールドに設定値を反映
+    const fields = ['terminalFolderId', 'printerFolderId', 'otherFolderId', 'defaultFolderId'];
+    
+    fields.forEach(fieldId => {
+      const input = document.getElementById(fieldId);
+      if (input && settings) {
+        const settingKey = fieldId.replace('FolderId', '');
+        input.value = settings[settingKey] || '';
+      }
+    });
+  }
+
+  // ========================================
+  // フォーム保存先設定の保存
+  // ========================================
+  function saveFormStorageSettings() {
+    const form = document.getElementById('formStorageSettingsForm');
+    if (!form) return;
+    
+    // フォームデータを収集
+    const settings = {
+      terminal: document.getElementById('terminalFolderId').value.trim(),
+      printer: document.getElementById('printerFolderId').value.trim(),
+      other: document.getElementById('otherFolderId').value.trim(),
+      default: document.getElementById('defaultFolderId').value.trim()
+    };
+    
+    // バリデーション
+    if (!validateFormStorageSettings(settings)) {
+      return;
+    }
+    
+    showSettingsLoading('設定を保存中...');
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideSettingsLoading();
+        showSettingsSuccess('フォーム保存先設定が正常に保存されました');
+        
+        if (DEBUG_MODE) {
+          showDebugInfo('フォーム保存先設定保存完了', result);
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideSettingsLoading();
+        showSettingsError('設定の保存に失敗しました: ' + error.message);
+        
+        if (DEBUG_MODE) {
+          showDebugInfo('フォーム保存先設定保存エラー', error);
+        }
+      })
+      .saveFormStorageSettings(settings);
+  }
+
+  // ========================================
+  // フォーム保存先設定のバリデーション
+  // ========================================
+  function validateFormStorageSettings(settings) {
+    // 少なくとも1つのフォルダIDが設定されている必要がある
+    const hasAtLeastOne = Object.values(settings).some(value => value.length > 0);
+    
+    if (!hasAtLeastOne) {
+      showSettingsError('少なくとも1つのフォルダIDを設定してください');
+      return false;
+    }
+    
+    // フォルダIDの形式チェック
+    const folderIdPattern = /^[a-zA-Z0-9_-]+$/;
+    
+    for (const [key, value] of Object.entries(settings)) {
+      if (value && !folderIdPattern.test(value)) {
+        showSettingsError(`${key}のフォルダIDの形式が正しくありません`);
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  // ========================================
+  // Google Drive フォルダIDの検証
+  // ========================================
+  function validateFolderId(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    const folderId = input.value.trim();
+    
+    if (!folderId) {
+      showSettingsError('フォルダIDを入力してください');
+      return;
+    }
+    
+    // フォルダIDの形式チェック
+    const folderIdPattern = /^[a-zA-Z0-9_-]+$/;
+    if (!folderIdPattern.test(folderId)) {
+      showSettingsError('フォルダIDの形式が正しくありません');
+      return;
+    }
+    
+    showSettingsLoading('フォルダIDを検証中...');
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideSettingsLoading();
+        
+        if (result.valid) {
+          showSettingsSuccess(`フォルダ「${result.name}」への接続が確認できました`);
+          input.classList.add('valid');
+          input.classList.remove('invalid');
+        } else {
+          showSettingsError('フォルダにアクセスできません: ' + result.error);
+          input.classList.add('invalid');
+          input.classList.remove('valid');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideSettingsLoading();
+        showSettingsError('フォルダIDの検証に失敗しました: ' + error.message);
+        input.classList.add('invalid');
+        input.classList.remove('valid');
+      })
+      .validateDriveFolderId(folderId);
+  }
+
+  // ========================================
+  // 設定のリセット
+  // ========================================
+  function resetFormStorageSettings() {
+    if (!confirm('フォーム保存先設定をリセットしてもよろしいですか？\n\n未保存の変更は失われます。')) {
+      return;
+    }
+    
+    // フォームをクリア
+    const form = document.getElementById('formStorageSettingsForm');
+    if (form) {
+      form.reset();
+      
+      // バリデーションクラスを削除
+      const inputs = form.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.classList.remove('valid', 'invalid');
+      });
+    }
+    
+    showSettingsSuccess('設定をリセットしました');
+  }
+
+  // ========================================
+  // UI通知関数
+  // ========================================
+  function showSettingsPopupMessage(message, type = 'info') {
+    const popup = document.getElementById('settingsPopupMessage');
+    if (!popup) {
+      console.log(type + ': ' + message);
+      return;
+    }
+    
+    popup.textContent = message;
+    popup.className = 'popup-message show';
+    
+    // メッセージタイプに応じてクラスを追加
+    if (type === 'success') {
+      popup.classList.add('success');
+    } else if (type === 'error') {
+      popup.classList.add('error');
+    } else if (type === 'info') {
+      popup.classList.add('info');
+    }
+    
+    popup.style.display = 'block';
+    
+    setTimeout(() => {
+      popup.classList.remove('show');
+      setTimeout(() => {
+        popup.style.display = 'none';
+        popup.className = 'popup-message';
+      }, 600);
+    }, 3000);
+  }
+
+  function showSettingsLoading(message) {
+    showSettingsPopupMessage(message, 'info');
+  }
+
+  function hideSettingsLoading() {
+    // ローディング表示を非表示（3秒後に自動で消える）
+    console.log('Settings loading completed');
+  }
+
+  function showSettingsSuccess(message) {
+    showSettingsPopupMessage(message, 'success');
+  }
+
+  function showSettingsError(message) {
+    showSettingsPopupMessage(message, 'error');
+  }
+
+  // ========================================
+  // ユーティリティ関数
+  // ========================================
+  function showDebugInfo(message, data) {
+    if (DEBUG_MODE) {
+      console.log('[Settings Debug]', message, data);
+    }
+  }
+</script>
