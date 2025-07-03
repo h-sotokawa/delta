@@ -2,7 +2,7 @@
 <div class="settings-container">
   <!-- ポップアップメッセージ -->
   <div id="settingsPopupMessage" class="popup-message"></div>
-  
+
   <div class="page-header">
     <h1><i class="fas fa-cog"></i> システム設定</h1>
     <p>フォーム作成やマスタデータに関する設定を管理します</p>
@@ -36,7 +36,6 @@
   <div id="form-storage-settings" class="settings-section active">
     <div class="section-header">
       <h2><i class="fas fa-folder-open"></i> フォーム保存先設定</h2>
-      <p>選択した拠点で作成されるGoogle Formsの保存先フォルダを詳細カテゴリごとに設定できます</p>
       <div id="location-notice" class="location-notice" style="display: none;">
         <i class="fas fa-info-circle"></i>
         <span id="location-notice-text">現在の設定対象: </span>
@@ -52,7 +51,7 @@
 
     <form id="formStorageSettingsForm" style="display: none;">
       <div class="settings-grid">
-        
+
         <!-- 拠点フォーム保存先 -->
         <div class="setting-item">
           <label for="locationFolderId">
@@ -61,10 +60,8 @@
             <span class="setting-description">この拠点で作成される全フォームの保存先</span>
           </label>
           <div class="input-group">
-            <input type="text" id="locationFolderId" name="locationFolderId" 
-                   placeholder="Google Drive フォルダID" 
-                   pattern="[a-zA-Z0-9_-]+" 
-                   title="Google DriveフォルダIDを入力してください">
+            <input type="text" id="locationFolderId" name="locationFolderId" placeholder="Google Drive フォルダID"
+              pattern="[a-zA-Z0-9_-]+" title="Google DriveフォルダIDを入力してください">
             <button type="button" class="btn btn-info btn-sm" onclick="validateFolderId('locationFolderId')">
               <i class="fas fa-check"></i>
               検証
@@ -98,7 +95,7 @@
       <h2><i class="fas fa-cogs"></i> 一般設定</h2>
       <p>システム全体の動作に関する設定</p>
     </div>
-    
+
     <div class="coming-soon">
       <i class="fas fa-tools"></i>
       <h3>準備中</h3>
@@ -113,7 +110,9 @@
       <li>Google Driveで保存先にしたいフォルダを開きます</li>
       <li>ブラウザのアドレスバーのURLを確認します</li>
       <li>URL中の <code>/folders/</code> の後にある長い英数字の文字列をコピーします</li>
-      <li>例: <code>https://drive.google.com/drive/folders/<strong>1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms</strong></code></li>
+      <li>例:
+        <code>https://drive.google.com/drive/folders/<strong>1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms</strong></code>
+      </li>
     </ol>
     <div class="help-note">
       <i class="fas fa-info-circle"></i>

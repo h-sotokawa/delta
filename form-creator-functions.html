@@ -826,6 +826,8 @@
 
   // 代替機種別に応じた質問項目を生成
   function getDeviceQuestions(location, deviceCategory, attributeData = {}) {
+    console.log('getDeviceQuestions called with:', { location, deviceCategory, attributeData });
+    
     const deviceTypeSelect = document.getElementById('device-type');
     const deviceType = deviceTypeSelect ? deviceTypeSelect.value : '';
     
@@ -1072,6 +1074,14 @@
     const locationNumber = formData.get('locationNumber');
     const location = formData.get('location');
     const deviceCategory = formData.get('deviceCategory');
+    
+    // デバッグ: location変数の確認
+    console.log('フォームデータ確認:', {
+      deviceType: deviceType,
+      locationNumber: locationNumber,
+      location: location,
+      deviceCategory: deviceCategory
+    });
     
     // 属性データを解析
     const attributeData = {};

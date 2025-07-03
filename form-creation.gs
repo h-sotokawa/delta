@@ -605,8 +605,30 @@ function createGoogleForm(formConfig) {
       };
     }
     
-    // 拠点別フォルダを取得または作成
-    const folder = getLocationFolder(formConfig.location);
+    // 拠点別フォルダを取得
+    const folderResult = getFormStorageFolderId(formConfig.location, formConfig.deviceCategory);
+    if (!folderResult.success) {
+      return {
+        success: false,
+        error: folderResult.error,
+        errorType: 'FOLDER_NOT_CONFIGURED'
+      };
+    }
+    
+    let folder;
+    try {
+      folder = DriveApp.getFolderById(folderResult.folderId);
+      addFormLog('拠点別フォルダを使用', { 
+        location: formConfig.location, 
+        folderId: folderResult.folderId 
+      });
+    } catch (folderError) {
+      return {
+        success: false,
+        error: `フォルダへのアクセスに失敗しました: ${folderError.message}`,
+        errorType: 'FOLDER_ACCESS_ERROR'
+      };
+    }
     
     // フォームを作成
     const form = FormApp.create(formConfig.title);
