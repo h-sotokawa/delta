@@ -8,6 +8,9 @@
       showDebugInfo('設定ページ初期化開始', {});
     }
     
+    // 拠点マスタを読み込み
+    loadLocationMasterForSettings();
+    
     // 初期状態では拠点選択を促す
     showNoLocationMessage();
   }
@@ -16,6 +19,62 @@
   // 拠点選択関連
   // ========================================
   let currentSelectedLocation = '';
+  let locationMasterData = [];
+
+  // 拠点マスタデータを読み込む
+  function loadLocationMasterForSettings() {
+    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+      showDebugInfo('拠点マスタデータ読み込み開始', {});
+    }
+    
+    google.script.run
+      .withSuccessHandler(function(locations) {
+        locationMasterData = locations;
+        populateLocationSelector(locations);
+        
+        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+          showDebugInfo('拠点マスタデータ読み込み完了', { locations });
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('拠点マスタデータの読み込みに失敗しました:', error);
+        showSettingsError('拠点データの読み込みに失敗しました: ' + error.message);
+        
+        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+          showDebugInfo('拠点マスタデータ読み込みエラー', { error });
+        }
+      })
+      .getLocationMaster();
+  }
+  
+  // 拠点選択セレクトボックスを更新
+  function populateLocationSelector(locations) {
+    const locationSelect = document.getElementById('selectedLocation');
+    if (!locationSelect) return;
+    
+    // 既存のオプションをクリア（デフォルトオプション以外）
+    locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
+    
+    // 拠点データが存在する場合のみ追加
+    if (locations && locations.length > 0) {
+      locations.forEach(function(location) {
+        // アクティブな拠点のみ表示
+        if (location.status === 'active') {
+          const option = document.createElement('option');
+          option.value = location.locationId;
+          option.textContent = location.locationName;
+          locationSelect.appendChild(option);
+        }
+      });
+    } else {
+      // データが無い場合のメッセージ
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = '拠点データがありません';
+      option.disabled = true;
+      locationSelect.appendChild(option);
+    }
+  }
 
   function onLocationChange() {
     const selectedLocation = document.getElementById('selectedLocation').value;
@@ -34,14 +93,14 @@
   }
 
   function showLocationSettings(locationId) {
-    // 拠点名を取得
-    const locationNames = {
-      'osaka': '大阪',
-      'kobe': '神戸',
-      'himeji': '姫路'
-    };
-    
-    const locationName = locationNames[locationId] || locationId;
+    // 拠点マスタデータから拠点名を取得
+    let locationName = locationId;
+    if (locationMasterData && locationMasterData.length > 0) {
+      const location = locationMasterData.find(loc => loc.locationId === locationId);
+      if (location) {
+        locationName = location.locationName;
+      }
+    }
     
     // UI要素の表示/非表示を制御
     document.getElementById('no-location-message').style.display = 'none';
