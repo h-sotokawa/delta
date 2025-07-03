@@ -8,8 +8,61 @@
       showDebugInfo('設定ページ初期化開始', {});
     }
     
-    // フォーム保存先設定を読み込み
-    loadFormStorageSettings();
+    // 初期状態では拠点選択を促す
+    showNoLocationMessage();
+  }
+
+  // ========================================
+  // 拠点選択関連
+  // ========================================
+  let currentSelectedLocation = '';
+
+  function onLocationChange() {
+    const selectedLocation = document.getElementById('selectedLocation').value;
+    currentSelectedLocation = selectedLocation;
+    
+    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+      showDebugInfo('拠点選択変更', { selectedLocation });
+    }
+    
+    if (selectedLocation) {
+      showLocationSettings(selectedLocation);
+      loadFormStorageSettings(selectedLocation);
+    } else {
+      showNoLocationMessage();
+    }
+  }
+
+  function showLocationSettings(locationId) {
+    // 拠点名を取得
+    const locationNames = {
+      'osaka': '大阪',
+      'kobe': '神戸',
+      'himeji': '姫路'
+    };
+    
+    const locationName = locationNames[locationId] || locationId;
+    
+    // UI要素の表示/非表示を制御
+    document.getElementById('no-location-message').style.display = 'none';
+    document.getElementById('formStorageSettingsForm').style.display = 'block';
+    document.getElementById('location-notice').style.display = 'block';
+    document.getElementById('location-notice-text').textContent = `現在の設定対象: ${locationName}`;
+  }
+
+  function showNoLocationMessage() {
+    // UI要素の表示/非表示を制御
+    document.getElementById('no-location-message').style.display = 'block';
+    document.getElementById('formStorageSettingsForm').style.display = 'none';
+    document.getElementById('location-notice').style.display = 'none';
+    
+    // フォームをクリア
+    const form = document.getElementById('formStorageSettingsForm');
+    if (form) {
+      form.reset();
+    }
+    
+    currentSelectedLocation = '';
   }
 
   // ========================================
@@ -38,7 +91,14 @@
   // ========================================
   // フォーム保存先設定の読み込み
   // ========================================
-  function loadFormStorageSettings() {
+  function loadFormStorageSettings(locationId) {
+    if (!locationId) {
+      if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+        showDebugInfo('拠点IDが指定されていません', { locationId });
+      }
+      return;
+    }
+    
     showSettingsLoading('設定を読み込み中...');
     
     google.script.run
@@ -47,7 +107,7 @@
         displayFormStorageSettings(settings);
         
         if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('フォーム保存先設定読み込み完了', settings);
+          showDebugInfo('フォーム保存先設定読み込み完了', { locationId, settings });
         }
       })
       .withFailureHandler(function(error) {
@@ -55,10 +115,10 @@
         showSettingsError('設定の読み込みに失敗しました: ' + error.message);
         
         if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('フォーム保存先設定読み込みエラー', error);
+          showDebugInfo('フォーム保存先設定読み込みエラー', { locationId, error });
         }
       })
-      .getFormStorageSettings();
+      .getFormStorageSettings(locationId);
   }
 
   // ========================================
@@ -87,6 +147,12 @@
     const form = document.getElementById('formStorageSettingsForm');
     if (!form) return;
     
+    // 現在選択中の拠点を確認
+    if (!currentSelectedLocation) {
+      showSettingsError('拠点が選択されていません');
+      return;
+    }
+    
     // フォームデータを収集
     const settings = {
       terminal: document.getElementById('terminalFolderId').value.trim(),
@@ -108,7 +174,7 @@
         showSettingsSuccess('フォーム保存先設定が正常に保存されました');
         
         if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('フォーム保存先設定保存完了', result);
+          showDebugInfo('フォーム保存先設定保存完了', { locationId: currentSelectedLocation, result });
         }
       })
       .withFailureHandler(function(error) {
@@ -116,10 +182,10 @@
         showSettingsError('設定の保存に失敗しました: ' + error.message);
         
         if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('フォーム保存先設定保存エラー', error);
+          showDebugInfo('フォーム保存先設定保存エラー', { locationId: currentSelectedLocation, error });
         }
       })
-      .saveFormStorageSettings(settings);
+      .saveFormStorageSettings(currentSelectedLocation, settings);
   }
 
   // ========================================
@@ -197,6 +263,11 @@
   // 設定のリセット
   // ========================================
   function resetFormStorageSettings() {
+    if (!currentSelectedLocation) {
+      showSettingsError('拠点が選択されていません');
+      return;
+    }
+    
     if (!confirm('フォーム保存先設定をリセットしてもよろしいですか？\n\n未保存の変更は失われます。')) {
       return;
     }

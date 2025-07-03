@@ -2410,74 +2410,84 @@ function diagnoseSummarySheet() {
 // フォーム保存先設定管理機能
 // ========================================
 
-// フォーム保存先設定を取得
-function getFormStorageSettings() {
+// フォーム保存先設定を取得（拠点別対応）
+function getFormStorageSettings(locationId) {
   const startTime = startPerformanceTimer();
-  addLog('フォーム保存先設定取得を開始');
+  addLog('フォーム保存先設定取得を開始', { locationId });
   
   try {
+    // 拠点IDの検証
+    if (!locationId) {
+      throw new Error('拠点IDが指定されていません');
+    }
+    
     const properties = PropertiesService.getScriptProperties();
     const settings = {
-      terminal: properties.getProperty('FORM_FOLDER_TERMINAL') || '',
-      printer: properties.getProperty('FORM_FOLDER_PRINTER') || '',
-      other: properties.getProperty('FORM_FOLDER_OTHER') || '',
-      default: properties.getProperty('FORM_FOLDER_DEFAULT') || ''
+      terminal: properties.getProperty(`FORM_FOLDER_${locationId.toUpperCase()}_TERMINAL`) || '',
+      printer: properties.getProperty(`FORM_FOLDER_${locationId.toUpperCase()}_PRINTER`) || '',
+      other: properties.getProperty(`FORM_FOLDER_${locationId.toUpperCase()}_OTHER`) || '',
+      default: properties.getProperty(`FORM_FOLDER_${locationId.toUpperCase()}_DEFAULT`) || ''
     };
     
     endPerformanceTimer(startTime, 'フォーム保存先設定取得');
-    addLog('フォーム保存先設定取得完了', settings);
+    addLog('フォーム保存先設定取得完了', { locationId, settings });
     
     return settings;
   } catch (error) {
-    addLog('フォーム保存先設定取得エラー', error.toString());
+    addLog('フォーム保存先設定取得エラー', { locationId, error: error.toString() });
     throw new Error('フォーム保存先設定の取得に失敗しました: ' + error.message);
   }
 }
 
-// フォーム保存先設定を保存
-function saveFormStorageSettings(settings) {
+// フォーム保存先設定を保存（拠点別対応）
+function saveFormStorageSettings(locationId, settings) {
   const startTime = startPerformanceTimer();
-  addLog('フォーム保存先設定保存を開始', settings);
+  addLog('フォーム保存先設定保存を開始', { locationId, settings });
   
   try {
     // バリデーション
+    if (!locationId) {
+      throw new Error('拠点IDが指定されていません');
+    }
+    
     if (!settings || typeof settings !== 'object') {
       throw new Error('設定データが不正です');
     }
     
     const properties = PropertiesService.getScriptProperties();
+    const locationPrefix = `FORM_FOLDER_${locationId.toUpperCase()}`;
     
-    // 各カテゴリの設定を保存
+    // 各カテゴリの設定を拠点別に保存
     if (settings.terminal) {
-      properties.setProperty('FORM_FOLDER_TERMINAL', settings.terminal);
+      properties.setProperty(`${locationPrefix}_TERMINAL`, settings.terminal);
     } else {
-      properties.deleteProperty('FORM_FOLDER_TERMINAL');
+      properties.deleteProperty(`${locationPrefix}_TERMINAL`);
     }
     
     if (settings.printer) {
-      properties.setProperty('FORM_FOLDER_PRINTER', settings.printer);
+      properties.setProperty(`${locationPrefix}_PRINTER`, settings.printer);
     } else {
-      properties.deleteProperty('FORM_FOLDER_PRINTER');
+      properties.deleteProperty(`${locationPrefix}_PRINTER`);
     }
     
     if (settings.other) {
-      properties.setProperty('FORM_FOLDER_OTHER', settings.other);
+      properties.setProperty(`${locationPrefix}_OTHER`, settings.other);
     } else {
-      properties.deleteProperty('FORM_FOLDER_OTHER');
+      properties.deleteProperty(`${locationPrefix}_OTHER`);
     }
     
     if (settings.default) {
-      properties.setProperty('FORM_FOLDER_DEFAULT', settings.default);
+      properties.setProperty(`${locationPrefix}_DEFAULT`, settings.default);
     } else {
-      properties.deleteProperty('FORM_FOLDER_DEFAULT');
+      properties.deleteProperty(`${locationPrefix}_DEFAULT`);
     }
     
     endPerformanceTimer(startTime, 'フォーム保存先設定保存');
-    addLog('フォーム保存先設定保存完了', settings);
+    addLog('フォーム保存先設定保存完了', { locationId, settings });
     
     return { success: true, message: 'フォーム保存先設定が正常に保存されました' };
   } catch (error) {
-    addLog('フォーム保存先設定保存エラー', error.toString());
+    addLog('フォーム保存先設定保存エラー', { locationId, error: error.toString() });
     throw new Error('フォーム保存先設定の保存に失敗しました: ' + error.message);
   }
 }
@@ -2520,53 +2530,79 @@ function validateDriveFolderId(folderId) {
   }
 }
 
-// フォーム作成時に適切な保存先フォルダIDを取得
-function getFormStorageFolderId(deviceCategory) {
+// フォーム作成時に適切な保存先フォルダIDを取得（拠点別対応・エラーハンドリング強化）
+function getFormStorageFolderId(locationId, deviceCategory) {
   const startTime = startPerformanceTimer();
-  addLog('フォーム保存先フォルダID取得を開始', { deviceCategory });
+  addLog('フォーム保存先フォルダID取得を開始', { locationId, deviceCategory });
   
   try {
-    const settings = getFormStorageSettings();
+    // 拠点IDの検証
+    if (!locationId) {
+      throw new Error('拠点IDが指定されていません');
+    }
+    
+    const settings = getFormStorageSettings(locationId);
     let folderId = '';
+    let categoryUsed = '';
     
     // デバイスカテゴリに応じてフォルダIDを決定
     switch (deviceCategory) {
       case 'SV':
       case 'CL':
         folderId = settings.terminal;
+        categoryUsed = 'terminal';
         break;
       case 'プリンタ':
         folderId = settings.printer;
+        categoryUsed = 'printer';
         break;
       case 'その他':
         folderId = settings.other;
+        categoryUsed = 'other';
         break;
       default:
         folderId = settings.default;
+        categoryUsed = 'default';
         break;
     }
     
     // フォールバック処理
-    if (!folderId) {
+    if (!folderId && categoryUsed !== 'default') {
       folderId = settings.default;
+      categoryUsed = 'default';
+    }
+    
+    // 保存先未設定エラーチェック
+    if (!folderId) {
+      const locationNames = {
+        'osaka': '大阪',
+        'kobe': '神戸',
+        'himeji': '姫路'
+      };
+      const locationName = locationNames[locationId] || locationId;
+      
+      throw new Error(`${locationName}拠点の${deviceCategory}カテゴリ用フォーム保存先が設定されていません。設定画面で保存先を設定してください。`);
     }
     
     endPerformanceTimer(startTime, 'フォーム保存先フォルダID取得');
-    addLog('フォーム保存先フォルダID取得完了', { deviceCategory, folderId });
+    addLog('フォーム保存先フォルダID取得完了', { locationId, deviceCategory, folderId, categoryUsed });
     
     return {
       success: true,
       folderId: folderId,
+      locationId: locationId,
       category: deviceCategory,
-      usedDefault: !settings[deviceCategory.toLowerCase()] && folderId === settings.default
+      categoryUsed: categoryUsed,
+      usedDefault: categoryUsed === 'default'
     };
   } catch (error) {
     endPerformanceTimer(startTime, 'フォーム保存先フォルダID取得エラー');
-    addLog('フォーム保存先フォルダID取得エラー', { deviceCategory, error: error.toString() });
+    addLog('フォーム保存先フォルダID取得エラー', { locationId, deviceCategory, error: error.toString() });
     
     return {
       success: false,
       error: error.toString(),
+      locationId: locationId,
       category: deviceCategory
     };
   }

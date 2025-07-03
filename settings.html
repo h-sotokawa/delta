@@ -20,14 +20,39 @@
     </button>
   </div>
 
+  <!-- 拠点選択 -->
+  <div id="location-selector" class="location-selector">
+    <label for="selectedLocation">
+      <i class="fas fa-map-marker-alt"></i>
+      設定対象拠点
+    </label>
+    <select id="selectedLocation" onchange="onLocationChange()">
+      <option value="">拠点を選択してください</option>
+      <option value="osaka">大阪</option>
+      <option value="kobe">神戸</option>
+      <option value="himeji">姫路</option>
+    </select>
+  </div>
+
   <!-- フォーム保存先設定 -->
   <div id="form-storage-settings" class="settings-section active">
     <div class="section-header">
       <h2><i class="fas fa-folder-open"></i> フォーム保存先設定</h2>
-      <p>作成されるGoogle Formsの保存先フォルダを詳細カテゴリごとに設定できます</p>
+      <p>選択した拠点で作成されるGoogle Formsの保存先フォルダを詳細カテゴリごとに設定できます</p>
+      <div id="location-notice" class="location-notice" style="display: none;">
+        <i class="fas fa-info-circle"></i>
+        <span id="location-notice-text">現在の設定対象: </span>
+      </div>
     </div>
 
-    <form id="formStorageSettingsForm">
+    <!-- 拠点未選択時のメッセージ -->
+    <div id="no-location-message" class="no-location-message">
+      <i class="fas fa-map-marker-alt"></i>
+      <h3>拠点を選択してください</h3>
+      <p>フォーム保存先を設定するには、上記から設定対象の拠点を選択してください。</p>
+    </div>
+
+    <form id="formStorageSettingsForm" style="display: none;">
       <div class="settings-grid">
         
         <!-- 端末フォーム保存先 -->
