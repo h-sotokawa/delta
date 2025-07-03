@@ -4,8 +4,37 @@
   // スプレッドシート関連関数
   // ========================================
   
+  // 拠点マスタデータ（動的読み込み）
+  let spreadsheetLocationMasterData = [];
+  
+  // 拠点IDから拠点名を取得（拠点マスタベース）
+  function getLocationNameByIdSpreadsheet(locationId) {
+    if (spreadsheetLocationMasterData && spreadsheetLocationMasterData.length > 0) {
+      const location = spreadsheetLocationMasterData.find(loc => loc.locationId === locationId);
+      return location ? location.locationName : locationId;
+    }
+    return locationId;
+  }
+  
+  // 拠点マスタデータを読み込み
+  function loadLocationMasterForSpreadsheet() {
+    google.script.run
+      .withSuccessHandler(function(locations) {
+        spreadsheetLocationMasterData = locations || [];
+        console.log('拠点マスタデータ読み込み完了（スプレッドシート）:', spreadsheetLocationMasterData);
+      })
+      .withFailureHandler(function(error) {
+        console.error('拠点マスタデータ読み込み失敗（スプレッドシート）:', error);
+        spreadsheetLocationMasterData = [];
+      })
+      .getLocationMaster();
+  }
+  
   // 拠点一覧を取得してプルダウンメニューに設定
   function initializeLocations() {
+    // 拠点マスタを読み込み
+    loadLocationMasterForSpreadsheet();
+    
     google.script.run
       .withSuccessHandler(function(response) {
         if (response.success) {
@@ -90,8 +119,7 @@
           refreshButton.disabled = true;
         }
         
-        const locationName = (typeof LOCATION_NAMES_CLIENT !== 'undefined' ? 
-          LOCATION_NAMES_CLIENT[selectedLocation] : selectedLocation) || selectedLocation;
+        const locationName = getLocationNameByIdSpreadsheet(selectedLocation);
         
         errorDiv.textContent = `${locationName}のスプレッドシートIDが設定されていません。システム管理者にお問い合わせください。`;
         tableContainer.innerHTML = `
@@ -824,10 +852,9 @@
       if (updateTime) {
         textElement.textContent = updateTime;
         
-        // 拠点名を表示（LOCATION_NAMES_CLIENTが定義されている場合はそれを使用）
+        // 拠点名を表示（拠点マスタベース）
         if (locationNameElement) {
-          const locationName = (typeof LOCATION_NAMES_CLIENT !== 'undefined' ? 
-            LOCATION_NAMES_CLIENT[location] : location) || location;
+          const locationName = getLocationNameByIdSpreadsheet(location);
           locationNameElement.textContent = `${locationName} `;
         }
         
@@ -1873,7 +1900,7 @@
   // データステータスパネルを作成（一覧画面用）
   function createDataStatusPanel(totalRows, displayedRows, lendingRows, userKeepingRows, queryType) {
     const locationName = currentLocation ? 
-      (LOCATION_NAMES_CLIENT[currentLocation] || currentLocation) : '未選択';
+      getLocationNameByIdSpreadsheet(currentLocation) : '未選択';
     
     const queryTypeLabel = queryType === 'all' ? '全データ' : '貸出中データ(ユーザー預り機有)';
     const currentTime = new Date().toLocaleString('ja-JP', {

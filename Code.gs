@@ -1,9 +1,43 @@
-// 拠点名の日本語表示用マッピング（3拠点に統合）
-const LOCATION_NAMES = {
-  'osaka': '大阪',
-  'kobe': '神戸', 
-  'himeji': '姫路'
-};
+// ========================================
+// 拠点マスタベース汎用関数
+// ========================================
+
+// 拠点IDから拠点名を取得（拠点マスタベース）
+function getLocationNameById(locationId) {
+  try {
+    const location = getLocationById(locationId);
+    return location ? location.locationName : locationId;
+  } catch (error) {
+    addLog('拠点名取得エラー', { locationId, error: error.toString() });
+    return locationId;
+  }
+}
+
+// 拠点IDから拠点コードを取得（拠点マスタベース）
+function getLocationCodeById(locationId) {
+  try {
+    const location = getLocationById(locationId);
+    return location ? location.locationCode : locationId;
+  } catch (error) {
+    addLog('拠点コード取得エラー', { locationId, error: error.toString() });
+    return locationId;
+  }
+}
+
+// 全拠点の名前マッピングを取得（互換性維持用）
+function getLocationNamesMapping() {
+  try {
+    const locations = getLocationMaster();
+    const mapping = {};
+    locations.forEach(location => {
+      mapping[location.locationId] = location.locationName;
+    });
+    return mapping;
+  } catch (error) {
+    addLog('拠点名マッピング取得エラー', { error: error.toString() });
+    return {}; // 空のオブジェクトを返す
+  }
+}
 
 // 端末・プリンタ・機種マスタシート名
 const MASTER_SHEET_NAMES = {
@@ -13,15 +47,7 @@ const MASTER_SHEET_NAMES = {
   model: '機種マスタ'
 };
 
-// 旧拠点から新拠点へのマッピング（互換性維持用）
-const LEGACY_LOCATION_MAPPING = {
-  'osaka_desktop': 'osaka',
-  'osaka_notebook': 'osaka', 
-  'osaka_printer': 'osaka',
-  'kobe': 'kobe',
-  'himeji': 'himeji',
-  'hyogo_printer': 'kobe'
-};
+// 旧マッピングは削除済み - 拠点マスタベースに統一
 
 // デバイスタイプに応じてマスタシートを決定する関数（既存の互換性維持）
 function getTargetSheetName(deviceType) {
@@ -429,9 +455,10 @@ function include(filename) {
   }
 }
 
-// 旧拠点から新拠点への変換関数
+// 拠点ID変換関数（拠点マスタベース・互換性維持）
 function convertLegacyLocation(location) {
-  return LEGACY_LOCATION_MAPPING[location] || location;
+  // 拠点マスタベースでは直接IDを使用
+  return location;
 }
 
 // 統一スプレッドシートIDをスクリプトプロパティから取得
@@ -448,7 +475,7 @@ function getLocations() {
   try {
     return {
       success: true,
-      locations: LOCATION_NAMES
+      locations: getLocationNamesMapping()
     };
   } catch (error) {
     return {
@@ -530,7 +557,7 @@ function getSpreadsheetData(location, queryType, deviceType = 'terminal') {
       data: data,
       logs: DEBUG ? serverLogs : [],
       metadata: {
-        location: LOCATION_NAMES[location],
+        location: getLocationNameById(location),
         queryType: queryType,
         spreadsheetName: spreadsheet.getName(),
         sheetName: sheet.getName(),
@@ -571,7 +598,7 @@ function getSpreadsheetData(location, queryType, deviceType = 'terminal') {
 function getLocations() {
   return {
     success: true,
-    locations: LOCATION_NAMES
+    locations: getLocationNamesMapping()
   };
 }
 
@@ -583,7 +610,7 @@ function checkSpreadsheetIdExists(location) {
       success: true,
       exists: !!spreadsheetId,
       location: location,
-      locationName: LOCATION_NAMES[location] || location,
+      locationName: getLocationNameById(location),
       spreadsheetId: spreadsheetId
     };
   } catch (error) {
@@ -591,7 +618,7 @@ function checkSpreadsheetIdExists(location) {
       success: false,
       error: error.toString(),
       location: location,
-      locationName: LOCATION_NAMES[location] || location
+      locationName: getLocationNameById(location)
     };
   }
 }
@@ -666,7 +693,7 @@ function getSpreadsheetDataPaginated(location, queryType, startRow = 1, maxRows 
         hasMore: endRow < totalRows
       },
       metadata: {
-        location: LOCATION_NAMES[location],
+        location: getLocationNameById(location),
         queryType: queryType,
         spreadsheetName: spreadsheet.getName(),
         sheetName: sheet.getName(),
@@ -917,7 +944,7 @@ function checkDataConsistency(location, deviceType = 'terminal') {
       },
       issues: issues.slice(0, 10), // 最初の10件のみ表示
       metadata: {
-        location: LOCATION_NAMES[location],
+        location: getLocationNameById(location),
         spreadsheetName: ss.getName(),
         sheetName: sheet.getName(),
         checkTime: new Date()
@@ -947,7 +974,8 @@ function systemHealthCheck() {
   
   try {
     // 1. プロパティ設定チェック
-    const locations = Object.keys(LOCATION_NAMES);
+    const locationMaster = getLocationMaster();
+    const locations = locationMaster.map(loc => loc.locationId);
     const propertyCheck = {
       total: locations.length,
       configured: 0,
@@ -1037,7 +1065,7 @@ function getLocationSheetData(location, locationSheetName, queryType) {
       data: data,
       logs: DEBUG ? serverLogs : [],
       metadata: {
-        location: LOCATION_NAMES[location],
+        location: getLocationNameById(location),
         locationSheetName: locationSheetName,
         queryType: queryType,
         spreadsheetName: spreadsheet.getName(),

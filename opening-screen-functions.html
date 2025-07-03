@@ -10,22 +10,31 @@
   let totalLocations = 0;
   let completedLocations = 0;
   
-  // LOCATION_NAMES の定義（Code.gsと同じ・3拠点に統合）
-  const LOCATION_NAMES_CLIENT = {
-    'osaka': '大阪',
-    'kobe': '神戸',
-    'himeji': '姫路'
-  };
-
-  // 旧拠点から新拠点へのマッピング（互換性維持用）
-  const LEGACY_LOCATION_MAPPING_CLIENT = {
-    'osaka_desktop': 'osaka',
-    'osaka_notebook': 'osaka',
-    'osaka_printer': 'osaka',
-    'kobe': 'kobe',
-    'himeji': 'himeji',
-    'hyogo_printer': 'kobe'
-  };
+  // 拠点マスタデータ（動的読み込み）
+  let locationMasterData = [];
+  
+  // 拠点IDから拠点名を取得（拠点マスタベース）
+  function getLocationNameByIdClient(locationId) {
+    if (locationMasterData && locationMasterData.length > 0) {
+      const location = locationMasterData.find(loc => loc.locationId === locationId);
+      return location ? location.locationName : locationId;
+    }
+    return locationId;
+  }
+  
+  // 拠点マスタデータを読み込み
+  function loadLocationMasterForOpening() {
+    google.script.run
+      .withSuccessHandler(function(locations) {
+        locationMasterData = locations || [];
+        console.log('拠点マスタデータ読み込み完了:', locationMasterData);
+      })
+      .withFailureHandler(function(error) {
+        console.error('拠点マスタデータ読み込み失敗:', error);
+        locationMasterData = [];
+      })
+      .getLocationMaster();
+  }
 
   // オープニング画面を表示してデータを一括読み込み
   function showOpeningScreenAndPreload() {
@@ -36,6 +45,9 @@
     }
     
     openingScreen.style.display = 'flex';
+    
+    // 拠点マスタを最初に読み込み
+    loadLocationMasterForOpening();
     
     // 6秒後にメッセージを変更
     setTimeout(() => {
@@ -58,7 +70,9 @@
   // バックグラウンドでのデータ読み込み
   function startBackgroundPreload() {
     // プログレス初期化
-    const locations = Object.keys(LOCATION_NAMES_CLIENT);
+    const locations = locationMasterData.length > 0 ? 
+      locationMasterData.map(loc => loc.locationId) : 
+      ['osaka', 'kobe', 'himeji']; // フォールバック
     totalLocations = locations.length;
     completedLocations = 0;
     preloadedData = {};
@@ -69,7 +83,9 @@
 
   // バックグラウンドで全拠点のデータを読み込み
   function loadAllLocationsDataInBackground() {
-    const locations = Object.keys(LOCATION_NAMES_CLIENT);
+    const locations = locationMasterData.length > 0 ? 
+      locationMasterData.map(loc => loc.locationId) : 
+      ['osaka', 'kobe', 'himeji']; // フォールバック
     let currentIndex = 0;
     
     function loadNextLocation() {
@@ -218,7 +234,7 @@
       
       if (loadingDiv) loadingDiv.style.display = 'none';
       
-      const locationName = LOCATION_NAMES_CLIENT[location] || location;
+      const locationName = getLocationNameByIdClient(location);
       if (errorDiv) {
         errorDiv.textContent = `${locationName}のスプレッドシートIDが設定されていません。システム管理者にお問い合わせください。`;
       }
@@ -257,9 +273,17 @@
     if (!DEBUG_MODE) return;
     
     console.log('プリロードデータの状況:');
-    Object.keys(LOCATION_NAMES_CLIENT).forEach(location => {
-      const status = isDataPreloaded(location) ? '✓ ロード済み' : '✗ 未ロード';
-      console.log(`${LOCATION_NAMES_CLIENT[location]}: ${status}`);
+    const locations = locationMasterData.length > 0 ? 
+      locationMasterData : 
+      [
+        {locationId: 'osaka', locationName: '大阪'},
+        {locationId: 'kobe', locationName: '神戸'},
+        {locationId: 'himeji', locationName: '姫路'}
+      ]; // フォールバック
+    
+    locations.forEach(location => {
+      const status = isDataPreloaded(location.locationId) ? '✓ ロード済み' : '✗ 未ロード';
+      console.log(`${location.locationName}: ${status}`);
     });
   }
 </script> 
