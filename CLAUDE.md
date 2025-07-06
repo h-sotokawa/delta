@@ -67,6 +67,7 @@ function formatDate(dateValue) {
 - **初期データ**: `getLocationMasterSheet()` - 既存拠点の初期化
 - **表示**: `formatDate()` - yyyy/MM/dd形式で表示
 - **グループメールアドレス**: 課のグループメールアドレスを管理（必須項目、メール形式バリデーション付き）
+- **日時処理変更**: アポストロフィなしの標準テキスト形式に変更（2025年1月対応）
 
 #### 機種マスタ (model-master) 
 - **新規追加**: `addModelMasterData()` - 作成日・更新日
@@ -133,3 +134,51 @@ console.log('日付データ:', location.createdAt);
 ```
 
 この仕様により、システム全体で一貫した日時処理が実現されます。
+
+## 日時処理変更履歴
+
+### 2025年1月: アポストロフィ削除対応
+
+**変更理由**: ユーザビリティ向上のため、日時データからアポストロフィ（'）を削除
+
+#### 変更内容
+
+**バックエンド（Code.gs）**:
+```javascript
+// 変更前
+const today = "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
+
+// 変更後
+const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
+```
+
+**フロントエンド（location-master-functions.html）**:
+```javascript
+// 変更前
+function formatDate(dateValue) {
+  if (typeof dateValue === 'string') {
+    return dateValue.startsWith("'") ? dateValue.substring(1) : dateValue;
+  }
+  // ...
+}
+
+// 変更後
+function formatDate(dateValue) {
+  if (typeof dateValue === 'string') {
+    return dateValue;
+  }
+  // ...
+}
+```
+
+#### 影響範囲
+- **拠点マスタ**: 全日時フィールド（作成日、更新日）
+- **データ形式**: `'2024/07/02` → `2024/07/02`
+- **表示**: アポストロフィ除去処理が不要に
+
+#### 実装済み機能
+- [x] Code.gs内の全日時保存処理
+- [x] フロントエンドformatDate関数
+- [x] 初期データ生成処理
+- [x] バリデーション機能
+- [x] グループメールアドレス必須化
