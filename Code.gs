@@ -285,8 +285,14 @@ function addLocation(locationData) {
   
   try {
     // バリデーション
-    if (!locationData.locationId || !locationData.locationName || !locationData.locationCode) {
+    if (!locationData.locationId || !locationData.locationName || !locationData.locationCode || !locationData.groupEmail) {
       throw new Error('必須項目が不足しています');
+    }
+    
+    // メールアドレス形式チェック
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(locationData.groupEmail)) {
+      throw new Error('正しいメールアドレス形式で入力してください');
     }
     
     // 拠点IDの重複チェック
@@ -328,8 +334,14 @@ function updateLocation(locationData) {
   
   try {
     // バリデーション
-    if (!locationData.locationId || !locationData.locationName || !locationData.locationCode) {
+    if (!locationData.locationId || !locationData.locationName || !locationData.locationCode || !locationData.groupEmail) {
       throw new Error('必須項目が不足しています');
+    }
+    
+    // メールアドレス形式チェック
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(locationData.groupEmail)) {
+      throw new Error('正しいメールアドレス形式で入力してください');
     }
     
     const sheet = getLocationMasterSheet();

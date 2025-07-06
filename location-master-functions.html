@@ -174,6 +174,7 @@
     const locationId = formData.get('locationId');
     const locationName = formData.get('locationName');
     const locationCode = formData.get('locationCode');
+    const groupEmail = formData.get('groupEmail');
 
     if (!locationId || !locationId.match(/^[a-z0-9_-]+$/)) {
       showError('拠点IDは小文字英数字、ハイフン、アンダースコアのみ使用可能です');
@@ -187,6 +188,18 @@
 
     if (!locationCode || !locationCode.match(/^[A-Z0-9]+$/)) {
       showError('拠点コードは大文字英数字のみ使用可能です');
+      return false;
+    }
+
+    if (!groupEmail) {
+      showError('グループメールアドレスを入力してください');
+      return false;
+    }
+
+    // メールアドレスの形式チェック
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(groupEmail)) {
+      showError('正しいメールアドレス形式で入力してください');
       return false;
     }
 

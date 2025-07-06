@@ -67,7 +67,7 @@ function formatDate(dateValue) {
 - **データ更新**: `updateLocation()` - 更新日、グループメールアドレス
 - **初期データ**: `getLocationMasterSheet()` - 既存拠点の初期化
 - **表示**: `formatDate()` - yyyy/MM/dd形式で表示
-- **グループメールアドレス**: 拠点ごとのグループメールアドレスを管理可能
+- **グループメールアドレス**: 課のグループメールアドレスを管理（必須項目、メール形式バリデーション付き）
 
 #### 機種マスタ (model-master) 
 - **新規追加**: `addModelMasterData()` - 作成日・更新日
