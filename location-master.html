@@ -29,6 +29,7 @@
             <th>拠点ID</th>
             <th>拠点名</th>
             <th>拠点コード</th>
+            <th>グループメールアドレス</th>
             <th>ステータス</th>
             <th>作成日</th>
             <th>更新日</th>
@@ -78,6 +79,15 @@
             <input type="text" id="locationCode" name="locationCode" required 
                    placeholder="例: OSA" maxlength="10" pattern="[A-Z0-9]+">
             <small class="help-text">大文字英数字のみ使用可能</small>
+          </div>
+
+          <div class="form-group">
+            <label for="groupEmail">
+              グループメールアドレス
+            </label>
+            <input type="email" id="groupEmail" name="groupEmail" 
+                   placeholder="例: osaka-group@company.jp" maxlength="100">
+            <small class="help-text">拠点のグループメールアドレスを入力してください</small>
           </div>
 
           <div class="form-group">

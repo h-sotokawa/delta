@@ -35,7 +35,7 @@
     tbody.innerHTML = '';
 
     if (!locations || locations.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center">拠点データがありません</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center">拠点データがありません</td></tr>';
       return;
     }
 
@@ -51,6 +51,7 @@
         <td>${escapeHtml(location.locationId)}</td>
         <td>${escapeHtml(location.locationName)}</td>
         <td>${escapeHtml(location.locationCode)}</td>
+        <td>${escapeHtml(location.groupEmail || '')}</td>
         <td>${statusBadge}</td>
         <td>${formatDate(location.createdAt)}</td>
         <td>${formatDate(location.updatedAt)}</td>
@@ -108,6 +109,7 @@
     document.getElementById('locationId').disabled = true;
     document.getElementById('locationName').value = location.locationName;
     document.getElementById('locationCode').value = location.locationCode;
+    document.getElementById('groupEmail').value = location.groupEmail || '';
     document.getElementById('locationStatus').value = location.status;
     document.getElementById('locationModal').style.display = 'block';
   }
@@ -135,6 +137,7 @@
       locationId: formData.get('locationId'),
       locationName: formData.get('locationName'),
       locationCode: formData.get('locationCode'),
+      groupEmail: formData.get('groupEmail'),
       status: formData.get('status')
     };
 
