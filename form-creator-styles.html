@@ -286,24 +286,27 @@
   .attr-location-number-preview {
     background: #f8fafc;
     border: 2px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 15px;
+    border-radius: 12px;
+    padding: 20px;
     transition: all 0.3s ease;
+    margin: 15px 0;
   }
 
   .attr-location-number-display {
     background: white;
     border: 2px dashed #cbd5e1;
     border-radius: 8px;
-    padding: 15px;
+    padding: 20px;
     text-align: center;
     color: #64748b;
     font-style: italic;
-    min-height: 20px;
+    min-height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .attr-location-number-display.has-content {
@@ -314,8 +317,9 @@
     font-style: normal;
     font-family: 'Courier New', monospace;
     font-weight: 600;
-    font-size: 1.1em;
+    font-size: 1.3em;
     animation: pulse 0.5s ease-in-out;
+    letter-spacing: 1px;
   }
 
   .attr-location-number-input {
@@ -327,6 +331,9 @@
     overflow: hidden;
     transition: border-color 0.3s ease;
     margin-top: 10px;
+    min-height: 60px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .attr-location-number-input:focus-within {
@@ -337,21 +344,27 @@
   .attr-location-prefix-generated {
     background: #f0f9ff;
     color: #0c4a6e;
-    padding: 12px 15px;
+    padding: 18px 20px;
     border-right: 1px solid #0ea5e9;
     font-weight: 600;
     font-family: 'Courier New', monospace;
     white-space: nowrap;
-    min-width: 200px;
+    min-width: 300px;
+    font-size: 1.1em;
+    letter-spacing: 0.5px;
   }
 
   .attr-location-number-input input[type="text"] {
     border: none;
-    padding: 12px 16px;
+    padding: 18px 20px;
     flex: 1;
-    font-size: 1rem;
+    font-size: 1.1rem;
     background: transparent;
     color: #374151;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    min-width: 120px;
   }
 
   .attr-location-number-input input[type="text"]:focus {
@@ -531,6 +544,37 @@
 
     .message-close-btn {
       right: 10px; /* モバイルでは閉じるボタンを少し内側に */
+    }
+    
+    /* 拠点管理番号のモバイル対応 */
+    .attr-location-number-input {
+      flex-direction: column;
+      min-height: auto;
+    }
+    
+    .attr-location-prefix-generated {
+      border-right: none;
+      border-bottom: 1px solid #0ea5e9;
+      min-width: 100%;
+      text-align: center;
+      padding: 15px;
+      font-size: 1rem;
+    }
+    
+    .attr-location-number-input input[type="text"] {
+      padding: 15px;
+      font-size: 1rem;
+      text-align: center;
+    }
+    
+    .attr-location-number-display {
+      min-height: 80px;
+      font-size: 1.1em;
+      padding: 25px 15px;
+    }
+    
+    .attr-location-number-display.has-content {
+      font-size: 1.2em;
     }
   }
 
