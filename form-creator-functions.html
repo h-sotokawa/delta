@@ -581,7 +581,7 @@
                    placeholder="${field.placeholder}"
                    ${field.required ? 'required' : ''}
                    ${field.readonly ? 'readonly' : ''}
-                   ${field.name === 'serial' ? 'onchange="updateAttributeLocationNumber()"' : ''}>
+                   ${field.name === 'serial' ? 'onchange="updateAttributeLocationNumber()" oninput="updateAttributeLocationNumber()"' : ''}>
           </div>
         `;
       }
