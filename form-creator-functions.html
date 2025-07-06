@@ -722,11 +722,13 @@
         { name: 'assetNumber', label: '資産管理番号', type: 'text', required: true, placeholder: '例: AS001234' },
         { name: 'serial', label: 'シリアル(製造番号)', type: 'text', required: true, placeholder: '例: ABC12345' },
         { name: 'software', label: 'ソフト', type: 'text', required: true, placeholder: '例: Recepty NEXT, MRN' },
-        { name: 'os', label: 'OS', type: 'text', required: true, placeholder: '例: Windows 11' }
+        { name: 'os', label: 'OS', type: 'text', required: true, placeholder: '例: Windows 11' },
+        { name: 'locationNumber', label: '拠点管理番号', type: 'text', required: true, placeholder: '例: OSA_SV_Server_ABC12345_001' }
       ];
     } else if (isPrinter) {
       attributeFields = [
-        { name: 'serial', label: 'シリアル(製造番号)', type: 'text', required: true, placeholder: '例: XYZ98765' }
+        { name: 'serial', label: 'シリアル(製造番号)', type: 'text', required: true, placeholder: '例: XYZ98765' },
+        { name: 'locationNumber', label: '拠点管理番号', type: 'text', required: true, placeholder: '例: OSA_Printer_MFP_XYZ98765_001' }
       ];
     }
     
@@ -846,12 +848,6 @@
         },
         { 
           type: 'TEXT', 
-          title: '拠点管理番号', 
-          required: true,
-          defaultValue: attributeData.locationNumber || ''
-        },
-        { 
-          type: 'TEXT', 
           title: 'シリアル(製造番号)', 
           required: true,
           defaultValue: attributeData.serial || ''
@@ -874,16 +870,16 @@
           required: true,
           options: ['SV', 'CL'],
           defaultValue: attributeData.deviceCategory || ''
-        }
-      ];
-    } else if (isPrinter) {
-      questions = [
+        },
         { 
           type: 'TEXT', 
           title: '拠点管理番号', 
           required: true,
           defaultValue: attributeData.locationNumber || ''
-        },
+        }
+      ];
+    } else if (isPrinter) {
+      questions = [
         { 
           type: 'TEXT', 
           title: 'シリアル(製造番号)', 
@@ -896,6 +892,12 @@
           required: true,
           options: ['プリンタ', 'その他'],
           defaultValue: attributeData.deviceCategory || ''
+        },
+        { 
+          type: 'TEXT', 
+          title: '拠点管理番号', 
+          required: true,
+          defaultValue: attributeData.locationNumber || ''
         }
       ];
     }

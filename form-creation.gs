@@ -1308,7 +1308,7 @@ function getFormDetails(formId) {
 }
 
 /**
- * 拠点管理番号のバリデーション（プレフィックスのみ検証）
+ * 拠点管理番号のバリデーション（製造番号を含む形式に対応）
  * @param {string} locationNumber - 拠点管理番号
  */
 function validateLocationNumber(locationNumber) {
@@ -1318,34 +1318,68 @@ function validateLocationNumber(locationNumber) {
   
   // アンダースコアで分割
   const parts = locationNumber.split('_');
-  if (parts.length < 2) {
+  if (parts.length < 4) {
     return { 
       valid: false, 
-      error: '拠点管理番号は「プレフィックス_サフィックス」の形式で入力してください（例：Osaka_001）' 
+      error: '拠点管理番号は「拠点_カテゴリ_モデル_製造番号_連番」の形式で入力してください（例：OSA_SV_Server_ABC12345_001）' 
     };
   }
   
-  // プレフィックス（アンダースコア前の部分）のみを検証
-  const prefix = parts[0];
+  // 各部分を検証
+  const [location, category, model, serial, number] = parts;
   
-  // プレフィックスは英字のみ許可
-  const prefixPattern = /^[A-Za-z]+$/;
-  if (!prefixPattern.test(prefix)) {
+  // 拠点コード（1番目）は英字のみ許可
+  const locationPattern = /^[A-Za-z]+$/;
+  if (!locationPattern.test(location)) {
     return { 
       valid: false, 
-      error: 'プレフィックスは英字のみで入力してください（例：Osaka、Hime）' 
+      error: '拠点コードは英字のみで入力してください（例：OSA、KOB）' 
     };
   }
   
-  // プレフィックスの長さチェック（2文字以上）
-  if (prefix.length < 2) {
+  // 拠点コードの長さチェック（2文字以上）
+  if (location.length < 2) {
     return { 
       valid: false, 
-      error: 'プレフィックスは2文字以上で入力してください' 
+      error: '拠点コードは2文字以上で入力してください' 
     };
   }
   
-  // サフィックスは検証しない（どんな文字列でも許可）
+  // カテゴリ（2番目）は英数字のみ許可
+  const categoryPattern = /^[A-Za-z0-9]+$/;
+  if (!categoryPattern.test(category)) {
+    return { 
+      valid: false, 
+      error: 'カテゴリは英数字のみで入力してください（例：SV、CL、Printer）' 
+    };
+  }
+  
+  // モデル（3番目）は英数字とアンダースコア許可
+  const modelPattern = /^[A-Za-z0-9_]+$/;
+  if (!modelPattern.test(model)) {
+    return { 
+      valid: false, 
+      error: 'モデルは英数字とアンダースコアのみで入力してください（例：Server、Desktop）' 
+    };
+  }
+  
+  // 製造番号（4番目）は英数字のみ許可
+  const serialPattern = /^[A-Za-z0-9]+$/;
+  if (!serialPattern.test(serial)) {
+    return { 
+      valid: false, 
+      error: '製造番号は英数字のみで入力してください（例：ABC12345）' 
+    };
+  }
+  
+  // 連番（5番目）は数字のみ許可（オプション）
+  if (number && !/^[0-9]+$/.test(number)) {
+    return { 
+      valid: false, 
+      error: '連番は数字のみで入力してください（例：001）' 
+    };
+  }
+  
   return { valid: true };
 }
 
