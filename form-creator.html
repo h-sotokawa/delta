@@ -17,6 +17,15 @@
     <form class="form-creation-form" id="googleFormCreationForm">
       <!-- フォーム基本情報 -->
       <div class="form-group">
+        <label for="form-title">
+          <i class="fas fa-edit"></i>
+          フォームタイトル <span class="required">*</span>
+        </label>
+        <input type="text" id="form-title" name="title" required placeholder="例: 大阪支店 代替機依頼フォーム" maxlength="100">
+        <small class="help-text">作成されるGoogle Formのタイトルを入力してください</small>
+      </div>
+
+      <div class="form-group">
         <label for="device-type">
           <i class="fas fa-desktop"></i>
           代替機種別 <span class="required">*</span>

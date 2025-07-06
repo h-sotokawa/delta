@@ -373,6 +373,9 @@
          // 属性フォームを更新
      updateAttributesForm();
      
+     // フォームタイトルの自動生成
+     updateFormTitle();
+     
      // 拠点管理番号を更新
      // 拠点管理番号は属性内で処理
      
@@ -454,6 +457,9 @@
     
     // 属性フォームを更新
     updateAttributesForm();
+    
+    // フォームタイトルの自動生成
+    updateFormTitle();
     
     // 拠点管理番号プレビューを更新
     // 拠点管理番号は属性内で処理
@@ -902,12 +908,13 @@
     
     // フォームデータを整理
     const deviceType = formData.get('deviceType');
-    const locationNumber = formData.get('locationNumber');
+    const locationNumber = formData.get('attributes[locationNumber]'); // 属性から取得
     const location = formData.get('location');
     const deviceCategory = formData.get('deviceCategory');
     
-    // デバッグ: location変数の確認
+    // デバッグ: フォームデータの確認
     console.log('フォームデータ確認:', {
+      title: formData.get('title'),
       deviceType: deviceType,
       locationNumber: locationNumber,
       location: location,
@@ -926,8 +933,10 @@
       }
     }
 
+    const formTitle = formData.get('title'); // タイトルを直接取得
+    
     const formConfig = {
-      title: locationNumber, // 拠点管理番号をタイトルとして使用
+      title: formTitle, // ユーザーが入力したタイトルを使用
       description: `${getLocationDisplayName(location)} 代替機依頼フォーム`,
       deviceType: deviceType,
       locationNumber: locationNumber,
@@ -1847,5 +1856,28 @@
   window.copyToClipboard = copyToClipboard;
   window.updateAttributeLocationNumber = updateAttributeLocationNumber;
   window.updateFinalAttributeLocationNumber = updateFinalAttributeLocationNumber;
+  
+  // フォームタイトル自動生成機能
+  function updateFormTitle() {
+    const locationSelect = document.getElementById('location-select');
+    const deviceTypeSelect = document.getElementById('device-type');
+    const formTitleInput = document.getElementById('form-title');
+    
+    if (!locationSelect || !deviceTypeSelect || !formTitleInput) return;
+    
+    const location = locationSelect.value;
+    const deviceType = deviceTypeSelect.value;
+    
+    if (location && deviceType && !formTitleInput.value.trim()) {
+      const locationName = getLocationDisplayName(location);
+      const deviceTypeName = deviceType === 'terminal' ? '端末' : 'プリンタ・その他';
+      const suggestedTitle = `${locationName} ${deviceTypeName}代替機依頼フォーム`;
+      
+      formTitleInput.value = suggestedTitle;
+      formTitleInput.placeholder = suggestedTitle;
+    }
+  }
+  
+  window.updateFormTitle = updateFormTitle;
 
 </script> 
