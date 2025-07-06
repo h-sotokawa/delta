@@ -220,14 +220,24 @@
   
   // 拠点マスタから拠点一覧を取得
   function loadLocationMasterForForm() {
+    console.log('拠点マスタ読み込み開始...');
+    
     google.script.run
       .withSuccessHandler(function(locations) {
         console.log('拠点マスタ取得成功:', locations);
-        updateLocationOptions(locations);
+        if (locations && locations.length > 0) {
+          updateLocationOptions(locations);
+        } else {
+          console.warn('拠点マスタが空、フォールバックを使用');
+          initializeLocationOptions();
+        }
       })
       .withFailureHandler(function(error) {
         console.error('拠点マスタ取得エラー:', error);
-        showDebugInfo('拠点マスタ取得エラー', { error: error.message });
+        console.log('フォールバック拠点選択肢を使用します');
+        if (DEBUG_MODE) {
+          showDebugInfo('拠点マスタ取得エラー', { error: error.toString() });
+        }
         // エラー時は従来のハードコードされた拠点を使用
         initializeLocationOptions();
       })
@@ -236,8 +246,12 @@
   
   // 拠点オプションを更新
   function updateLocationOptions(locations) {
+    console.log('拠点オプション更新開始。受信データ:', locations);
+    
     // アクティブな拠点のみフィルタ
     const activeLocations = locations.filter(location => location.status === 'active');
+    
+    console.log('アクティブ拠点:', activeLocations);
     
     if (DEBUG_MODE) {
       showDebugInfo('アクティブ拠点一覧', activeLocations);
@@ -247,7 +261,8 @@
     window.formCreatorLocations = activeLocations;
     
     // 拠点選択を更新
-    updateDeviceType();
+    console.log('initializeLocationOptions呼び出し...');
+    initializeLocationOptions();
   }
   
   function getLocationDisplayName(locationValue) {
@@ -296,6 +311,7 @@
   }
   // 拠点選択肢を初期化する処理
   function initializeLocationOptions() {
+    console.log('initializeLocationOptions開始');
     const locationSelect = document.getElementById('location-select');
     const deviceCategorySelect = document.getElementById('device-category');
     
@@ -303,6 +319,8 @@
       console.error('必要な要素が見つかりません');
       return;
     }
+    
+    console.log('拠点データ確認:', window.formCreatorLocations);
     
     if (DEBUG_MODE) {
       showDebugInfo('拠点選択肢初期化開始', {});
@@ -313,17 +331,38 @@
     
     if (window.formCreatorLocations && window.formCreatorLocations.length > 0) {
       // 拠点マスタから取得した拠点を使用
+      console.log('拠点マスタデータを使用:', window.formCreatorLocations.length, '件');
       locationOptions = window.formCreatorLocations.map(location => ({
         value: location.locationId,
         text: location.locationName
       }));
       
+      console.log('生成された拠点選択肢:', locationOptions);
+      
       if (DEBUG_MODE) {
         showDebugInfo('拠点マスタから拠点選択肢を生成', locationOptions);
+      }
+    } else {
+      // フォールバック: 従来のハードコードされた拠点
+      console.log('フォールバック拠点選択肢を使用');
+      locationOptions = [
+        { value: 'osaka-desktop', text: '大阪(デスクトップ)' },
+        { value: 'osaka-server', text: '大阪(サーバー、ノート)' },
+        { value: 'kobe-terminal', text: '神戸(端末)' },
+        { value: 'himeji-terminal', text: '姫路(端末)' },
+        { value: 'osaka-printer', text: '大阪(プリンタ、その他)' },
+        { value: 'hyogo-printer', text: '兵庫(プリンタ、その他)' }
+      ];
+      
+      console.log('フォールバック拠点選択肢:', locationOptions);
+      
+      if (DEBUG_MODE) {
+        showDebugInfo('フォールバック拠点選択肢を使用', locationOptions);
       }
     }
     
     // 拠点選択肢を更新
+    console.log('拠点選択肢の更新開始。オプション数:', locationOptions.length);
     locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
     
     if (locationOptions.length > 0) {
@@ -335,11 +374,15 @@
       });
       locationSelect.disabled = false;
       
+      console.log('拠点選択肢更新完了。', locationOptions.length, '個の選択肢を追加');
+      
       if (DEBUG_MODE) {
         showDebugInfo('拠点選択肢更新完了', { count: locationOptions.length });
       }
     } else {
       locationSelect.disabled = true;
+      console.error('拠点選択肢が空のため、拠点選択を無効化');
+      
       if (DEBUG_MODE) {
         showDebugInfo('拠点選択肢なし', { locationOptionsLength: locationOptions.length });
       }
