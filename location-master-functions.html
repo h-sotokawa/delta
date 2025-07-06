@@ -125,13 +125,26 @@
   // 拠点保存
   // ========================================
   function saveLocation() {
+    console.log('saveLocation関数が呼び出されました');
+    
     const form = document.getElementById('locationForm');
     const formData = new FormData(form);
     
+    console.log('FormData取得完了:', {
+      locationId: formData.get('locationId'),
+      locationName: formData.get('locationName'),
+      locationCode: formData.get('locationCode'),
+      groupEmail: formData.get('groupEmail'),
+      status: formData.get('status')
+    });
+    
     // バリデーション
+    console.log('バリデーション開始');
     if (!validateLocationForm(formData)) {
+      console.log('バリデーションエラーで処理終了');
       return;
     }
+    console.log('バリデーション成功');
 
     const locationData = {
       locationId: formData.get('locationId'),
@@ -171,27 +184,40 @@
   // フォームバリデーション
   // ========================================
   function validateLocationForm(formData) {
+    console.log('validateLocationForm開始');
+    
     const locationId = formData.get('locationId');
     const locationName = formData.get('locationName');
     const locationCode = formData.get('locationCode');
     const groupEmail = formData.get('groupEmail');
 
+    console.log('バリデーション対象データ:', {
+      locationId,
+      locationName,
+      locationCode,
+      groupEmail
+    });
+
     if (!locationId || !locationId.match(/^[a-z0-9_-]+$/)) {
+      console.log('拠点IDバリデーションエラー:', locationId);
       showError('拠点IDは小文字英数字、ハイフン、アンダースコアのみ使用可能です');
       return false;
     }
 
     if (!locationName) {
+      console.log('拠点名バリデーションエラー:', locationName);
       showError('拠点名を入力してください');
       return false;
     }
 
     if (!locationCode || !locationCode.match(/^[A-Z0-9]+$/)) {
+      console.log('拠点コードバリデーションエラー:', locationCode);
       showError('拠点コードは大文字英数字のみ使用可能です');
       return false;
     }
 
     if (!groupEmail) {
+      console.log('グループメールアドレスバリデーションエラー（未入力）:', groupEmail);
       showError('グループメールアドレスを入力してください');
       return false;
     }
@@ -199,10 +225,12 @@
     // メールアドレスの形式チェック
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(groupEmail)) {
+      console.log('グループメールアドレス形式エラー:', groupEmail);
       showError('正しいメールアドレス形式で入力してください');
       return false;
     }
 
+    console.log('バリデーション全て成功');
     return true;
   }
 
