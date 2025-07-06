@@ -289,25 +289,33 @@
   
   // 拠点コード（プレフィックス）を取得
   function getLocationPrefix(locationValue) {
+    console.log('getLocationPrefix called with:', locationValue);
+    console.log('Available locations:', window.formCreatorLocations);
+    
     // 拠点マスタからプレフィックス取得
     if (window.formCreatorLocations) {
       const location = window.formCreatorLocations.find(loc => loc.locationId === locationValue);
+      console.log('Found location:', location);
       if (location && location.locationCode) {
+        console.log('Using location code from master:', location.locationCode);
         return location.locationCode;
       }
     }
     
     // フォールバック: 従来のハードコードされたプレフィックス
+    console.log('Using fallback prefix for:', locationValue);
     const locationPrefixes = {
-      'osaka-desktop': 'Osaka',
-      'osaka-server': 'Osaka', 
-      'kobe-terminal': 'Kobe',
-      'himeji-terminal': 'Hime',
-      'osaka-printer': 'Osaka',
-      'hyogo-printer': 'Kobe'
+      'osaka-desktop': 'OSA',
+      'osaka-server': 'OSA', 
+      'kobe-terminal': 'KOB',
+      'himeji-terminal': 'HIM',
+      'osaka-printer': 'OSA',
+      'hyogo-printer': 'HYO'
     };
     
-    return locationPrefixes[locationValue] || 'Unknown';
+    const prefix = locationPrefixes[locationValue] || 'UNK';
+    console.log('Fallback prefix result:', prefix);
+    return prefix;
   }
   // 拠点選択肢を初期化する処理
   function initializeLocationOptions() {
@@ -1722,15 +1730,9 @@
       serialNumber
     });
     
-    // 拠点プレフィックスのマッピング
-    const locationPrefixMapping = {
-      'osaka-desktop': 'OSA',
-      'osaka-server': 'OSA',
-      'kobe-terminal': 'KOB',
-      'himeji-terminal': 'HIM',
-      'osaka-printer': 'OSA',
-      'hyogo-printer': 'HYO'
-    };
+    // 拠点プレフィックスを取得（拠点マスタベース）
+    const locationPrefix = getLocationPrefix(location);
+    console.log('取得した拠点プレフィックス:', locationPrefix, 'for location:', location);
     
     const categoryMapping = {
       'SV': 'SV',
@@ -1738,8 +1740,6 @@
       'プリンタ': 'Printer',
       'その他': 'Other'
     };
-    
-    const locationPrefix = locationPrefixMapping[location] || '';
     
     // 機種情報を取得
     let modelInfo = '';
@@ -1778,6 +1778,14 @@
     let previewText = '';
     let isComplete = false;
     
+    console.log('プレビュー生成の条件確認:', {
+      location: !!location,
+      deviceCategory: !!deviceCategory,
+      modelInfo: !!modelInfo,
+      serialNumber: !!serialNumber,
+      locationPrefix: locationPrefix
+    });
+    
     if (!location) {
       previewText = '拠点を選択してください';
     } else if (!deviceCategory) {
@@ -1793,6 +1801,8 @@
       previewText = `${locationPrefix}_${englishCategory}_${modelInfo}_${serialNumber}_[Number]`;
       isComplete = true;
     }
+    
+    console.log('生成されたプレビューテキスト:', previewText);
     
     // プレビュー表示を更新
     attrLocationNumberDisplay.textContent = previewText;
