@@ -371,10 +371,9 @@
     if (!dateValue) return '';
     
     try {
-      // 既に文字列の場合
+      // 既に文字列の場合はそのまま返す
       if (typeof dateValue === 'string') {
-        // 先頭のアポストロフィがある場合は除去
-        return dateValue.startsWith("'") ? dateValue.substring(1) : dateValue;
+        return dateValue;
       }
       
       // Dateオブジェクトの場合は年月日形式にフォーマット

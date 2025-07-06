@@ -172,7 +172,7 @@ function getLocationMaster() {
       addLog('行データ処理中', { rowIndex: i, row: row });
       
       if (row[0]) { // 拠点IDが存在する行のみ
-        const today = "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
+        const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
         const location = {
           locationId: row[0],
           locationName: row[1],
@@ -221,7 +221,7 @@ function getLocationMasterSheet() {
     headerRange.setBackground('#f0f0f0');
     
     // 初期データを追加（既存の拠点）
-    const today = "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
+    const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
     const initialData = [
       ['osaka', '大阪', 'OSA', '', 'active', today, today],
       ['kobe', '神戸', 'KOB', '', 'active', today, today],
@@ -250,7 +250,7 @@ function getLocationById(locationId) {
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
       if (row[0] === locationId) {
-        const today = "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
+        const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
         const location = {
           locationId: row[0],
           locationName: row[1],
@@ -302,7 +302,7 @@ function addLocation(locationData) {
     }
     
     const sheet = getLocationMasterSheet();
-    const today = "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
+    const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
     
     // 新しい行を追加
     const newRow = [
@@ -352,7 +352,7 @@ function updateLocation(locationData) {
       if (row[0] === locationData.locationId) {
         // 該当行を更新
         const range = sheet.getRange(i + 1, 1, 1, 7);
-        const today = "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
+        const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
         const updatedRow = [
           locationData.locationId,
           locationData.locationName,
