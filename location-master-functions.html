@@ -127,6 +127,9 @@
   function saveLocation() {
     console.log('saveLocation関数が呼び出されました');
     
+    // 保存処理開始をユーザーに知らせる
+    showLocationPopupMessage('保存処理を開始しています...', 'info');
+    
     const form = document.getElementById('locationForm');
     const formData = new FormData(form);
     
@@ -163,9 +166,18 @@
     
     google.script.run
       .withSuccessHandler(function(result) {
+        console.log('Google Apps Script成功:', result);
         hideLoading();
         closeLocationModal();
-        showSuccess(`拠点が正常に${operation}されました`);
+        
+        const successMessage = `拠点が正常に${operation}されました`;
+        showSuccess(successMessage);
+        
+        // 成功をユーザーに確実に伝える
+        setTimeout(() => {
+          alert('成功: ' + successMessage);
+        }, 100);
+        
         loadLocationList();
         
         // 少し遅延してから該当行をハイライト
@@ -174,8 +186,22 @@
         }, 500);
       })
       .withFailureHandler(function(error) {
+        console.error('Google Apps Scriptエラー:', error);
         hideLoading();
-        showError(`拠点の${operation}に失敗しました: ` + error.message);
+        
+        let errorMessage = `拠点の${operation}に失敗しました`;
+        if (error && error.message) {
+          errorMessage += ': ' + error.message;
+        } else if (error) {
+          errorMessage += ': ' + error.toString();
+        }
+        
+        showError(errorMessage);
+        
+        // フォールバック用のalert
+        setTimeout(() => {
+          alert('エラー: ' + errorMessage);
+        }, 200);
       })
       [apiCall](locationData);
   }
@@ -200,25 +226,34 @@
 
     if (!locationId || !locationId.match(/^[a-z0-9_-]+$/)) {
       console.log('拠点IDバリデーションエラー:', locationId);
-      showError('拠点IDは小文字英数字、ハイフン、アンダースコアのみ使用可能です');
+      const errorMsg = '拠点IDは小文字英数字、ハイフン、アンダースコアのみ使用可能です';
+      showError(errorMsg);
+      // 緊急時のフォールバック
+      setTimeout(() => alert('エラー: ' + errorMsg), 100);
       return false;
     }
 
     if (!locationName) {
       console.log('拠点名バリデーションエラー:', locationName);
-      showError('拠点名を入力してください');
+      const errorMsg = '拠点名を入力してください';
+      showError(errorMsg);
+      setTimeout(() => alert('エラー: ' + errorMsg), 100);
       return false;
     }
 
     if (!locationCode || !locationCode.match(/^[A-Z0-9]+$/)) {
       console.log('拠点コードバリデーションエラー:', locationCode);
-      showError('拠点コードは大文字英数字のみ使用可能です');
+      const errorMsg = '拠点コードは大文字英数字のみ使用可能です';
+      showError(errorMsg);
+      setTimeout(() => alert('エラー: ' + errorMsg), 100);
       return false;
     }
 
     if (!groupEmail) {
       console.log('グループメールアドレスバリデーションエラー（未入力）:', groupEmail);
-      showError('グループメールアドレスを入力してください');
+      const errorMsg = 'グループメールアドレスを入力してください';
+      showError(errorMsg);
+      setTimeout(() => alert('エラー: ' + errorMsg), 100);
       return false;
     }
 
@@ -226,7 +261,9 @@
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(groupEmail)) {
       console.log('グループメールアドレス形式エラー:', groupEmail);
-      showError('正しいメールアドレス形式で入力してください');
+      const errorMsg = '正しいメールアドレス形式で入力してください';
+      showError(errorMsg);
+      setTimeout(() => alert('エラー: ' + errorMsg), 100);
       return false;
     }
 
@@ -349,9 +386,19 @@
   // UI通知関数
   // ========================================
   function showLocationPopupMessage(message, type = 'info') {
+    console.log(`[${type.toUpperCase()}] ${message}`); // デバッグ用
+    
     const popup = document.getElementById('popupMessage');
     if (!popup) {
-      console.log(type + ': ' + message);
+      console.warn('popupMessage要素が見つかりません。alertで表示します。');
+      // フォールバック：ポップアップ要素がない場合はalertを使用
+      if (type === 'error') {
+        alert('エラー: ' + message);
+      } else if (type === 'success') {
+        alert('成功: ' + message);
+      } else {
+        alert('情報: ' + message);
+      }
       return;
     }
     
@@ -367,15 +414,29 @@
       popup.classList.add('info');
     }
     
+    // 表示を強制的に確実にする
     popup.style.display = 'block';
+    popup.style.visibility = 'visible';
+    popup.style.opacity = '1';
+    popup.style.zIndex = '9999';
+    
+    console.log('ポップアップメッセージ表示:', {
+      message,
+      type,
+      element: popup,
+      className: popup.className,
+      style: popup.style.cssText
+    });
     
     setTimeout(() => {
       popup.classList.remove('show');
       setTimeout(() => {
         popup.style.display = 'none';
+        popup.style.visibility = '';
+        popup.style.opacity = '';
         popup.className = 'popup-message'; // クラスをリセット
       }, 600);
-    }, 3000);
+    }, 5000); // 3秒から5秒に延長
   }
 
   function showLoading(message) {
