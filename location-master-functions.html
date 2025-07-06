@@ -133,8 +133,15 @@
     const form = document.getElementById('locationForm');
     const formData = new FormData(form);
     
+    // 編集時はdisabledフィールドから値を取得できないため、editLocationIdまたは要素から直接取得
+    const isEdit = formData.get('editLocationId');
+    const locationId = isEdit ? formData.get('editLocationId') : formData.get('locationId');
+    
     console.log('FormData取得完了:', {
-      locationId: formData.get('locationId'),
+      isEdit: !!isEdit,
+      locationId: locationId,
+      locationIdFromForm: formData.get('locationId'),
+      editLocationId: formData.get('editLocationId'),
       locationName: formData.get('locationName'),
       locationCode: formData.get('locationCode'),
       groupEmail: formData.get('groupEmail'),
@@ -150,14 +157,12 @@
     console.log('バリデーション成功');
 
     const locationData = {
-      locationId: formData.get('locationId'),
+      locationId: locationId, // 上で取得した正しい拠点IDを使用
       locationName: formData.get('locationName'),
       locationCode: formData.get('locationCode'),
       groupEmail: formData.get('groupEmail'),
       status: formData.get('status')
     };
-
-    const isEdit = formData.get('editLocationId');
     const operation = isEdit ? '更新' : '追加';
     
     showLoading(`拠点を${operation}中...`);
@@ -212,13 +217,18 @@
   function validateLocationForm(formData) {
     console.log('validateLocationForm開始');
     
-    const locationId = formData.get('locationId');
+    // 編集時はdisabledフィールドから値を取得できないため、editLocationIdを使用
+    const isEdit = formData.get('editLocationId');
+    const locationId = isEdit ? formData.get('editLocationId') : formData.get('locationId');
     const locationName = formData.get('locationName');
     const locationCode = formData.get('locationCode');
     const groupEmail = formData.get('groupEmail');
 
     console.log('バリデーション対象データ:', {
+      isEdit: !!isEdit,
       locationId,
+      locationIdFromForm: formData.get('locationId'),
+      editLocationId: formData.get('editLocationId'),
       locationName,
       locationCode,
       groupEmail
