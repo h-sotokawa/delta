@@ -229,7 +229,7 @@
         console.error('拠点マスタ取得エラー:', error);
         showDebugInfo('拠点マスタ取得エラー', { error: error.message });
         // エラー時は従来のハードコードされた拠点を使用
-        updateDeviceType();
+        initializeLocationOptions();
       })
       .getLocationMaster();
   }
@@ -294,24 +294,21 @@
     
     return locationPrefixes[locationValue] || 'Unknown';
   }
-  // 代替機種別選択時の処理
-  function updateDeviceType() {
-    const deviceTypeSelect = document.getElementById('device-type');
+  // 拠点選択肢を初期化する処理
+  function initializeLocationOptions() {
     const locationSelect = document.getElementById('location-select');
     const deviceCategorySelect = document.getElementById('device-category');
     
-    if (!deviceTypeSelect || !locationSelect || !deviceCategorySelect) {
+    if (!locationSelect || !deviceCategorySelect) {
       console.error('必要な要素が見つかりません');
       return;
     }
     
-    const selectedType = deviceTypeSelect.value;
-    
     if (DEBUG_MODE) {
-      showDebugInfo('代替機種別選択', { selectedType });
+      showDebugInfo('拠点選択肢初期化開始', {});
     }
     
-    // 拠点選択肢を構築
+    // 拠点選択肢を構築（拠点マスタベース）
     let locationOptions = [];
     
     if (window.formCreatorLocations && window.formCreatorLocations.length > 0) {
@@ -324,28 +321,12 @@
       if (DEBUG_MODE) {
         showDebugInfo('拠点マスタから拠点選択肢を生成', locationOptions);
       }
-    } else {
-      // フォールバック: 従来のハードコードされた拠点
-      const fallbackLocationOptions = {
-        'terminal': [
-          { value: 'osaka-desktop', text: '大阪(デスクトップ)' },
-          { value: 'osaka-server', text: '大阪(サーバー、ノート)' },
-          { value: 'kobe-terminal', text: '神戸(端末)' },
-          { value: 'himeji-terminal', text: '姫路(端末)' }
-        ],
-        'printer': [
-          { value: 'osaka-printer', text: '大阪(プリンタ、その他)' },
-          { value: 'hyogo-printer', text: '兵庫(プリンタ、その他)' }
-        ]
-      };
-      
-      locationOptions = fallbackLocationOptions[selectedType] || [];
     }
     
     // 拠点選択肢を更新
     locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
     
-    if (selectedType && locationOptions.length > 0) {
+    if (locationOptions.length > 0) {
       locationOptions.forEach(function(option) {
         const optionElement = document.createElement('option');
         optionElement.value = option.value;
@@ -360,21 +341,16 @@
     } else {
       locationSelect.disabled = true;
       if (DEBUG_MODE) {
-        showDebugInfo('拠点選択肢なし', { selectedType, locationOptionsLength: locationOptions.length });
+        showDebugInfo('拠点選択肢なし', { locationOptionsLength: locationOptions.length });
       }
     }
     
-    // 詳細カテゴリと管理番号をリセット
+    // 詳細カテゴリをリセット
     deviceCategorySelect.innerHTML = '<option value="">拠点を選択してください</option>';
     deviceCategorySelect.disabled = true;
     
-    // 拠点管理番号は属性内で処理
-    
-         // 属性フォームを更新
-     updateAttributesForm();
-     
-     // フォームタイトルの自動生成
-     updateFormTitle();
+    // 属性フォームを更新
+    updateAttributesForm();
      
      // 拠点管理番号を更新
      // 拠点管理番号は属性内で処理
@@ -389,30 +365,24 @@
 
   // 拠点選択時の処理
   function updateLocationNumber() {
-    const deviceTypeSelect = document.getElementById('device-type');
     const locationSelect = document.getElementById('location-select');
     const deviceCategorySelect = document.getElementById('device-category');
     
-    if (!deviceTypeSelect || !locationSelect || !deviceCategorySelect) return;
+    if (!locationSelect || !deviceCategorySelect) return;
     
-    const deviceType = deviceTypeSelect.value;
     const selectedLocation = locationSelect.value;
     
     if (DEBUG_MODE) {
-      showDebugInfo('拠点選択時の処理', { deviceType, selectedLocation });
+      showDebugInfo('拠点選択時の処理', { selectedLocation });
     }
     
-    // 機器種別に基づく詳細カテゴリの選択肢（拠点に依存しない）
-    const deviceCategoryOptions = {
-      'terminal': [
-        { value: 'SV', text: 'SV（サーバー）' },
-        { value: 'CL', text: 'CL（クライアント）' }
-      ],
-      'printer': [
-        { value: 'プリンタ', text: 'プリンタ' },
-        { value: 'その他', text: 'その他' }
-      ]
-    };
+    // 全ての詳細カテゴリオプション
+    const allDeviceCategoryOptions = [
+      { value: 'SV', text: 'SV（サーバー）' },
+      { value: 'CL', text: 'CL（クライアント）' },
+      { value: 'プリンタ', text: 'プリンタ' },
+      { value: 'その他', text: 'その他' }
+    ];
     
     // 詳細カテゴリの選択肢を更新
     deviceCategorySelect.innerHTML = '<option value="">詳細カテゴリを選択してください</option>';
@@ -431,9 +401,9 @@
       modelSelect.disabled = true;
     }
     
-    // 拠点が選択されていて、機器種別も選択されている場合
-    if (selectedLocation && deviceType && deviceCategoryOptions[deviceType]) {
-      deviceCategoryOptions[deviceType].forEach(function(option) {
+    // 拠点が選択されている場合、全ての詳細カテゴリを有効化
+    if (selectedLocation) {
+      allDeviceCategoryOptions.forEach(function(option) {
         const optionElement = document.createElement('option');
         optionElement.value = option.value;
         optionElement.textContent = option.text;
@@ -443,15 +413,15 @@
       
       if (DEBUG_MODE) {
         showDebugInfo('詳細カテゴリ選択肢更新', { 
-          deviceType, 
-          options: deviceCategoryOptions[deviceType] 
+          selectedLocation, 
+          options: allDeviceCategoryOptions 
         });
       }
     } else {
       deviceCategorySelect.disabled = true;
       
       if (DEBUG_MODE) {
-        showDebugInfo('詳細カテゴリ無効化', { selectedLocation, deviceType });
+        showDebugInfo('詳細カテゴリ無効化', { selectedLocation });
       }
     }
     
@@ -461,14 +431,10 @@
     // フォームタイトルの自動生成
     updateFormTitle();
     
-    // 拠点管理番号プレビューを更新
-    // 拠点管理番号は属性内で処理
-    
     if (DEBUG_MODE) {
       showDebugInfo('拠点選択更新', { 
-        deviceType,
         selectedLocation,
-        deviceOptions: deviceCategoryOptions[selectedLocation] || []
+        categoriesAvailable: allDeviceCategoryOptions.length
       });
     }
   }
@@ -480,36 +446,34 @@
   // 代替機属性プレビュー機能
   // ========================================
   function updateAttributesForm() {
-    const deviceTypeSelect = document.getElementById('device-type');
     const locationSelect = document.getElementById('location-select');
     const deviceCategorySelect = document.getElementById('device-category');
     const attributesContainer = document.getElementById('attributes-form');
     
-    if (!deviceTypeSelect || !locationSelect || !deviceCategorySelect || !attributesContainer) return;
+    if (!locationSelect || !deviceCategorySelect || !attributesContainer) return;
     
-    const deviceType = deviceTypeSelect.value;
     const location = locationSelect.value;
     const deviceCategory = deviceCategorySelect.value;
     
-    // 代替機種別タイプの判定
-    const isTerminal = deviceType === 'terminal';
-    const isPrinter = deviceType === 'printer';
-    
-    if (!deviceType) {
-      attributesContainer.innerHTML = `
-        <div class="attributes-placeholder">
-          <i class="fas fa-info-circle"></i>
-          <p>代替機種別を選択すると、入力フィールドが表示されます</p>
-        </div>
-      `;
-      return;
-    }
+    // 詳細カテゴリに基づく判定
+    const isTerminal = deviceCategory === 'SV' || deviceCategory === 'CL';
+    const isPrinter = deviceCategory === 'プリンタ' || deviceCategory === 'その他';
     
     if (!location) {
       attributesContainer.innerHTML = `
         <div class="attributes-placeholder">
           <i class="fas fa-info-circle"></i>
           <p>拠点を選択すると、入力フィールドが表示されます</p>
+        </div>
+      `;
+      return;
+    }
+    
+    if (!deviceCategory) {
+      attributesContainer.innerHTML = `
+        <div class="attributes-placeholder">
+          <i class="fas fa-info-circle"></i>
+          <p>詳細カテゴリを選択すると、入力フィールドが表示されます</p>
         </div>
       `;
       return;
@@ -532,7 +496,7 @@
       ];
     }
     
-    const deviceTypeDisplayName = deviceType === 'terminal' ? '端末' : 'プリンタ・その他';
+    const deviceTypeDisplayName = isTerminal ? '端末' : 'プリンタ・その他';
     
     // 属性フィールドのHTMLを生成
     var attributeFieldsHtml = '';
@@ -653,23 +617,23 @@
     loadModelCategories();
     
     updateAttributesForm();
-    // 拠点管理番号は属性内で処理
+    
+    // フォームタイトルの自動生成
+    updateFormTitle();
     
     if (DEBUG_MODE) {
       const deviceCategorySelect = document.getElementById('device-category');
-      showDebugInfo('代替機種別変更', { selectedCategory: deviceCategorySelect.value });
+      showDebugInfo('詳細カテゴリ変更', { selectedCategory: deviceCategorySelect.value });
     }
   }
 
-  // 代替機種別に応じた質問項目を生成
+  // 詳細カテゴリに応じた質問項目を生成
   function getDeviceQuestions(location, deviceCategory, attributeData = {}) {
     console.log('getDeviceQuestions called with:', { location, deviceCategory, attributeData });
     
-    const deviceTypeSelect = document.getElementById('device-type');
-    const deviceType = deviceTypeSelect ? deviceTypeSelect.value : '';
-    
-    const isTerminal = deviceType === 'terminal';
-    const isPrinter = deviceType === 'printer';
+    // 詳細カテゴリに基づく判定
+    const isTerminal = deviceCategory === 'SV' || deviceCategory === 'CL';
+    const isPrinter = deviceCategory === 'プリンタ' || deviceCategory === 'その他';
     
     let questions = [];
     
@@ -907,18 +871,20 @@
     }
     
     // フォームデータを整理
-    const deviceType = formData.get('deviceType');
     const locationNumber = formData.get('attributes[locationNumber]'); // 属性から取得
     const location = formData.get('location');
     const deviceCategory = formData.get('deviceCategory');
+    
+    // 詳細カテゴリから代替機種別を推定
+    const deviceType = (deviceCategory === 'SV' || deviceCategory === 'CL') ? 'terminal' : 'printer';
     
     // デバッグ: フォームデータの確認
     console.log('フォームデータ確認:', {
       title: formData.get('title'),
       deviceType: deviceType,
+      deviceCategory: deviceCategory,
       locationNumber: locationNumber,
-      location: location,
-      deviceCategory: deviceCategory
+      location: location
     });
     
     // 属性データを解析
@@ -1847,7 +1813,7 @@
   }
 
   // グローバルスコープに関数を公開
-  window.updateDeviceType = updateDeviceType;
+  window.initializeLocationOptions = initializeLocationOptions;
   window.updateLocationNumber = updateLocationNumber;
   window.updateDeviceCategory = updateDeviceCategory;
   window.switchFormCreationMode = switchFormCreationMode;
@@ -1860,17 +1826,18 @@
   // フォームタイトル自動生成機能
   function updateFormTitle() {
     const locationSelect = document.getElementById('location-select');
-    const deviceTypeSelect = document.getElementById('device-type');
+    const deviceCategorySelect = document.getElementById('device-category');
     const formTitleInput = document.getElementById('form-title');
     
-    if (!locationSelect || !deviceTypeSelect || !formTitleInput) return;
+    if (!locationSelect || !deviceCategorySelect || !formTitleInput) return;
     
     const location = locationSelect.value;
-    const deviceType = deviceTypeSelect.value;
+    const deviceCategory = deviceCategorySelect.value;
     
-    if (location && deviceType && !formTitleInput.value.trim()) {
+    if (location && deviceCategory && !formTitleInput.value.trim()) {
       const locationName = getLocationDisplayName(location);
-      const deviceTypeName = deviceType === 'terminal' ? '端末' : 'プリンタ・その他';
+      const isTerminal = deviceCategory === 'SV' || deviceCategory === 'CL';
+      const deviceTypeName = isTerminal ? '端末' : 'プリンタ・その他';
       const suggestedTitle = `${locationName} ${deviceTypeName}代替機依頼フォーム`;
       
       formTitleInput.value = suggestedTitle;
