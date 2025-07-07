@@ -2883,7 +2883,7 @@ function checkDuplicateValues(deviceCategory, checkData) {
 
   } catch (error) {
     addFormLog('重複チェックエラー', {
-      location,
+      deviceCategory,
       checkData,
       error: error.toString(),
       stack: error.stack
