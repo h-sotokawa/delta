@@ -108,15 +108,50 @@
      フォームスタイル
      ======================================== */
   .generation-form {
-    max-width: 700px;
+    max-width: 800px;
     margin: 0 auto;
+  }
+
+  .form-section {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 25px;
+  }
+
+  .form-section-title {
+    color: #1e40af;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .form-section-description {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin-bottom: 20px;
   }
 
   .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 25px;
+    gap: 20px;
     margin-bottom: 25px;
+  }
+
+  .form-group.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .generated-field {
+    background: #e0f2fe !important;
+    border-color: #0284c7 !important;
+    font-weight: 600;
+    color: #0c4a6e;
   }
 
   .form-group {

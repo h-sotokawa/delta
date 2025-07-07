@@ -12,6 +12,9 @@
     
     // 共通フォームURL設定の確認
     checkCommonFormSettings();
+    
+    // 拠点一覧の読み込み
+    loadLocations();
   }
 
   // ========================================
@@ -98,6 +101,125 @@
   }
 
   // ========================================
+  // 拠点一覧の読み込み
+  // ========================================
+  function loadLocations() {
+    console.log('拠点一覧の読み込み開始');
+    
+    google.script.run
+      .withSuccessHandler(function(locations) {
+        console.log('拠点一覧取得成功:', locations);
+        const locationSelect = document.getElementById('location');
+        locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
+        
+        if (locations && locations.length > 0) {
+          locations.forEach(function(location) {
+            if (location.status === 'active') {
+              const option = document.createElement('option');
+              option.value = location.locationId;
+              option.textContent = location.locationName;
+              option.setAttribute('data-code', location.locationCode);
+              locationSelect.appendChild(option);
+            }
+          });
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('拠点一覧取得エラー:', error);
+        showErrorMessage('拠点一覧の取得に失敗しました: ' + error.message);
+      })
+      .getLocationMaster();
+  }
+
+  // ========================================
+  // モデル一覧の読み込み
+  // ========================================
+  function loadModels() {
+    const category = document.getElementById('deviceCategory').value;
+    const modelSelect = document.getElementById('model');
+    
+    if (!category) {
+      modelSelect.innerHTML = '<option value="">先にカテゴリを選択してください</option>';
+      modelSelect.disabled = true;
+      return;
+    }
+    
+    console.log('モデル一覧の読み込み開始:', category);
+    modelSelect.innerHTML = '<option value="">読み込み中...</option>';
+    modelSelect.disabled = true;
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('モデル一覧取得成功:', result);
+        modelSelect.innerHTML = '<option value="">モデルを選択してください</option>';
+        modelSelect.disabled = false;
+        
+        if (result.success && result.models && result.models.length > 0) {
+          // カテゴリに応じてフィルタリング
+          const filteredModels = result.models.filter(function(model) {
+            if (category === 'SV' || category === 'CL') {
+              return model.category === '端末';
+            } else if (category === 'プリンタ') {
+              return model.category === 'プリンタ';
+            } else if (category === 'その他') {
+              return model.category === 'その他';
+            }
+            return false;
+          });
+          
+          filteredModels.forEach(function(model) {
+            const option = document.createElement('option');
+            option.value = model.modelName;
+            option.textContent = model.modelName + ' (' + model.manufacturer + ')';
+            modelSelect.appendChild(option);
+          });
+          
+          if (filteredModels.length === 0) {
+            modelSelect.innerHTML = '<option value="">該当するモデルがありません</option>';
+          }
+        } else {
+          modelSelect.innerHTML = '<option value="">モデルデータがありません</option>';
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('モデル一覧取得エラー:', error);
+        modelSelect.innerHTML = '<option value="">エラーが発生しました</option>';
+        showErrorMessage('モデル一覧の取得に失敗しました: ' + error.message);
+      })
+      .getModelMaster();
+  }
+
+  // ========================================
+  // 拠点管理番号の自動生成
+  // ========================================
+  function updateLocationNumber() {
+    const location = document.getElementById('location').value;
+    const category = document.getElementById('deviceCategory').value;
+    const model = document.getElementById('model').value;
+    const serialNumber = document.getElementById('serialNumber').value.trim();
+    const sequenceNumber = document.getElementById('sequenceNumber').value;
+    
+    const locationNumberInput = document.getElementById('locationNumber');
+    
+    // すべての必須項目が入力されているかチェック
+    if (!location || !category || !model || !serialNumber || !sequenceNumber) {
+      locationNumberInput.value = '';
+      return;
+    }
+    
+    // 拠点コードを取得
+    const locationSelect = document.getElementById('location');
+    const selectedOption = locationSelect.options[locationSelect.selectedIndex];
+    const locationCode = selectedOption.getAttribute('data-code') || location;
+    
+    // 拠点管理番号を生成（形式: 拠点_カテゴリ_モデル_製造番号_連番）
+    const locationNumber = `${locationCode}_${category}_${model}_${serialNumber}_${String(sequenceNumber).padStart(3, '0')}`;
+    
+    locationNumberInput.value = locationNumber;
+    console.log('拠点管理番号生成:', locationNumber);
+  }
+
+  // ========================================
   // URL生成・保存処理
   // ========================================
   function generateAndSaveUrl() {
@@ -149,13 +271,39 @@
   // フォームバリデーション
   // ========================================
   function validateGenerationForm(locationNumber, deviceCategory) {
-    if (!locationNumber) {
-      showErrorMessage('拠点管理番号を入力してください');
+    // 全フィールドのバリデーション
+    const location = document.getElementById('location').value;
+    const model = document.getElementById('model').value;
+    const serialNumber = document.getElementById('serialNumber').value.trim();
+    const sequenceNumber = document.getElementById('sequenceNumber').value;
+    
+    if (!location) {
+      showErrorMessage('拠点を選択してください');
       return false;
     }
     
     if (!deviceCategory) {
       showErrorMessage('デバイスカテゴリを選択してください');
+      return false;
+    }
+    
+    if (!model) {
+      showErrorMessage('モデルを選択してください');
+      return false;
+    }
+    
+    if (!serialNumber) {
+      showErrorMessage('製造番号を入力してください');
+      return false;
+    }
+    
+    if (!sequenceNumber) {
+      showErrorMessage('連番を入力してください');
+      return false;
+    }
+    
+    if (!locationNumber) {
+      showErrorMessage('拠点管理番号が生成されていません');
       return false;
     }
     
@@ -261,6 +409,19 @@
     if (form) {
       form.reset();
       updateCategoryInfo(); // カテゴリ情報を非表示にする
+      
+      // モデル選択を無効化
+      const modelSelect = document.getElementById('model');
+      if (modelSelect) {
+        modelSelect.innerHTML = '<option value="">先にカテゴリを選択してください</option>';
+        modelSelect.disabled = true;
+      }
+      
+      // 拠点管理番号をクリア
+      const locationNumberInput = document.getElementById('locationNumber');
+      if (locationNumberInput) {
+        locationNumberInput.value = '';
+      }
     }
     
     const resultSection = document.getElementById('resultSection');
@@ -355,6 +516,9 @@
   window.resetForm = resetForm;
   window.copyUrlToClipboard = copyUrlToClipboard;
   window.openGeneratedUrl = openGeneratedUrl;
+  window.loadLocations = loadLocations;
+  window.loadModels = loadModels;
+  window.updateLocationNumber = updateLocationNumber;
   
   console.log('URL生成機能が登録されました');
 </script>

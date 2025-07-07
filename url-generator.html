@@ -28,39 +28,95 @@
     </div>
 
     <form id="urlGenerationForm" class="generation-form">
-      <div class="form-grid">
+      <!-- 拠点管理番号自動生成フィールド -->
+      <div class="form-section">
+        <h3 class="form-section-title">
+          <i class="fas fa-info-circle"></i>
+          拠点管理番号の生成
+        </h3>
+        <p class="form-section-description">以下の情報を入力すると、拠点管理番号が自動的に生成されます</p>
         
-        <!-- 拠点管理番号入力 -->
-        <div class="form-group">
-          <label for="locationNumber">
-            <i class="fas fa-map-marker-alt"></i>
-            拠点管理番号 <span class="required">*</span>
-          </label>
-          <input type="text" id="locationNumber" name="locationNumber" required
-            placeholder="例: Osaka_CL_HP_001_001" 
-            pattern="[A-Za-z0-9_-]+"
-            title="英数字、アンダースコア、ハイフンのみ使用可能">
-          <small class="help-text">マスタデータに登録済みの拠点管理番号を入力してください</small>
-        </div>
+        <div class="form-grid">
+          <!-- 拠点選択 -->
+          <div class="form-group">
+            <label for="location">
+              <i class="fas fa-map-marker-alt"></i>
+              拠点 <span class="required">*</span>
+            </label>
+            <select id="location" name="location" required onchange="updateLocationNumber()">
+              <option value="">拠点を選択してください</option>
+            </select>
+            <small class="help-text">代替機を管理する拠点を選択してください</small>
+          </div>
 
-        <!-- デバイスカテゴリ選択 -->
-        <div class="form-group">
-          <label for="deviceCategory">
-            <i class="fas fa-tag"></i>
-            デバイスカテゴリ <span class="required">*</span>
-          </label>
-          <select id="deviceCategory" name="deviceCategory" required onchange="updateCategoryInfo()">
-            <option value="">カテゴリを選択してください</option>
-            <option value="SV">SV（サーバー）</option>
-            <option value="CL">CL（クライアント）</option>
-            <option value="プリンタ">プリンタ</option>
-            <option value="その他">その他</option>
-          </select>
-          <small class="help-text">
-            <span id="categoryHelp">選択したカテゴリに応じた共通フォームURLが使用されます</span>
-          </small>
-        </div>
+          <!-- デバイスカテゴリ選択 -->
+          <div class="form-group">
+            <label for="deviceCategory">
+              <i class="fas fa-tag"></i>
+              デバイスカテゴリ <span class="required">*</span>
+            </label>
+            <select id="deviceCategory" name="deviceCategory" required onchange="updateCategoryInfo(); loadModels(); updateLocationNumber()">
+              <option value="">カテゴリを選択してください</option>
+              <option value="SV">SV（サーバー）</option>
+              <option value="CL">CL（クライアント）</option>
+              <option value="プリンタ">プリンタ</option>
+              <option value="その他">その他</option>
+            </select>
+            <small class="help-text">
+              <span id="categoryHelp">選択したカテゴリに応じた共通フォームURLが使用されます</span>
+            </small>
+          </div>
 
+          <!-- モデル選択 -->
+          <div class="form-group">
+            <label for="model">
+              <i class="fas fa-laptop"></i>
+              モデル <span class="required">*</span>
+            </label>
+            <select id="model" name="model" required onchange="updateLocationNumber()" disabled>
+              <option value="">先にカテゴリを選択してください</option>
+            </select>
+            <small class="help-text">選択したカテゴリのモデルが表示されます</small>
+          </div>
+
+          <!-- 製造番号入力 -->
+          <div class="form-group">
+            <label for="serialNumber">
+              <i class="fas fa-barcode"></i>
+              製造番号 <span class="required">*</span>
+            </label>
+            <input type="text" id="serialNumber" name="serialNumber" required
+              placeholder="例: ABC123456" 
+              pattern="[A-Za-z0-9-]+"
+              title="英数字とハイフンのみ使用可能"
+              onchange="updateLocationNumber()">
+            <small class="help-text">機器の製造番号を入力してください</small>
+          </div>
+
+          <!-- 連番入力 -->
+          <div class="form-group">
+            <label for="sequenceNumber">
+              <i class="fas fa-sort-numeric-up"></i>
+              連番 <span class="required">*</span>
+            </label>
+            <input type="number" id="sequenceNumber" name="sequenceNumber" required
+              min="1" max="999" value="1"
+              onchange="updateLocationNumber()">
+            <small class="help-text">同一製造番号の機器がある場合の連番</small>
+          </div>
+
+          <!-- 自動生成された拠点管理番号 -->
+          <div class="form-group full-width">
+            <label for="locationNumber">
+              <i class="fas fa-key"></i>
+              生成された拠点管理番号
+            </label>
+            <input type="text" id="locationNumber" name="locationNumber" readonly
+              placeholder="上記の情報を入力すると自動生成されます"
+              class="generated-field">
+            <small class="help-text">形式: 拠点_カテゴリ_モデル_製造番号_連番</small>
+          </div>
+        </div>
       </div>
 
       <!-- カテゴリ情報表示 -->
