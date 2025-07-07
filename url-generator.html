@@ -12,6 +12,19 @@
       <p>拠点管理番号とデバイスカテゴリを指定して、個別URLを生成します</p>
     </div>
 
+    <!-- デバッグボタン（一時的） -->
+    <div style="margin-bottom: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+      <button type="button" class="btn btn-secondary" onclick="testLoadLocations()" style="margin-right: 10px;">
+        <i class="fas fa-sync"></i> 拠点データ再読み込み
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="testLocationMasterBackend()">
+        <i class="fas fa-bug"></i> 拠点マスタテスト（バックエンド）
+      </button>
+      <div id="debugOutput" style="margin-top: 10px; padding: 10px; background: white; border-radius: 5px; display: none; max-height: 200px; overflow-y: auto;">
+        <pre id="debugContent" style="margin: 0; font-size: 12px;"></pre>
+      </div>
+    </div>
+
     <!-- 警告メッセージ -->
     <div class="generation-warning">
       <div class="warning-header">

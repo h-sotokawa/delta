@@ -141,273 +141,6 @@ function resetPerformanceStats() {
   return { success: true, message: 'パフォーマンス統計をリセットしました' };
 }
 
-// ========================================
-// 拠点マスタ管理機能
-// ========================================
-
-// 拠点マスタを格納するスプレッドシートのシート名
-const LOCATION_MASTER_SHEET_NAME = '拠点マスタ';
-
-// 拠点マスタ一覧を取得
-function getLocationMaster() {
-  const startTime = startPerformanceTimer();
-  addLog('拠点マスタ一覧取得を開始');
-  
-  try {
-    const sheet = getLocationMasterSheet();
-    addLog('拠点マスタシート取得完了', { sheetName: sheet.getName() });
-    
-    const data = sheet.getDataRange().getValues();
-    addLog('シートデータ取得完了', { rowCount: data.length, data: data });
-    
-    if (data.length <= 1) {
-      // ヘッダー行のみまたはデータなし
-      addLog('データなし: ヘッダー行のみ');
-      return [];
-    }
-    
-    const locations = [];
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      addLog('行データ処理中', { rowIndex: i, row: row });
-      
-      if (row[0]) { // 拠点IDが存在する行のみ
-        const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
-        const location = {
-          locationId: row[0],
-          locationName: row[1],
-          locationCode: row[2],
-          groupEmail: row[3] || '',
-          status: row[4] || 'active',
-          createdAt: row[5] || today,
-          updatedAt: row[6] || today
-        };
-        locations.push(location);
-        addLog('拠点データ追加', location);
-      }
-    }
-    
-    endPerformanceTimer(startTime, '拠点マスタ一覧取得');
-    addLog('拠点マスタ一覧取得完了', { count: locations.length, locations: locations });
-    
-    return locations;
-  } catch (error) {
-    addLog('拠点マスタ一覧取得エラー', error.toString());
-    throw new Error('拠点マスタ一覧の取得に失敗しました: ' + error.message);
-  }
-}
-
-// 拠点マスタシートを取得（存在しない場合は作成）
-function getLocationMasterSheet() {
-  const spreadsheetId = getSpreadsheetIdFromProperty('destination');
-  if (!spreadsheetId) {
-    throw new Error('拠点マスタ用スプレッドシートIDが設定されていません');
-  }
-  
-  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-  let sheet = spreadsheet.getSheetByName(LOCATION_MASTER_SHEET_NAME);
-  
-  if (!sheet) {
-    // シートが存在しない場合は作成
-    sheet = spreadsheet.insertSheet(LOCATION_MASTER_SHEET_NAME);
-    
-    // ヘッダー行を作成
-    const headers = ['拠点ID', '拠点名', '拠点コード', 'グループメールアドレス', 'ステータス', '作成日', '更新日'];
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    
-    // ヘッダー行のスタイルを設定
-    const headerRange = sheet.getRange(1, 1, 1, headers.length);
-    headerRange.setFontWeight('bold');
-    headerRange.setBackground('#f0f0f0');
-    
-    // 初期データを追加（既存の拠点）
-    const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
-    const initialData = [
-      ['osaka', '大阪', 'OSA', '', 'active', today, today],
-      ['kobe', '神戸', 'KOB', '', 'active', today, today],
-      ['himeji', '姫路', 'HIM', '', 'active', today, today]
-    ];
-    
-    if (initialData.length > 0) {
-      sheet.getRange(2, 1, initialData.length, 7).setValues(initialData);
-    }
-    
-    addLog('拠点マスタシートを作成しました');
-  }
-  
-  return sheet;
-}
-
-// 拠点IDで拠点情報を取得
-function getLocationById(locationId) {
-  const startTime = startPerformanceTimer();
-  addLog('拠点情報取得を開始', { locationId });
-  
-  try {
-    const sheet = getLocationMasterSheet();
-    const data = sheet.getDataRange().getValues();
-    
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      if (row[0] === locationId) {
-        const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
-        const location = {
-          locationId: row[0],
-          locationName: row[1],
-          locationCode: row[2],
-          groupEmail: row[3] || '',
-          status: row[4] || 'active',
-          createdAt: row[5] || today,
-          updatedAt: row[6] || today
-        };
-        
-        endPerformanceTimer(startTime, '拠点情報取得');
-        addLog('拠点情報取得完了', location);
-        
-        return location;
-      }
-    }
-    
-    endPerformanceTimer(startTime, '拠点情報取得');
-    addLog('拠点が見つかりませんでした', { locationId });
-    
-    return null;
-  } catch (error) {
-    addLog('拠点情報取得エラー', error.toString());
-    throw new Error('拠点情報の取得に失敗しました: ' + error.message);
-  }
-}
-
-// 新規拠点を追加
-function addLocation(locationData) {
-  const startTime = startPerformanceTimer();
-  addLog('拠点追加を開始', locationData);
-  
-  try {
-    // バリデーション
-    if (!locationData.locationId || !locationData.locationName || !locationData.locationCode || !locationData.groupEmail) {
-      throw new Error('必須項目が不足しています');
-    }
-    
-    // メールアドレス形式チェック
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(locationData.groupEmail)) {
-      throw new Error('正しいメールアドレス形式で入力してください');
-    }
-    
-    // 拠点IDの重複チェック
-    const existingLocation = getLocationById(locationData.locationId);
-    if (existingLocation) {
-      throw new Error('同じ拠点IDが既に存在します: ' + locationData.locationId);
-    }
-    
-    const sheet = getLocationMasterSheet();
-    const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
-    
-    // 新しい行を追加
-    const newRow = [
-      locationData.locationId,
-      locationData.locationName,
-      locationData.locationCode,
-      locationData.groupEmail || '',
-      locationData.status || 'active',
-      today,
-      today
-    ];
-    
-    sheet.appendRow(newRow);
-    
-    endPerformanceTimer(startTime, '拠点追加');
-    addLog('拠点追加完了', locationData);
-    
-    return { success: true, message: '拠点が正常に追加されました' };
-  } catch (error) {
-    addLog('拠点追加エラー', error.toString());
-    throw new Error('拠点の追加に失敗しました: ' + error.message);
-  }
-}
-
-// 拠点情報を更新
-function updateLocation(locationData) {
-  const startTime = startPerformanceTimer();
-  addLog('拠点更新を開始', locationData);
-  
-  try {
-    // バリデーション
-    if (!locationData.locationId || !locationData.locationName || !locationData.locationCode || !locationData.groupEmail) {
-      throw new Error('必須項目が不足しています');
-    }
-    
-    // メールアドレス形式チェック
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(locationData.groupEmail)) {
-      throw new Error('正しいメールアドレス形式で入力してください');
-    }
-    
-    const sheet = getLocationMasterSheet();
-    const data = sheet.getDataRange().getValues();
-    
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      if (row[0] === locationData.locationId) {
-        // 該当行を更新
-        const range = sheet.getRange(i + 1, 1, 1, 7);
-        const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
-        const updatedRow = [
-          locationData.locationId,
-          locationData.locationName,
-          locationData.locationCode,
-          locationData.groupEmail || '',
-          locationData.status || 'active',
-          row[5], // 作成日は保持
-          today // 更新日を現在日付に設定
-        ];
-        
-        range.setValues([updatedRow]);
-        
-        endPerformanceTimer(startTime, '拠点更新');
-        addLog('拠点更新完了', locationData);
-        
-        return { success: true, message: '拠点が正常に更新されました' };
-      }
-    }
-    
-    throw new Error('更新対象の拠点が見つかりません: ' + locationData.locationId);
-  } catch (error) {
-    addLog('拠点更新エラー', error.toString());
-    throw new Error('拠点の更新に失敗しました: ' + error.message);
-  }
-}
-
-// 拠点を削除
-function deleteLocation(locationId) {
-  const startTime = startPerformanceTimer();
-  addLog('拠点削除を開始', { locationId });
-  
-  try {
-    const sheet = getLocationMasterSheet();
-    const data = sheet.getDataRange().getValues();
-    
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      if (row[0] === locationId) {
-        // 該当行を削除
-        sheet.deleteRow(i + 1);
-        
-        endPerformanceTimer(startTime, '拠点削除');
-        addLog('拠点削除完了', { locationId });
-        
-        return { success: true, message: '拠点が正常に削除されました' };
-      }
-    }
-    
-    throw new Error('削除対象の拠点が見つかりません: ' + locationId);
-  } catch (error) {
-    addLog('拠点削除エラー', error.toString());
-    throw new Error('拠点の削除に失敗しました: ' + error.message);
-  }
-}
-
 function doGet(e) {
   serverLogs = []; // ログをリセット
   addLog('doGet関数が呼び出されました', e);
@@ -2798,39 +2531,90 @@ function getLocationMaster() {
   
   try {
     const sheet = getLocationMasterSheet();
+    addLog('拠点マスタシート取得成功', { 
+      sheetName: sheet.getName(),
+      sheetId: sheet.getSheetId()
+    });
+    
     const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    addLog('シート情報', { lastRow, lastColumn });
     
     if (lastRow <= 1) {
       // ヘッダー行のみの場合
+      addLog('データなし（ヘッダー行のみ）');
       return [];
     }
     
-    const data = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
+    const dataRange = sheet.getRange(2, 1, lastRow - 1, 7);
+    const data = dataRange.getValues();
+    addLog('データ取得', { 
+      rangeAddress: dataRange.getA1Notation(),
+      dataRows: data.length,
+      firstRow: data[0] 
+    });
+    
     const locations = [];
     
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       if (row[0]) { // 拠点IDが存在する場合のみ
-        locations.push({
-          locationId: row[0],
-          locationName: row[1],
-          locationCode: row[2],
-          groupEmail: row[3],
-          status: row[4],
-          createdAt: row[5],
-          updatedAt: row[6]
-        });
+        const location = {
+          locationId: String(row[0]),
+          locationName: String(row[1]),
+          locationCode: String(row[2]),
+          groupEmail: String(row[3] || ''),
+          status: String(row[4]),
+          createdAt: formatDateForLocation(row[5]),
+          updatedAt: formatDateForLocation(row[6])
+        };
+        locations.push(location);
+        addLog(`拠点データ追加 ${i + 1}`, location);
       }
     }
     
     endPerformanceTimer(startTime, '拠点マスタデータ取得');
-    addLog('拠点マスタデータ取得完了', { count: locations.length });
+    addLog('拠点マスタデータ取得完了', { 
+      count: locations.length,
+      locations: locations
+    });
     
     return locations;
   } catch (error) {
     endPerformanceTimer(startTime, '拠点マスタデータ取得エラー');
-    addLog('拠点マスタデータ取得エラー', { error: error.toString() });
+    addLog('拠点マスタデータ取得エラー', { 
+      error: error.toString(),
+      message: error.message,
+      stack: error.stack
+    });
     throw error;
+  }
+}
+
+/**
+ * 日付フォーマット関数（拠点マスタ用）
+ */
+function formatDateForLocation(dateValue) {
+  if (!dateValue) return '';
+  
+  try {
+    // 既に文字列の場合（アポストロフィ付きの場合を含む）
+    if (typeof dateValue === 'string') {
+      return dateValue.startsWith("'") ? dateValue.substring(1) : dateValue;
+    }
+    
+    // Dateオブジェクトの場合
+    if (dateValue instanceof Date) {
+      const year = dateValue.getFullYear();
+      const month = (dateValue.getMonth() + 1).toString().padStart(2, '0');
+      const day = dateValue.getDate().toString().padStart(2, '0');
+      return `${year}/${month}/${day}`;
+    }
+    
+    return dateValue.toString();
+  } catch (error) {
+    console.error('日付フォーマットエラー:', error, dateValue);
+    return '';
   }
 }
 
@@ -2977,5 +2761,51 @@ function deleteLocation(locationId) {
     endPerformanceTimer(startTime, '拠点削除エラー');
     addLog('拠点削除エラー', { error: error.toString() });
     return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * 拠点マスタのテスト関数（デバッグ用）
+ */
+function testLocationMaster() {
+  try {
+    console.log('=== 拠点マスタテスト開始 ===');
+    
+    // 1. シートの存在確認
+    console.log('1. シート取得テスト');
+    const sheet = getLocationMasterSheet();
+    console.log('シート名:', sheet.getName());
+    console.log('最終行:', sheet.getLastRow());
+    console.log('最終列:', sheet.getLastColumn());
+    
+    // 2. データ取得テスト
+    console.log('\n2. データ取得テスト');
+    const locations = getLocationMaster();
+    console.log('取得件数:', locations.length);
+    console.log('取得データ:', JSON.stringify(locations, null, 2));
+    
+    // 3. 個別拠点取得テスト
+    console.log('\n3. 個別拠点取得テスト');
+    const osaka = getLocationById('osaka');
+    console.log('大阪拠点:', JSON.stringify(osaka, null, 2));
+    
+    console.log('\n=== テスト完了 ===');
+    
+    return {
+      success: true,
+      sheet: {
+        name: sheet.getName(),
+        lastRow: sheet.getLastRow(),
+        lastColumn: sheet.getLastColumn()
+      },
+      data: locations,
+      count: locations.length
+    };
+  } catch (error) {
+    console.error('テストエラー:', error);
+    return {
+      success: false,
+      error: error.toString()
+    };
   }
 }

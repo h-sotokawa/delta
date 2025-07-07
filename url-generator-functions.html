@@ -106,27 +106,66 @@
   function loadLocations() {
     console.log('拠点一覧の読み込み開始');
     
+    // デバッグ用: 拠点選択要素の存在確認
+    const locationSelect = document.getElementById('location');
+    if (!locationSelect) {
+      console.error('拠点選択要素が見つかりません');
+      showErrorMessage('拠点選択要素が見つかりません');
+      return;
+    }
+    
+    // 読み込み中の表示
+    locationSelect.innerHTML = '<option value="">読み込み中...</option>';
+    locationSelect.disabled = true;
+    
     google.script.run
       .withSuccessHandler(function(locations) {
         console.log('拠点一覧取得成功:', locations);
-        const locationSelect = document.getElementById('location');
-        locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
+        console.log('データ型:', typeof locations);
+        console.log('配列かどうか:', Array.isArray(locations));
+        console.log('データ長:', locations ? locations.length : 'null');
         
-        if (locations && locations.length > 0) {
-          locations.forEach(function(location) {
-            if (location.status === 'active') {
+        locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
+        locationSelect.disabled = false;
+        
+        if (locations && Array.isArray(locations) && locations.length > 0) {
+          console.log('拠点データを追加開始');
+          let addedCount = 0;
+          
+          locations.forEach(function(location, index) {
+            console.log(`拠点 ${index}:`, location);
+            
+            if (location && location.status === 'active') {
               const option = document.createElement('option');
               option.value = location.locationId;
               option.textContent = location.locationName;
               option.setAttribute('data-code', location.locationCode);
               locationSelect.appendChild(option);
+              addedCount++;
+              console.log(`追加成功: ${location.locationName} (${location.locationId})`);
             }
           });
+          
+          console.log(`合計 ${addedCount} 件の拠点を追加`);
+          
+          if (addedCount === 0) {
+            showErrorMessage('有効な拠点データがありません');
+          }
+        } else {
+          console.log('拠点データが空または無効です');
+          locationSelect.innerHTML = '<option value="">拠点データがありません</option>';
+          showErrorMessage('拠点データが見つかりません。拠点マスタを確認してください。');
         }
       })
       .withFailureHandler(function(error) {
         console.error('拠点一覧取得エラー:', error);
-        showErrorMessage('拠点一覧の取得に失敗しました: ' + error.message);
+        console.error('エラー詳細:', error.toString());
+        console.error('エラースタック:', error.stack);
+        
+        locationSelect.innerHTML = '<option value="">エラーが発生しました</option>';
+        locationSelect.disabled = false;
+        
+        showErrorMessage('拠点一覧の取得に失敗しました: ' + error.toString());
       })
       .getLocationMaster();
   }
@@ -519,6 +558,56 @@
   window.loadLocations = loadLocations;
   window.loadModels = loadModels;
   window.updateLocationNumber = updateLocationNumber;
+  
+  // デバッグ用関数
+  window.testLoadLocations = function() {
+    console.log('=== 拠点データ再読み込みテスト開始 ===');
+    const debugOutput = document.getElementById('debugOutput');
+    const debugContent = document.getElementById('debugContent');
+    
+    debugOutput.style.display = 'block';
+    debugContent.textContent = '拠点データを読み込み中...\n';
+    
+    // 拠点データを強制的に再読み込み
+    loadLocations();
+    
+    // 3秒後に選択肢の状態を確認
+    setTimeout(function() {
+      const locationSelect = document.getElementById('location');
+      const options = locationSelect.options;
+      
+      debugContent.textContent += '\n=== 拠点選択ドロップダウンの状態 ===\n';
+      debugContent.textContent += `オプション数: ${options.length}\n`;
+      
+      for (let i = 0; i < options.length; i++) {
+        debugContent.textContent += `オプション${i}: value="${options[i].value}", text="${options[i].text}", data-code="${options[i].getAttribute('data-code')}"\n`;
+      }
+      
+      console.log('=== テスト完了 ===');
+    }, 3000);
+  };
+  
+  window.testLocationMasterBackend = function() {
+    console.log('=== バックエンド拠点マスタテスト開始 ===');
+    const debugOutput = document.getElementById('debugOutput');
+    const debugContent = document.getElementById('debugContent');
+    
+    debugOutput.style.display = 'block';
+    debugContent.textContent = 'バックエンドの拠点マスタをテスト中...\n';
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('テスト結果:', result);
+        debugContent.textContent += '\n=== バックエンドテスト結果 ===\n';
+        debugContent.textContent += JSON.stringify(result, null, 2);
+      })
+      .withFailureHandler(function(error) {
+        console.error('テストエラー:', error);
+        debugContent.textContent += '\n=== エラー ===\n';
+        debugContent.textContent += error.toString();
+      })
+      .testLocationMaster();
+  };
   
   console.log('URL生成機能が登録されました');
 </script>
