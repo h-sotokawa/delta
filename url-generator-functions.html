@@ -208,8 +208,24 @@
           console.log(`最終的なselect要素の状態:`, {
             childrenCount: locationSelect.children.length,
             disabled: locationSelect.disabled,
-            innerHTML: locationSelect.innerHTML.substring(0, 200) + '...'
+            innerHTML: locationSelect.innerHTML.substring(0, 500) + '...'
           });
+          
+          // 追加直後に要素が存在するか再確認
+          setTimeout(() => {
+            const checkSelect = document.getElementById('location');
+            console.log('=== 1秒後の確認 ===');
+            console.log('select要素:', checkSelect);
+            console.log('オプション数:', checkSelect ? checkSelect.options.length : 'select要素なし');
+            if (checkSelect) {
+              console.log('innerHTML:', checkSelect.innerHTML);
+              
+              // 全てのオプションを表示
+              for (let i = 0; i < checkSelect.options.length; i++) {
+                console.log(`option[${i}]: value="${checkSelect.options[i].value}", text="${checkSelect.options[i].text}"`);
+              }
+            }
+          }, 1000);
           
           if (addedCount === 0) {
             showErrorMessage('有効な拠点データがありません');
@@ -649,6 +665,40 @@
       
       console.log('=== テスト完了 ===');
     }, 3000);
+  };
+  
+  // 手動でデータを追加する関数
+  window.manuallyAddLocations = function() {
+    console.log('=== 手動で拠点データを追加 ===');
+    const locationSelect = document.getElementById('location');
+    
+    if (!locationSelect) {
+      console.error('location要素が見つかりません');
+      return;
+    }
+    
+    // 既存のオプションをクリア
+    locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
+    
+    // 手動でオプションを追加
+    const locations = [
+      { id: 'himeji', name: '姫路', code: 'HIMEJI' },
+      { id: 'nara', name: '奈良', code: 'NARA' },
+      { id: 'keiji', name: '京滋', code: 'KEIJI' },
+      { id: 'osaka', name: '大阪', code: 'OSAKA' }
+    ];
+    
+    locations.forEach(loc => {
+      const option = document.createElement('option');
+      option.value = loc.id;
+      option.textContent = loc.name;
+      option.setAttribute('data-code', loc.code);
+      locationSelect.appendChild(option);
+      console.log(`追加: ${loc.name}`);
+    });
+    
+    console.log('完了。現在のオプション数:', locationSelect.options.length);
+    console.log('現在のHTML:', locationSelect.outerHTML);
   };
   
   window.testLocationMasterBackend = function() {
