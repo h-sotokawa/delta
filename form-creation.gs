@@ -2796,8 +2796,8 @@ function checkDuplicateValues(deviceCategory, checkData) {
     const dataRange = sheet.getRange(headerInfo.rowIndex + 1, 1, lastRow - headerInfo.rowIndex, lastColumn);
     const dataValues = dataRange.getValues();
 
-    // デバイスタイプに応じて除外するフィールドを決定
-    const excludedFields = (deviceType === 'プリンタ' || deviceType === 'その他') 
+    // デバイスカテゴリに応じて除外するフィールドを決定
+    const excludedFields = (deviceCategory === 'プリンタ' || deviceCategory === 'その他') 
       ? ['assetNumber', 'software', 'os', 'depositReceiptNo'] 
       : [];
 
@@ -2808,9 +2808,9 @@ function checkDuplicateValues(deviceCategory, checkData) {
 
       // プリンタ・その他の場合、除外対象フィールドはスキップ
       if (excludedFields.includes(fieldName)) {
-        addFormLog('重複チェック: デバイスタイプにより除外', {
+        addFormLog('重複チェック: デバイスカテゴリにより除外', {
           fieldName,
-          deviceType,
+          deviceCategory,
           value,
           excludedFields
         });
@@ -2861,7 +2861,7 @@ function checkDuplicateValues(deviceCategory, checkData) {
 
     addFormLog('重複チェック完了', {
       sheetName,
-      deviceType: deviceType,
+      deviceCategory: deviceCategory,
       excludedFields: excludedFields,
       checkedFields,
       duplicatesFound: duplicates.length,

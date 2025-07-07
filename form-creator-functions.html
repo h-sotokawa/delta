@@ -479,9 +479,6 @@
     // 属性フォームを更新
     updateAttributesForm();
     
-    // フォームタイトルの自動生成
-    updateFormTitle();
-    
     if (DEBUG_MODE) {
       showDebugInfo('拠点選択更新', { 
         selectedLocation,
@@ -668,9 +665,6 @@
     loadModelCategories();
     
     updateAttributesForm();
-    
-    // フォームタイトルの自動生成
-    updateFormTitle();
     
     if (DEBUG_MODE) {
       const deviceCategorySelect = document.getElementById('device-category');
@@ -931,7 +925,6 @@
     
     // デバッグ: フォームデータの確認
     console.log('フォームデータ確認:', {
-      title: formData.get('title'),
       deviceType: deviceType,
       deviceCategory: deviceCategory,
       locationNumber: locationNumber,
@@ -950,10 +943,11 @@
       }
     }
 
-    const formTitle = formData.get('title'); // タイトルを直接取得
+    // 拠点管理番号をタイトルとして使用
+    const formTitle = locationNumber; // 拠点管理番号をタイトルに設定
     
     const formConfig = {
-      title: formTitle, // ユーザーが入力したタイトルを使用
+      title: formTitle, // 拠点管理番号をタイトルとして使用
       description: `${getLocationDisplayName(location)} 代替機依頼フォーム`,
       deviceType: deviceType,
       locationNumber: locationNumber,
@@ -1068,10 +1062,10 @@
     
     // 必須フィールドチェック
     if (!formConfig.title || formConfig.title.trim() === '') {
-      validationErrors.push('フォームタイトルが未設定です');
+      validationErrors.push('拠点管理番号からタイトルを生成できませんでした');
       isValid = false;
     } else {
-      console.log('✓ フォームタイトル:', formConfig.title);
+      console.log('✓ フォームタイトル（拠点管理番号から生成）:', formConfig.title);
     }
     
     if (!formConfig.locationNumber || formConfig.locationNumber.trim() === '') {
@@ -1890,28 +1884,7 @@
   window.updateAttributeLocationNumber = updateAttributeLocationNumber;
   window.updateFinalAttributeLocationNumber = updateFinalAttributeLocationNumber;
   
-  // フォームタイトル自動生成機能
-  function updateFormTitle() {
-    const locationSelect = document.getElementById('location-select');
-    const deviceCategorySelect = document.getElementById('device-category');
-    const formTitleInput = document.getElementById('form-title');
-    
-    if (!locationSelect || !deviceCategorySelect || !formTitleInput) return;
-    
-    const location = locationSelect.value;
-    const deviceCategory = deviceCategorySelect.value;
-    
-    if (location && deviceCategory && !formTitleInput.value.trim()) {
-      const locationName = getLocationDisplayName(location);
-      const isTerminal = deviceCategory === 'SV' || deviceCategory === 'CL';
-      const deviceTypeName = isTerminal ? '端末' : 'プリンタ・その他';
-      const suggestedTitle = `${locationName} ${deviceTypeName}代替機依頼フォーム`;
-      
-      formTitleInput.value = suggestedTitle;
-      formTitleInput.placeholder = suggestedTitle;
-    }
-  }
-  
-  window.updateFormTitle = updateFormTitle;
+  // フォームタイトル自動生成機能は削除済み
+  // タイトルは拠点管理番号から自動設定されます
 
 </script> 
