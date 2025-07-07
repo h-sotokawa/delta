@@ -5,16 +5,31 @@
   // ========================================
   function onUrlGeneratorPageShow() {
     console.log('URL生成ページ初期化開始');
+    console.log('onUrlGeneratorPageShow関数が呼び出されました');
     
     if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
       showDebugInfo('URL生成ページ初期化開始', {});
     }
     
     // 共通フォームURL設定の確認
+    console.log('共通フォームURL設定の確認を開始');
     checkCommonFormSettings();
     
     // 拠点一覧の読み込み
+    console.log('拠点一覧の読み込みを開始');
     loadLocations();
+    
+    // デバッグ：ページ要素の存在確認
+    const locationElement = document.getElementById('location');
+    console.log('拠点選択要素の存在:', locationElement ? '存在する' : '存在しない');
+    if (locationElement) {
+      console.log('拠点選択要素の初期状態:', {
+        tagName: locationElement.tagName,
+        id: locationElement.id,
+        childrenCount: locationElement.children.length,
+        disabled: locationElement.disabled
+      });
+    }
   }
 
   // ========================================
@@ -610,4 +625,15 @@
   };
   
   console.log('URL生成機能が登録されました');
+  
+  // ページ読み込み時にも初期化を実行（念のため）
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded: URL生成ページ');
+    // URL生成ページが表示されている場合のみ初期化
+    const urlGeneratorPage = document.getElementById('url-generator');
+    if (urlGeneratorPage && urlGeneratorPage.classList.contains('active')) {
+      console.log('URL生成ページがアクティブなので初期化を実行');
+      onUrlGeneratorPageShow();
+    }
+  });
 </script>

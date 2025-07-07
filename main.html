@@ -84,16 +84,20 @@
     
     // URL生成ページの場合、URL生成機能を初期化
     if (pageId === 'url-generator') {
+      console.log('showPage: URL生成ページが選択されました');
       if (DEBUG_MODE) {
         showDebugInfo('showPage: URL生成ページ表示', { pageId });
       }
       setTimeout(() => {
+        console.log('showPage: URL生成機能初期化を試行');
         if (typeof onUrlGeneratorPageShow === 'function') {
+          console.log('showPage: onUrlGeneratorPageShow関数が見つかりました。実行します。');
           if (DEBUG_MODE) {
             showDebugInfo('showPage遅延実行: URL生成機能初期化', {});
           }
           onUrlGeneratorPageShow();
         } else {
+          console.error('showPage: onUrlGeneratorPageShow関数が見つかりません');
           if (DEBUG_MODE) {
             showDebugInfo('showPage: onUrlGeneratorPageShow関数が見つからない', {});
           }
