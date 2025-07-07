@@ -119,12 +119,30 @@
   // 拠点一覧の読み込み
   // ========================================
   function loadLocations() {
+    console.log('========================================');
+    console.log('loadLocations関数開始');
+    console.log('========================================');
     console.log('拠点一覧の読み込み開始');
     
     // デバッグ用: 拠点選択要素の存在確認
     const locationSelect = document.getElementById('location');
+    console.log('location要素の検索結果:', locationSelect);
+    
     if (!locationSelect) {
       console.error('拠点選択要素が見つかりません');
+      console.error('現在のDOM構造を確認してください');
+      
+      // 全てのselect要素を探してみる
+      const allSelects = document.querySelectorAll('select');
+      console.log('ページ内の全select要素数:', allSelects.length);
+      allSelects.forEach((select, index) => {
+        console.log(`select[${index}]:`, {
+          id: select.id,
+          name: select.name,
+          className: select.className
+        });
+      });
+      
       showErrorMessage('拠点選択要素が見つかりません');
       return;
     }
@@ -149,19 +167,49 @@
           
           locations.forEach(function(location, index) {
             console.log(`拠点 ${index}:`, location);
+            console.log(`  - locationId: "${location.locationId}"`);
+            console.log(`  - locationName: "${location.locationName}"`);
+            console.log(`  - locationCode: "${location.locationCode}"`);
+            console.log(`  - status: "${location.status}"`);
+            console.log(`  - statusがactiveか: ${location.status === 'active'}`);
             
-            if (location && location.status === 'active') {
+            // ステータスのチェックを一時的に緩和してデバッグ
+            if (location && location.locationId && location.locationName) {
               const option = document.createElement('option');
               option.value = location.locationId;
               option.textContent = location.locationName;
-              option.setAttribute('data-code', location.locationCode);
+              if (location.locationCode) {
+                option.setAttribute('data-code', location.locationCode);
+              }
+              
+              // optionが正しく作成されたか確認
+              console.log(`作成されたoption:`, {
+                value: option.value,
+                text: option.textContent,
+                dataCode: option.getAttribute('data-code')
+              });
+              
+              // DOM操作前の状態を確認
+              console.log(`追加前のselect要素の子要素数: ${locationSelect.children.length}`);
+              
               locationSelect.appendChild(option);
+              
+              // DOM操作後の状態を確認
+              console.log(`追加後のselect要素の子要素数: ${locationSelect.children.length}`);
+              
               addedCount++;
               console.log(`追加成功: ${location.locationName} (${location.locationId})`);
+            } else {
+              console.log(`スキップ: 必要なデータが不足`, location);
             }
           });
           
           console.log(`合計 ${addedCount} 件の拠点を追加`);
+          console.log(`最終的なselect要素の状態:`, {
+            childrenCount: locationSelect.children.length,
+            disabled: locationSelect.disabled,
+            innerHTML: locationSelect.innerHTML.substring(0, 200) + '...'
+          });
           
           if (addedCount === 0) {
             showErrorMessage('有効な拠点データがありません');
@@ -565,6 +613,7 @@
   // ========================================
   // グローバル関数登録
   // ========================================
+  window.onUrlGeneratorPageShow = onUrlGeneratorPageShow;
   window.updateCategoryInfo = updateCategoryInfo;
   window.generateAndSaveUrl = generateAndSaveUrl;
   window.resetForm = resetForm;
@@ -622,6 +671,28 @@
         debugContent.textContent += error.toString();
       })
       .testLocationMaster();
+  };
+  
+  // 直接オプションを追加するテスト関数
+  window.testDirectAddOption = function() {
+    console.log('=== 直接オプション追加テスト ===');
+    const locationSelect = document.getElementById('location');
+    
+    if (!locationSelect) {
+      console.error('location要素が見つかりません');
+      return;
+    }
+    
+    console.log('現在のオプション数:', locationSelect.options.length);
+    
+    // テスト用のオプションを追加
+    const testOption = document.createElement('option');
+    testOption.value = 'test';
+    testOption.textContent = 'テスト拠点';
+    locationSelect.appendChild(testOption);
+    
+    console.log('追加後のオプション数:', locationSelect.options.length);
+    console.log('select要素のHTML:', locationSelect.outerHTML);
   };
   
   console.log('URL生成機能が登録されました');
