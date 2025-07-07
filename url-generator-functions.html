@@ -30,6 +30,11 @@
         console.warn('拠点データが読み込まれていません。手動で追加します。');
         addStaticLocations();
       }
+      
+      // 初期化時に拠点管理番号の更新を試行
+      setTimeout(function() {
+        updateLocationNumber();
+      }, 1000);
     }, 5000);
     
     // デバッグ：ページ要素の存在確認
@@ -391,16 +396,27 @@
   // 拠点管理番号の自動生成
   // ========================================
   function updateLocationNumber() {
+    console.log('updateLocationNumber関数が呼び出されました');
+    
     const location = document.getElementById('location').value;
     const category = document.getElementById('deviceCategory').value;
     const model = document.getElementById('model').value;
     const serialNumber = document.getElementById('serialNumber').value.trim();
     const sequenceNumber = document.getElementById('sequenceNumber').value;
     
+    console.log('フィールドの値:', {
+      location: location,
+      category: category,
+      model: model,
+      serialNumber: serialNumber,
+      sequenceNumber: sequenceNumber
+    });
+    
     const locationNumberInput = document.getElementById('locationNumber');
     
     // すべての必須項目が入力されているかチェック
     if (!location || !category || !model || !serialNumber || !sequenceNumber) {
+      console.log('必須項目が不足しています');
       locationNumberInput.value = '';
       return;
     }
@@ -410,11 +426,18 @@
     const selectedOption = locationSelect.options[locationSelect.selectedIndex];
     const locationCode = selectedOption.getAttribute('data-code') || location;
     
+    console.log('拠点コード取得:', {
+      selectedIndex: locationSelect.selectedIndex,
+      selectedOption: selectedOption,
+      dataCode: selectedOption ? selectedOption.getAttribute('data-code') : 'なし',
+      locationCode: locationCode
+    });
+    
     // 拠点管理番号を生成（形式: 拠点_カテゴリ_モデル_製造番号_連番）
     const locationNumber = `${locationCode}_${category}_${model}_${serialNumber}_${String(sequenceNumber).padStart(3, '0')}`;
     
     locationNumberInput.value = locationNumber;
-    console.log('拠点管理番号生成:', locationNumber);
+    console.log('拠点管理番号生成完了:', locationNumber);
   }
 
   // ========================================

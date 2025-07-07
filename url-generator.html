@@ -107,7 +107,7 @@
               placeholder="例: ABC123456" 
               pattern="[A-Za-z0-9-]+"
               title="英数字とハイフンのみ使用可能"
-              onchange="updateLocationNumber()">
+              onchange="updateLocationNumber()" oninput="updateLocationNumber()">
             <small class="help-text">機器の製造番号を入力してください</small>
           </div>
 
@@ -119,7 +119,7 @@
             </label>
             <input type="number" id="sequenceNumber" name="sequenceNumber" required
               min="1" max="999" value="1"
-              onchange="updateLocationNumber()">
+              onchange="updateLocationNumber()" oninput="updateLocationNumber()">
             <small class="help-text">同一製造番号の機器がある場合の連番</small>
           </div>
 
