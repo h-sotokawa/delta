@@ -125,7 +125,17 @@
     console.log('拠点一覧の読み込み開始');
     
     // デバッグ用: 拠点選択要素の存在確認
-    const locationSelect = document.getElementById('location');
+    // onchange="updateLocationNumber()"を持つ正しい要素を探す
+    let locationSelect = document.querySelector('select#location[onchange="updateLocationNumber()"]');
+    
+    if (!locationSelect) {
+      // 属性なしで再度検索
+      locationSelect = document.getElementById('location');
+      if (locationSelect && locationSelect.tagName === 'SELECT') {
+        console.log('location要素は見つかったが、onchange属性が異なる:', locationSelect.getAttribute('onchange'));
+      }
+    }
+    
     console.log('location要素の検索結果:', locationSelect);
     
     if (!locationSelect) {
@@ -139,7 +149,9 @@
         console.log(`select[${index}]:`, {
           id: select.id,
           name: select.name,
-          className: select.className
+          onchange: select.getAttribute('onchange'),
+          className: select.className,
+          parent: select.parentElement.tagName
         });
       });
       
@@ -670,15 +682,42 @@
   // 手動でデータを追加する関数
   window.manuallyAddLocations = function() {
     console.log('=== 手動で拠点データを追加 ===');
-    const locationSelect = document.getElementById('location');
     
-    if (!locationSelect) {
-      console.error('location要素が見つかりません');
+    // 全てのlocation IDを持つ要素を検索
+    const allLocationElements = document.querySelectorAll('#location');
+    console.log(`ID="location"の要素数: ${allLocationElements.length}`);
+    
+    allLocationElements.forEach((elem, index) => {
+      console.log(`location要素[${index}]:`, {
+        tagName: elem.tagName,
+        onchange: elem.getAttribute('onchange'),
+        parent: elem.parentElement,
+        innerHTML: elem.innerHTML
+      });
+    });
+    
+    // onchange="updateLocationNumber()"を持つ要素を特定
+    const correctSelect = document.querySelector('select#location[onchange="updateLocationNumber()"]');
+    
+    if (!correctSelect) {
+      console.error('onchange="updateLocationNumber()"を持つlocation要素が見つかりません');
+      // 別の方法で探す
+      const allSelects = document.querySelectorAll('select');
+      console.log('全select要素:', allSelects.length);
+      allSelects.forEach((s, i) => {
+        console.log(`select[${i}]:`, {
+          id: s.id,
+          onchange: s.getAttribute('onchange'),
+          optionsCount: s.options.length
+        });
+      });
       return;
     }
     
+    console.log('正しいselect要素を発見:', correctSelect);
+    
     // 既存のオプションをクリア
-    locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
+    correctSelect.innerHTML = '<option value="">拠点を選択してください</option>';
     
     // 手動でオプションを追加
     const locations = [
@@ -693,12 +732,12 @@
       option.value = loc.id;
       option.textContent = loc.name;
       option.setAttribute('data-code', loc.code);
-      locationSelect.appendChild(option);
+      correctSelect.appendChild(option);
       console.log(`追加: ${loc.name}`);
     });
     
-    console.log('完了。現在のオプション数:', locationSelect.options.length);
-    console.log('現在のHTML:', locationSelect.outerHTML);
+    console.log('完了。現在のオプション数:', correctSelect.options.length);
+    console.log('現在のHTML:', correctSelect.outerHTML);
   };
   
   window.testLocationMasterBackend = function() {
