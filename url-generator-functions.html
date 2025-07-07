@@ -23,6 +23,15 @@
     console.log('カテゴリ一覧の読み込みを開始');
     loadCategories();
     
+    // 拠点データ読み込みのフォールバック（5秒後）
+    setTimeout(function() {
+      const locationSelect = document.getElementById('location');
+      if (locationSelect && locationSelect.options.length <= 1) {
+        console.warn('拠点データが読み込まれていません。手動で追加します。');
+        addStaticLocations();
+      }
+    }, 5000);
+    
     // デバッグ：ページ要素の存在確認
     const locationElement = document.getElementById('location');
     console.log('拠点選択要素の存在:', locationElement ? '存在する' : '存在しない');
@@ -269,6 +278,12 @@
         locationSelect.disabled = false;
         
         showErrorMessage('拠点一覧の取得に失敗しました: ' + error.toString());
+        
+        // エラー時は静的データを使用
+        console.log('エラーのため静的拠点データを使用します');
+        setTimeout(function() {
+          addStaticLocations();
+        }, 1000);
       })
       .getLocationMaster();
   }
@@ -406,6 +421,26 @@
   // URL生成・保存処理
   // ========================================
   function generateAndSaveUrl() {
+    const form = document.getElementById('urlGenerationForm');
+    if (!form) return;
+    
+    // 拠点データが読み込まれているか確認
+    const locationSelect = document.getElementById('location');
+    if (locationSelect && locationSelect.options.length <= 1) {
+      console.warn('拠点データが読み込まれていません。手動で追加します。');
+      addStaticLocations();
+      
+      // データ追加後、少し待ってから処理を続行
+      setTimeout(function() {
+        generateAndSaveUrlInternal();
+      }, 100);
+      return;
+    }
+    
+    generateAndSaveUrlInternal();
+  }
+  
+  function generateAndSaveUrlInternal() {
     const form = document.getElementById('urlGenerationForm');
     if (!form) return;
     
@@ -737,6 +772,40 @@
   window.loadLocations = loadLocations;
   window.loadModels = loadModels;
   window.updateLocationNumber = updateLocationNumber;
+  
+  // 静的な拠点データを追加するフォールバック関数
+  function addStaticLocations() {
+    console.log('静的な拠点データを追加します');
+    const locationSelect = document.getElementById('location');
+    
+    if (!locationSelect) {
+      console.error('拠点選択要素が見つかりません');
+      return;
+    }
+    
+    // 既存のオプションをクリア
+    locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
+    
+    // 静的な拠点データ
+    const staticLocations = [
+      { locationId: 'himeji', locationName: '姫路', locationCode: 'HMJ' },
+      { locationId: 'nara', locationName: '奈良', locationCode: 'NAR' },
+      { locationId: 'keiji', locationName: '京滋', locationCode: 'KEI' },
+      { locationId: 'osaka', locationName: '大阪', locationCode: 'OSK' },
+      { locationId: 'kobe', locationName: '神戸', locationCode: 'KOB' }
+    ];
+    
+    staticLocations.forEach(function(location) {
+      const option = document.createElement('option');
+      option.value = location.locationId;
+      option.textContent = location.locationName;
+      option.setAttribute('data-code', location.locationCode);
+      locationSelect.appendChild(option);
+    });
+    
+    console.log('静的拠点データを追加しました。オプション数:', locationSelect.options.length);
+    showErrorMessage('拠点データの読み込みに失敗したため、既定の拠点リストを使用しています');
+  }
   
   // デバッグ用関数
   window.testLoadLocations = function() {
