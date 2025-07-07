@@ -1,0 +1,360 @@
+<!-- url-generator-functions.html - URL生成ページの機能 -->
+<script>
+  // ========================================
+  // ページ初期化
+  // ========================================
+  function onUrlGeneratorPageShow() {
+    console.log('URL生成ページ初期化開始');
+    
+    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+      showDebugInfo('URL生成ページ初期化開始', {});
+    }
+    
+    // 共通フォームURL設定の確認
+    checkCommonFormSettings();
+  }
+
+  // ========================================
+  // 共通フォーム設定確認
+  // ========================================
+  function checkCommonFormSettings() {
+    console.log('共通フォーム設定確認開始');
+    
+    google.script.run
+      .withSuccessHandler(function(settings) {
+        console.log('共通フォーム設定取得成功:', settings);
+        updateSettingsStatus(settings);
+      })
+      .withFailureHandler(function(error) {
+        console.error('共通フォーム設定取得エラー:', error);
+        showErrorMessage('共通フォーム設定の確認に失敗しました: ' + error.message);
+      })
+      .getCommonFormsSettings();
+  }
+
+  // ========================================
+  // 設定状況の表示更新
+  // ========================================
+  function updateSettingsStatus(settings) {
+    const hasTerminalUrl = !!(settings.terminalCommonFormUrl);
+    const hasPrinterUrl = !!(settings.printerCommonFormUrl);
+    
+    console.log('設定状況:', { hasTerminalUrl, hasPrinterUrl });
+    
+    // 設定状況を保存（カテゴリ選択時に使用）
+    window.commonFormSettings = {
+      terminal: hasTerminalUrl,
+      printer: hasPrinterUrl,
+      terminalUrl: settings.terminalCommonFormUrl,
+      printerUrl: settings.printerCommonFormUrl
+    };
+    
+    if (!hasTerminalUrl && !hasPrinterUrl) {
+      showErrorMessage('共通フォームURLが設定されていません。設定画面で設定してください。');
+      disableForm();
+    }
+  }
+
+  // ========================================
+  // カテゴリ選択時の情報表示
+  // ========================================
+  function updateCategoryInfo() {
+    const categorySelect = document.getElementById('deviceCategory');
+    const categoryInfo = document.getElementById('categoryInfo');
+    const formTypeText = document.getElementById('formTypeText');
+    const masterTypeText = document.getElementById('masterTypeText');
+    const urlStatusText = document.getElementById('urlStatusText');
+    const categoryHelp = document.getElementById('categoryHelp');
+    
+    if (!categorySelect.value) {
+      categoryInfo.style.display = 'none';
+      categoryHelp.textContent = '選択したカテゴリに応じた共通フォームURLが使用されます';
+      return;
+    }
+    
+    const category = categorySelect.value;
+    let formType, masterType, hasUrl;
+    
+    if (category === 'SV' || category === 'CL') {
+      formType = '端末用共通フォーム';
+      masterType = '端末マスタ';
+      hasUrl = window.commonFormSettings?.terminal || false;
+    } else if (category === 'プリンタ' || category === 'その他') {
+      formType = 'プリンタ・その他用共通フォーム';
+      masterType = 'プリンタマスタ';
+      hasUrl = window.commonFormSettings?.printer || false;
+    }
+    
+    formTypeText.textContent = formType;
+    masterTypeText.textContent = masterType;
+    urlStatusText.textContent = hasUrl ? '✅ 設定済み' : '❌ 未設定';
+    urlStatusText.className = hasUrl ? 'status-ok' : 'status-error';
+    
+    categoryHelp.textContent = hasUrl 
+      ? `${formType}を使用してURLを生成します`
+      : `⚠️ ${formType}のURLが未設定です`;
+    
+    categoryInfo.style.display = 'block';
+  }
+
+  // ========================================
+  // URL生成・保存処理
+  // ========================================
+  function generateAndSaveUrl() {
+    const form = document.getElementById('urlGenerationForm');
+    if (!form) return;
+    
+    // フォームデータを収集
+    const locationNumber = document.getElementById('locationNumber').value.trim();
+    const deviceCategory = document.getElementById('deviceCategory').value;
+    
+    // バリデーション
+    if (!validateGenerationForm(locationNumber, deviceCategory)) {
+      return;
+    }
+    
+    // 共通フォーム設定確認
+    if (!checkCategorySettings(deviceCategory)) {
+      return;
+    }
+    
+    const requestData = {
+      locationNumber: locationNumber,
+      deviceCategory: deviceCategory
+    };
+    
+    showLoadingMessage('URL生成・保存中...');
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoadingMessage();
+        console.log('URL生成・保存成功:', result);
+        
+        if (result.success) {
+          showGenerationResult(result);
+          showSuccessMessage('URLの生成と保存が完了しました');
+        } else {
+          showErrorMessage('URL生成・保存に失敗しました: ' + result.error);
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoadingMessage();
+        console.error('URL生成・保存エラー:', error);
+        showErrorMessage('URL生成・保存に失敗しました: ' + error.message);
+      })
+      .generateAndSaveCommonFormUrl(requestData);
+  }
+
+  // ========================================
+  // フォームバリデーション
+  // ========================================
+  function validateGenerationForm(locationNumber, deviceCategory) {
+    if (!locationNumber) {
+      showErrorMessage('拠点管理番号を入力してください');
+      return false;
+    }
+    
+    if (!deviceCategory) {
+      showErrorMessage('デバイスカテゴリを選択してください');
+      return false;
+    }
+    
+    // 拠点管理番号の形式チェック
+    const locationNumberPattern = /^[A-Za-z0-9_-]+$/;
+    if (!locationNumberPattern.test(locationNumber)) {
+      showErrorMessage('拠点管理番号は英数字、アンダースコア、ハイフンのみ使用可能です');
+      return false;
+    }
+    
+    return true;
+  }
+
+  // ========================================
+  // カテゴリ設定確認
+  // ========================================
+  function checkCategorySettings(deviceCategory) {
+    if (!window.commonFormSettings) {
+      showErrorMessage('共通フォーム設定が確認できていません');
+      return false;
+    }
+    
+    if (deviceCategory === 'SV' || deviceCategory === 'CL') {
+      if (!window.commonFormSettings.terminal) {
+        showErrorMessage('端末用共通フォームURLが設定されていません。設定画面で設定してください。');
+        return false;
+      }
+    } else if (deviceCategory === 'プリンタ' || deviceCategory === 'その他') {
+      if (!window.commonFormSettings.printer) {
+        showErrorMessage('プリンタ・その他用共通フォームURLが設定されていません。設定画面で設定してください。');
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  // ========================================
+  // 生成結果表示
+  // ========================================
+  function showGenerationResult(result) {
+    const resultSection = document.getElementById('resultSection');
+    const resultContent = document.getElementById('resultContent');
+    
+    if (!resultSection || !resultContent) return;
+    
+    // 結果データをグローバルに保存
+    window.generatedResult = result;
+    
+    resultContent.innerHTML = `
+      <div class="result-item">
+        <div class="result-label">
+          <i class="fas fa-map-marker-alt"></i>
+          拠点管理番号
+        </div>
+        <div class="result-value">${result.locationNumber}</div>
+      </div>
+      
+      <div class="result-item">
+        <div class="result-label">
+          <i class="fas fa-tag"></i>
+          デバイスカテゴリ
+        </div>
+        <div class="result-value">${result.deviceCategory}</div>
+      </div>
+      
+      <div class="result-item">
+        <div class="result-label">
+          <i class="fas fa-database"></i>
+          保存先
+        </div>
+        <div class="result-value">${result.savedTo} (行: ${result.savedRow})</div>
+      </div>
+      
+      <div class="result-item full-width">
+        <div class="result-label">
+          <i class="fas fa-link"></i>
+          生成されたURL
+        </div>
+        <div class="result-value url-display">
+          <input type="text" id="generatedUrl" value="${result.generatedUrl}" readonly>
+        </div>
+      </div>
+      
+      <div class="result-item">
+        <div class="result-label">
+          <i class="fas fa-clock"></i>
+          処理時刻
+        </div>
+        <div class="result-value">${new Date().toLocaleString('ja-JP')}</div>
+      </div>
+    `;
+    
+    resultSection.style.display = 'block';
+    resultSection.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // ========================================
+  // ユーティリティ関数
+  // ========================================
+  function resetForm() {
+    const form = document.getElementById('urlGenerationForm');
+    if (form) {
+      form.reset();
+      updateCategoryInfo(); // カテゴリ情報を非表示にする
+    }
+    
+    const resultSection = document.getElementById('resultSection');
+    if (resultSection) {
+      resultSection.style.display = 'none';
+    }
+    
+    showSuccessMessage('フォームをリセットしました');
+  }
+
+  function disableForm() {
+    const form = document.getElementById('urlGenerationForm');
+    if (form) {
+      const inputs = form.querySelectorAll('input, select, button');
+      inputs.forEach(input => {
+        input.disabled = true;
+      });
+    }
+  }
+
+  function copyUrlToClipboard() {
+    const urlInput = document.getElementById('generatedUrl');
+    if (urlInput) {
+      urlInput.select();
+      document.execCommand('copy');
+      showSuccessMessage('URLをクリップボードにコピーしました');
+    }
+  }
+
+  function openGeneratedUrl() {
+    if (window.generatedResult && window.generatedResult.generatedUrl) {
+      window.open(window.generatedResult.generatedUrl, '_blank');
+    }
+  }
+
+  // ========================================
+  // メッセージ表示関数
+  // ========================================
+  function showSuccessMessage(message) {
+    const successDiv = document.getElementById('success-message');
+    const successText = document.getElementById('success-text');
+    
+    if (successDiv && successText) {
+      successText.textContent = message;
+      successDiv.style.display = 'block';
+      
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 3000);
+    }
+  }
+
+  function showErrorMessage(message) {
+    const errorDiv = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+    
+    if (errorDiv && errorText) {
+      errorText.textContent = message;
+      errorDiv.style.display = 'block';
+      
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+  }
+
+  function showLoadingMessage(message) {
+    showSuccessMessage(message);
+  }
+
+  function hideLoadingMessage() {
+    const successDiv = document.getElementById('success-message');
+    if (successDiv) {
+      successDiv.style.display = 'none';
+    }
+  }
+
+  // ========================================
+  // デバッグ関数
+  // ========================================
+  function showDebugInfo(message, data) {
+    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+      console.log('[URL Generator Debug]', message, data);
+    }
+  }
+
+  // ========================================
+  // グローバル関数登録
+  // ========================================
+  window.updateCategoryInfo = updateCategoryInfo;
+  window.generateAndSaveUrl = generateAndSaveUrl;
+  window.resetForm = resetForm;
+  window.copyUrlToClipboard = copyUrlToClipboard;
+  window.openGeneratedUrl = openGeneratedUrl;
+  
+  console.log('URL生成機能が登録されました');
+</script>

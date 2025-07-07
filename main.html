@@ -82,20 +82,20 @@
       }, 100);
     }
     
-    // フォーム作成ページの場合、フォーム作成機能を初期化
-    if (pageId === 'form-creator') {
+    // URL生成ページの場合、URL生成機能を初期化
+    if (pageId === 'url-generator') {
       if (DEBUG_MODE) {
-        showDebugInfo('showPage: フォーム作成ページ表示', { pageId });
+        showDebugInfo('showPage: URL生成ページ表示', { pageId });
       }
       setTimeout(() => {
-        if (typeof onFormCreatorPageShow === 'function') {
+        if (typeof onUrlGeneratorPageShow === 'function') {
           if (DEBUG_MODE) {
-            showDebugInfo('showPage遅延実行: フォーム作成機能初期化', {});
+            showDebugInfo('showPage遅延実行: URL生成機能初期化', {});
           }
-          onFormCreatorPageShow();
+          onUrlGeneratorPageShow();
         } else {
           if (DEBUG_MODE) {
-            showDebugInfo('showPage: onFormCreatorPageShow関数が見つからない', {});
+            showDebugInfo('showPage: onUrlGeneratorPageShow関数が見つからない', {});
           }
         }
       }, 100);

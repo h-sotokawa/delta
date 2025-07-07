@@ -1,0 +1,126 @@
+<!-- url-generator.html - 共通フォームURL生成ページ -->
+<div class="url-generator-container">
+  <div class="page-header">
+    <h1><i class="fas fa-link"></i> 共通フォームURL生成</h1>
+    <p>拠点管理番号を共通フォームURLに追加してマスタデータに保存します</p>
+  </div>
+
+  <!-- URL生成セクション -->
+  <div class="url-generation-section">
+    <div class="section-header">
+      <h2><i class="fas fa-magic"></i> URL生成・保存</h2>
+      <p>拠点管理番号とデバイスカテゴリを指定して、個別URLを生成します</p>
+    </div>
+
+    <!-- 警告メッセージ -->
+    <div class="generation-warning">
+      <div class="warning-header">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>重要な注意事項</strong>
+      </div>
+      <div class="warning-content">
+        <ul>
+          <li>生成されたURLは該当するマスタデータに<strong>自動保存</strong>されます</li>
+          <li>既存のURLがある場合は<strong>上書き</strong>されます</li>
+          <li>共通フォームURLが設定されていない場合は生成できません</li>
+        </ul>
+      </div>
+    </div>
+
+    <form id="urlGenerationForm" class="generation-form">
+      <div class="form-grid">
+        
+        <!-- 拠点管理番号入力 -->
+        <div class="form-group">
+          <label for="locationNumber">
+            <i class="fas fa-map-marker-alt"></i>
+            拠点管理番号 <span class="required">*</span>
+          </label>
+          <input type="text" id="locationNumber" name="locationNumber" required
+            placeholder="例: Osaka_CL_HP_001_001" 
+            pattern="[A-Za-z0-9_-]+"
+            title="英数字、アンダースコア、ハイフンのみ使用可能">
+          <small class="help-text">マスタデータに登録済みの拠点管理番号を入力してください</small>
+        </div>
+
+        <!-- デバイスカテゴリ選択 -->
+        <div class="form-group">
+          <label for="deviceCategory">
+            <i class="fas fa-tag"></i>
+            デバイスカテゴリ <span class="required">*</span>
+          </label>
+          <select id="deviceCategory" name="deviceCategory" required onchange="updateCategoryInfo()">
+            <option value="">カテゴリを選択してください</option>
+            <option value="SV">SV（サーバー）</option>
+            <option value="CL">CL（クライアント）</option>
+            <option value="プリンタ">プリンタ</option>
+            <option value="その他">その他</option>
+          </select>
+          <small class="help-text">
+            <span id="categoryHelp">選択したカテゴリに応じた共通フォームURLが使用されます</span>
+          </small>
+        </div>
+
+      </div>
+
+      <!-- カテゴリ情報表示 -->
+      <div id="categoryInfo" class="category-info" style="display: none;">
+        <div class="info-header">
+          <i class="fas fa-info-circle"></i>
+          <span id="categoryInfoTitle">選択されたカテゴリ情報</span>
+        </div>
+        <div class="info-content">
+          <p><strong>使用される共通フォーム:</strong> <span id="formTypeText"></span></p>
+          <p><strong>保存先マスタ:</strong> <span id="masterTypeText"></span></p>
+          <p><strong>共通URL設定状況:</strong> <span id="urlStatusText">確認中...</span></p>
+        </div>
+      </div>
+
+      <!-- 生成・保存ボタン -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="resetForm()">
+          <i class="fas fa-undo"></i>
+          リセット
+        </button>
+        <button type="button" class="btn btn-primary" onclick="generateAndSaveUrl()">
+          <i class="fas fa-magic"></i>
+          URL生成・保存
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 結果表示セクション -->
+  <div id="resultSection" class="result-section" style="display: none;">
+    <div class="section-header">
+      <h2><i class="fas fa-check-circle"></i> 生成結果</h2>
+    </div>
+
+    <div id="resultContent" class="result-content">
+      <!-- 動的に結果が表示されます -->
+    </div>
+
+    <div class="result-actions">
+      <button type="button" class="btn btn-info" onclick="copyUrlToClipboard()">
+        <i class="fas fa-copy"></i>
+        URLをコピー
+      </button>
+      <button type="button" class="btn btn-success" onclick="openGeneratedUrl()" id="openUrlBtn">
+        <i class="fas fa-external-link-alt"></i>
+        URLを開く
+      </button>
+    </div>
+  </div>
+
+  <!-- 成功メッセージ -->
+  <div id="success-message" class="success-message" style="display: none;">
+    <i class="fas fa-check-circle"></i>
+    <span id="success-text">処理が完了しました</span>
+  </div>
+
+  <!-- エラーメッセージ -->
+  <div id="error-message" class="error-message" style="display: none;">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span id="error-text">エラーが発生しました</span>
+  </div>
+</div>
