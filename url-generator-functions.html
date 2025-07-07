@@ -19,6 +19,10 @@
     console.log('拠点一覧の読み込みを開始');
     loadLocations();
     
+    // カテゴリ一覧の読み込み
+    console.log('カテゴリ一覧の読み込みを開始');
+    loadCategories();
+    
     // デバッグ：ページ要素の存在確認
     const locationElement = document.getElementById('location');
     console.log('拠点選択要素の存在:', locationElement ? '存在する' : '存在しない');
@@ -259,6 +263,53 @@
         showErrorMessage('拠点一覧の取得に失敗しました: ' + error.toString());
       })
       .getLocationMaster();
+  }
+
+  // ========================================
+  // カテゴリ一覧の読み込み
+  // ========================================
+  function loadCategories() {
+    console.log('カテゴリ一覧の読み込み開始');
+    
+    const categorySelect = document.getElementById('deviceCategory');
+    if (!categorySelect) {
+      console.error('deviceCategory要素が見つかりません');
+      return;
+    }
+    
+    // 読み込み中の表示
+    categorySelect.innerHTML = '<option value="">カテゴリを読み込み中...</option>';
+    categorySelect.disabled = true;
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('カテゴリ一覧取得成功:', result);
+        categorySelect.innerHTML = '<option value="">カテゴリを選択してください</option>';
+        categorySelect.disabled = false;
+        
+        if (result.success && result.categories && result.categories.length > 0) {
+          result.categories.forEach(function(category) {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+            console.log(`カテゴリ追加: ${category}`);
+          });
+          
+          console.log(`合計 ${result.categories.length} 件のカテゴリを追加`);
+        } else {
+          console.log('カテゴリデータがありません');
+          categorySelect.innerHTML = '<option value="">カテゴリデータがありません</option>';
+          showErrorMessage('カテゴリデータが見つかりません。機種マスタを確認してください。');
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('カテゴリ一覧取得エラー:', error);
+        categorySelect.innerHTML = '<option value="">エラーが発生しました</option>';
+        categorySelect.disabled = false;
+        showErrorMessage('カテゴリ一覧の取得に失敗しました: ' + error.toString());
+      })
+      .getAvailableCategories();
   }
 
   // ========================================
