@@ -19,18 +19,31 @@ function generateCommonFormUrl(locationNumber, deviceCategory) {
     
     // デバイスカテゴリに応じて適切な共通URLを選択
     let baseUrl;
-    if (deviceCategory === 'SV' || deviceCategory === 'CL') {
+    let formType;
+    
+    // 端末系のカテゴリ判定
+    if (deviceCategory === 'SV' || deviceCategory === 'CL' || 
+        deviceCategory === 'デスクトップPC' || deviceCategory === 'ノートPC' || 
+        deviceCategory === '端末' || deviceCategory.includes('PC') || 
+        deviceCategory.includes('サーバ') || deviceCategory.includes('クライアント')) {
       baseUrl = settings.terminalCommonFormUrl;
+      formType = '端末';
       if (!baseUrl) {
         throw new Error('端末用共通フォームURLが設定されていません');
       }
-    } else if (deviceCategory === 'プリンタ' || deviceCategory === 'その他') {
+    } else if (deviceCategory === 'プリンタ' || deviceCategory.includes('プリンタ')) {
       baseUrl = settings.printerCommonFormUrl;
+      formType = 'プリンタ';
       if (!baseUrl) {
         throw new Error('プリンタ・その他用共通フォームURLが設定されていません');
       }
     } else {
-      throw new Error('無効なデバイスカテゴリです: ' + deviceCategory);
+      // その他のカテゴリはプリンタ・その他用として扱う
+      baseUrl = settings.printerCommonFormUrl;
+      formType = 'その他';
+      if (!baseUrl) {
+        throw new Error('プリンタ・その他用共通フォームURLが設定されていません');
+      }
     }
     
     // URLパラメータとして拠点管理番号を追加
@@ -258,12 +271,22 @@ function generateAndSaveCommonFormUrl(requestData) {
     
     // マスタデータに保存
     let saveResult;
-    if (deviceCategory === 'SV' || deviceCategory === 'CL') {
+    let masterType;
+    
+    // カテゴリに応じて保存先を決定
+    if (deviceCategory === 'SV' || deviceCategory === 'CL' || 
+        deviceCategory === 'デスクトップPC' || deviceCategory === 'ノートPC' || 
+        deviceCategory === '端末' || deviceCategory.includes('PC') || 
+        deviceCategory.includes('サーバ') || deviceCategory.includes('クライアント')) {
       saveResult = saveUrlToTerminalMaster(locationNumber, urlResult.url);
-    } else if (deviceCategory === 'プリンタ' || deviceCategory === 'その他') {
+      masterType = '端末マスタ';
+    } else if (deviceCategory === 'プリンタ' || deviceCategory.includes('プリンタ')) {
       saveResult = saveUrlToPrinterMaster(locationNumber, urlResult.url);
+      masterType = 'プリンタマスタ';
     } else {
-      throw new Error('無効なデバイスカテゴリです: ' + deviceCategory);
+      // その他のカテゴリはプリンタマスタに保存
+      saveResult = saveUrlToPrinterMaster(locationNumber, urlResult.url);
+      masterType = 'プリンタマスタ';
     }
     
     if (!saveResult.success) {
@@ -284,7 +307,7 @@ function generateAndSaveCommonFormUrl(requestData) {
       deviceCategory: deviceCategory,
       generatedUrl: urlResult.url,
       baseUrl: urlResult.baseUrl,
-      savedTo: deviceCategory === 'SV' || deviceCategory === 'CL' ? '端末マスタ' : 'プリンタマスタ',
+      savedTo: masterType,
       savedRow: saveResult.savedRow,
       savedColumn: saveResult.savedColumn
     };

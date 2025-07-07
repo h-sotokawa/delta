@@ -97,13 +97,23 @@
     const category = categorySelect.value;
     let formType, masterType, hasUrl;
     
-    if (category === 'SV' || category === 'CL') {
+    // カテゴリをマスタタイプにマッピング
+    // デスクトップPC、ノートPC、SV、CLなどは端末系として扱う
+    if (category === 'SV' || category === 'CL' || 
+        category === 'デスクトップPC' || category === 'ノートPC' || 
+        category === '端末' || category.includes('PC') || 
+        category.includes('サーバ') || category.includes('クライアント')) {
       formType = '端末用共通フォーム';
       masterType = '端末マスタ';
       hasUrl = window.commonFormSettings?.terminal || false;
-    } else if (category === 'プリンタ' || category === 'その他') {
+    } else if (category === 'プリンタ' || category.includes('プリンタ')) {
       formType = 'プリンタ・その他用共通フォーム';
       masterType = 'プリンタマスタ';
+      hasUrl = window.commonFormSettings?.printer || false;
+    } else {
+      // その他のカテゴリはプリンタ・その他用として扱う
+      formType = 'プリンタ・その他用共通フォーム';
+      masterType = 'その他マスタ';
       hasUrl = window.commonFormSettings?.printer || false;
     }
     
@@ -337,15 +347,9 @@
         
         if (result.success && result.models && result.models.length > 0) {
           // カテゴリに応じてフィルタリング
+          // モデルのカテゴリが選択されたカテゴリと一致するものを抽出
           const filteredModels = result.models.filter(function(model) {
-            if (category === 'SV' || category === 'CL') {
-              return model.category === '端末';
-            } else if (category === 'プリンタ') {
-              return model.category === 'プリンタ';
-            } else if (category === 'その他') {
-              return model.category === 'その他';
-            }
-            return false;
+            return model.category === category;
           });
           
           filteredModels.forEach(function(model) {
@@ -367,7 +371,7 @@
         modelSelect.innerHTML = '<option value="">エラーが発生しました</option>';
         showErrorMessage('モデル一覧の取得に失敗しました: ' + error.message);
       })
-      .getModelMaster();
+      .getModelMasterForForm();
   }
 
   // ========================================
@@ -507,12 +511,22 @@
       return false;
     }
     
-    if (deviceCategory === 'SV' || deviceCategory === 'CL') {
+    // カテゴリに応じて必要なURL設定を確認
+    if (deviceCategory === 'SV' || deviceCategory === 'CL' || 
+        deviceCategory === 'デスクトップPC' || deviceCategory === 'ノートPC' || 
+        deviceCategory === '端末' || deviceCategory.includes('PC') || 
+        deviceCategory.includes('サーバ') || deviceCategory.includes('クライアント')) {
       if (!window.commonFormSettings.terminal) {
         showErrorMessage('端末用共通フォームURLが設定されていません。設定画面で設定してください。');
         return false;
       }
-    } else if (deviceCategory === 'プリンタ' || deviceCategory === 'その他') {
+    } else if (deviceCategory === 'プリンタ' || deviceCategory.includes('プリンタ')) {
+      if (!window.commonFormSettings.printer) {
+        showErrorMessage('プリンタ・その他用共通フォームURLが設定されていません。設定画面で設定してください。');
+        return false;
+      }
+    } else {
+      // その他のカテゴリもプリンタ・その他用として扱う
       if (!window.commonFormSettings.printer) {
         showErrorMessage('プリンタ・その他用共通フォームURLが設定されていません。設定画面で設定してください。');
         return false;
