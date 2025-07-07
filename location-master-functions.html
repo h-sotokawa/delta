@@ -53,8 +53,8 @@
         <td>${escapeHtml(location.locationCode)}</td>
         <td>${escapeHtml(location.groupEmail || '')}</td>
         <td>${statusBadge}</td>
-        <td>${formatDate(location.createdAt)}</td>
-        <td>${formatDate(location.updatedAt)}</td>
+        <td>${location.createdAt || '-'}</td>
+        <td>${location.updatedAt || '-'}</td>
         <td>
           <button class="btn btn-sm btn-outline-primary" onclick="editLocation('${location.locationId}')">
             <i class="fas fa-edit"></i> 編集

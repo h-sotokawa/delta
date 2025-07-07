@@ -2564,9 +2564,8 @@ function getLocationMaster() {
           locationName: String(row[1]),
           locationCode: String(row[2]),
           groupEmail: String(row[3] || ''),
-          status: String(row[4]),
-          createdAt: formatDateForLocation(row[5]),
-          updatedAt: formatDateForLocation(row[6])
+          status: String(row[4])
+          // createdAt と updatedAt を削除（日付処理をスキップ）
         };
         locations.push(location);
         addLog(`拠点データ追加 ${i + 1}`, location);
@@ -2591,32 +2590,7 @@ function getLocationMaster() {
   }
 }
 
-/**
- * 日付フォーマット関数（拠点マスタ用）
- */
-function formatDateForLocation(dateValue) {
-  if (!dateValue) return '';
-  
-  try {
-    // 既に文字列の場合（アポストロフィ付きの場合を含む）
-    if (typeof dateValue === 'string') {
-      return dateValue.startsWith("'") ? dateValue.substring(1) : dateValue;
-    }
-    
-    // Dateオブジェクトの場合
-    if (dateValue instanceof Date) {
-      const year = dateValue.getFullYear();
-      const month = (dateValue.getMonth() + 1).toString().padStart(2, '0');
-      const day = dateValue.getDate().toString().padStart(2, '0');
-      return `${year}/${month}/${day}`;
-    }
-    
-    return dateValue.toString();
-  } catch (error) {
-    console.error('日付フォーマットエラー:', error, dateValue);
-    return '';
-  }
-}
+// 日付フォーマット関数は削除（拠点マスタで日付を扱わないため）
 
 /**
  * 拠点IDから拠点情報を取得
@@ -2782,7 +2756,7 @@ function testLocationMaster() {
     console.log('\n2. データ取得テスト');
     const locations = getLocationMaster();
     console.log('取得件数:', locations.length);
-    console.log('取得データ:', JSON.stringify(locations, null, 2));
+    console.log('取得データ（日付除外）:', JSON.stringify(locations, null, 2));
     
     // 3. 個別拠点取得テスト
     console.log('\n3. 個別拠点取得テスト');
