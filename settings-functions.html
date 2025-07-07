@@ -4,9 +4,18 @@
   // ページ初期化
   // ========================================
   function onSettingsPageShow() {
+    console.log('onSettingsPageShow called');
+    
     if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
       showDebugInfo('設定ページ初期化開始', {});
     }
+    
+    // DOM要素の確認
+    const commonFormsTab = document.getElementById('common-forms-tab');
+    const commonFormsSettings = document.getElementById('common-forms-settings');
+    
+    console.log('共通フォームタブ要素:', commonFormsTab);
+    console.log('共通フォーム設定セクション:', commonFormsSettings);
     
     // 拠点マスタを読み込み
     loadLocationMasterForSettings();
@@ -128,27 +137,56 @@
   // 設定タブ切り替え
   // ========================================
   function showSettingsTab(tabId) {
-    // 全てのタブボタンからactiveクラスを削除
-    document.querySelectorAll('.tab-button').forEach(tab => {
-      tab.classList.remove('active');
-    });
+    console.log('showSettingsTab called with tabId:', tabId);
     
-    // 全ての設定セクションを非表示
-    document.querySelectorAll('.settings-section').forEach(section => {
-      section.classList.remove('active');
-    });
-    
-    // 選択されたタブとセクションをアクティブ化
-    document.getElementById(tabId + '-tab').classList.add('active');
-    document.getElementById(tabId + '-settings').classList.add('active');
-    
-    // タブ固有の初期化処理
-    if (tabId === 'common-forms') {
-      loadCommonFormsSettings();
-    }
-    
-    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-      showDebugInfo('設定タブ切り替え', { tabId });
+    try {
+      // 全てのタブボタンからactiveクラスを削除
+      const tabButtons = document.querySelectorAll('.tab-button');
+      console.log('Found tab buttons:', tabButtons.length);
+      tabButtons.forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // 全ての設定セクションを非表示
+      const settingSections = document.querySelectorAll('.settings-section');
+      console.log('Found setting sections:', settingSections.length);
+      settingSections.forEach(section => {
+        section.classList.remove('active');
+      });
+      
+      // 選択されたタブとセクションをアクティブ化
+      const targetTab = document.getElementById(tabId + '-tab');
+      const targetSection = document.getElementById(tabId + '-settings');
+      
+      console.log('Target tab element:', targetTab);
+      console.log('Target section element:', targetSection);
+      
+      if (targetTab) {
+        targetTab.classList.add('active');
+        console.log('Tab activated successfully');
+      } else {
+        console.error('Target tab not found:', tabId + '-tab');
+      }
+      
+      if (targetSection) {
+        targetSection.classList.add('active');
+        console.log('Section activated successfully');
+      } else {
+        console.error('Target section not found:', tabId + '-settings');
+      }
+      
+      // タブ固有の初期化処理
+      if (tabId === 'common-forms') {
+        console.log('Loading common forms settings...');
+        loadCommonFormsSettings();
+      }
+      
+      if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+        showDebugInfo('設定タブ切り替え', { tabId });
+      }
+    } catch (error) {
+      console.error('Error in showSettingsTab:', error);
+      showSettingsError('タブ切り替えエラー: ' + error.message);
     }
   }
 
@@ -317,10 +355,12 @@
   // 共通フォームURL設定の読み込み
   // ========================================
   function loadCommonFormsSettings() {
+    console.log('loadCommonFormsSettings called');
     showSettingsLoading('共通フォームURL設定を読み込み中...');
     
     google.script.run
       .withSuccessHandler(function(settings) {
+        console.log('共通フォームURL設定読み込み成功:', settings);
         hideSettingsLoading();
         displayCommonFormsSettings(settings);
         
@@ -329,6 +369,7 @@
         }
       })
       .withFailureHandler(function(error) {
+        console.error('共通フォームURL設定読み込みエラー:', error);
         hideSettingsLoading();
         showSettingsError('共通フォームURL設定の読み込みに失敗しました: ' + error.message);
         
@@ -343,15 +384,22 @@
   // 共通フォームURL設定の表示
   // ========================================
   function displayCommonFormsSettings(settings) {
+    console.log('displayCommonFormsSettings called with:', settings);
+    
     const terminalUrlInput = document.getElementById('terminalCommonFormUrl');
     const printerUrlInput = document.getElementById('printerCommonFormUrl');
     
+    console.log('terminalUrlInput element:', terminalUrlInput);
+    console.log('printerUrlInput element:', printerUrlInput);
+    
     if (terminalUrlInput && settings) {
       terminalUrlInput.value = settings.terminalCommonFormUrl || '';
+      console.log('Set terminal URL to:', terminalUrlInput.value);
     }
     
     if (printerUrlInput && settings) {
       printerUrlInput.value = settings.printerCommonFormUrl || '';
+      console.log('Set printer URL to:', printerUrlInput.value);
     }
   }
 
@@ -585,4 +633,19 @@
       console.log('[Settings Debug]', message, data);
     }
   }
+
+  // ========================================
+  // グローバル関数の登録
+  // ========================================
+  // 関数をwindowオブジェクトに登録してグローバルに利用可能にする
+  window.showSettingsTab = showSettingsTab;
+  window.onLocationChange = onLocationChange;
+  window.saveFormStorageSettings = saveFormStorageSettings;
+  window.resetFormStorageSettings = resetFormStorageSettings;
+  window.validateFolderId = validateFolderId;
+  window.saveCommonFormsSettings = saveCommonFormsSettings;
+  window.resetCommonFormsSettings = resetCommonFormsSettings;
+  window.validateFormUrl = validateFormUrl;
+  
+  console.log('Settings functions registered globally');
 </script>
