@@ -142,6 +142,11 @@
     document.getElementById(tabId + '-tab').classList.add('active');
     document.getElementById(tabId + '-settings').classList.add('active');
     
+    // タブ固有の初期化処理
+    if (tabId === 'common-forms') {
+      loadCommonFormsSettings();
+    }
+    
     if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
       showDebugInfo('設定タブ切り替え', { tabId });
     }
@@ -306,6 +311,192 @@
         input.classList.remove('valid');
       })
       .validateDriveFolderId(folderId);
+  }
+
+  // ========================================
+  // 共通フォームURL設定の読み込み
+  // ========================================
+  function loadCommonFormsSettings() {
+    showSettingsLoading('共通フォームURL設定を読み込み中...');
+    
+    google.script.run
+      .withSuccessHandler(function(settings) {
+        hideSettingsLoading();
+        displayCommonFormsSettings(settings);
+        
+        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+          showDebugInfo('共通フォームURL設定読み込み完了', { settings });
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideSettingsLoading();
+        showSettingsError('共通フォームURL設定の読み込みに失敗しました: ' + error.message);
+        
+        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+          showDebugInfo('共通フォームURL設定読み込みエラー', { error });
+        }
+      })
+      .getCommonFormsSettings();
+  }
+
+  // ========================================
+  // 共通フォームURL設定の表示
+  // ========================================
+  function displayCommonFormsSettings(settings) {
+    const terminalUrlInput = document.getElementById('terminalCommonFormUrl');
+    const printerUrlInput = document.getElementById('printerCommonFormUrl');
+    
+    if (terminalUrlInput && settings) {
+      terminalUrlInput.value = settings.terminalCommonFormUrl || '';
+    }
+    
+    if (printerUrlInput && settings) {
+      printerUrlInput.value = settings.printerCommonFormUrl || '';
+    }
+  }
+
+  // ========================================
+  // 共通フォームURL設定の保存
+  // ========================================
+  function saveCommonFormsSettings() {
+    const form = document.getElementById('commonFormsSettingsForm');
+    if (!form) return;
+    
+    // フォームデータを収集
+    const terminalUrl = document.getElementById('terminalCommonFormUrl').value.trim();
+    const printerUrl = document.getElementById('printerCommonFormUrl').value.trim();
+    
+    // バリデーション
+    if (!validateCommonFormsSettings(terminalUrl, printerUrl)) {
+      return;
+    }
+    
+    const settings = {
+      terminalCommonFormUrl: terminalUrl,
+      printerCommonFormUrl: printerUrl
+    };
+    
+    showSettingsLoading('共通フォームURL設定を保存中...');
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideSettingsLoading();
+        showSettingsSuccess('共通フォームURL設定が正常に保存されました');
+        
+        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+          showDebugInfo('共通フォームURL設定保存完了', { result });
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideSettingsLoading();
+        showSettingsError('共通フォームURL設定の保存に失敗しました: ' + error.message);
+        
+        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+          showDebugInfo('共通フォームURL設定保存エラー', { error });
+        }
+      })
+      .saveCommonFormsSettings(settings);
+  }
+
+  // ========================================
+  // 共通フォームURL設定のバリデーション
+  // ========================================
+  function validateCommonFormsSettings(terminalUrl, printerUrl) {
+    // 少なくとも一つのURLが設定されている必要がある
+    if (!terminalUrl && !printerUrl) {
+      showSettingsError('少なくとも一つの共通フォームURLを設定してください');
+      return false;
+    }
+    
+    // URLの形式チェック
+    const urlPattern = /^https:\/\/docs\.google\.com\/forms\/d\/[a-zA-Z0-9_-]+/;
+    
+    if (terminalUrl && !urlPattern.test(terminalUrl)) {
+      showSettingsError('端末用共通フォームURLの形式が正しくありません');
+      return false;
+    }
+    
+    if (printerUrl && !urlPattern.test(printerUrl)) {
+      showSettingsError('プリンタ・その他用共通フォームURLの形式が正しくありません');
+      return false;
+    }
+    
+    return true;
+  }
+
+  // ========================================
+  // Google FormsのURL検証
+  // ========================================
+  function validateFormUrl(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    const formUrl = input.value.trim();
+    
+    if (!formUrl) {
+      showSettingsError('フォームURLを入力してください');
+      return;
+    }
+    
+    // URLの形式チェック
+    const urlPattern = /^https:\/\/docs\.google\.com\/forms\/d\/[a-zA-Z0-9_-]+/;
+    if (!urlPattern.test(formUrl)) {
+      showSettingsError('Google FormsのURLの形式が正しくありません');
+      return;
+    }
+    
+    showSettingsLoading('フォームURLを検証中...');
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideSettingsLoading();
+        
+        if (result.valid) {
+          showSettingsSuccess(`フォーム「${result.title}」への接続が確認できました`);
+          input.classList.add('valid');
+          input.classList.remove('invalid');
+        } else {
+          showSettingsError('フォームにアクセスできません: ' + result.error);
+          input.classList.add('invalid');
+          input.classList.remove('valid');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideSettingsLoading();
+        showSettingsError('フォームURLの検証に失敗しました: ' + error.message);
+        input.classList.add('invalid');
+        input.classList.remove('valid');
+      })
+      .validateGoogleFormUrl(formUrl);
+  }
+
+  // ========================================
+  // 共通フォームURL設定のリセット
+  // ========================================
+  function resetCommonFormsSettings() {
+    if (!confirm('共通フォームURL設定をリセットしてもよろしいですか？\n\n未保存の変更は失われます。')) {
+      return;
+    }
+    
+    // フォームをクリア
+    const form = document.getElementById('commonFormsSettingsForm');
+    if (form) {
+      form.reset();
+      
+      // バリデーションクラスを削除
+      const terminalInput = document.getElementById('terminalCommonFormUrl');
+      const printerInput = document.getElementById('printerCommonFormUrl');
+      
+      if (terminalInput) {
+        terminalInput.classList.remove('valid', 'invalid');
+      }
+      
+      if (printerInput) {
+        printerInput.classList.remove('valid', 'invalid');
+      }
+    }
+    
+    showSettingsSuccess('共通フォームURL設定をリセットしました');
   }
 
   // ========================================

@@ -14,6 +14,10 @@
       <i class="fas fa-folder"></i>
       フォーム保存先
     </button>
+    <button class="tab-button" onclick="showSettingsTab('common-forms')" id="common-forms-tab">
+      <i class="fas fa-link"></i>
+      共通フォームURL
+    </button>
     <button class="tab-button" onclick="showSettingsTab('general')" id="general-tab">
       <i class="fas fa-cogs"></i>
       一般設定
@@ -82,6 +86,74 @@
           リセット
         </button>
         <button type="button" class="btn btn-success" onclick="saveFormStorageSettings()">
+          <i class="fas fa-save"></i>
+          設定を保存
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 共通フォームURL設定 -->
+  <div id="common-forms-settings" class="settings-section">
+    <div class="section-header">
+      <h2><i class="fas fa-link"></i> 共通フォームURL設定</h2>
+      <p>拠点管理番号を事前入力するための共通フォームURLを設定します</p>
+    </div>
+
+    <form id="commonFormsSettingsForm">
+      <div class="settings-grid">
+
+        <!-- 端末用共通フォームURL -->
+        <div class="setting-item">
+          <label for="terminalCommonFormUrl">
+            <i class="fas fa-desktop"></i>
+            端末用共通フォームURL
+            <span class="setting-description">SV・CLカテゴリで使用する共通フォームのURL</span>
+          </label>
+          <div class="input-group">
+            <input type="url" id="terminalCommonFormUrl" name="terminalCommonFormUrl" 
+              placeholder="https://docs.google.com/forms/d/...">
+            <button type="button" class="btn btn-info btn-sm" onclick="validateFormUrl('terminalCommonFormUrl')">
+              <i class="fas fa-check"></i>
+              検証
+            </button>
+          </div>
+          <small class="help-text">
+            例: https://docs.google.com/forms/d/1FAIpQLSe.../viewform<br>
+            拠点管理番号フィールドがあるGoogle FormsのURLを入力してください
+          </small>
+        </div>
+
+        <!-- プリンタ・その他用共通フォームURL -->
+        <div class="setting-item">
+          <label for="printerCommonFormUrl">
+            <i class="fas fa-print"></i>
+            プリンタ・その他用共通フォームURL
+            <span class="setting-description">プリンタ・その他カテゴリで使用する共通フォームのURL</span>
+          </label>
+          <div class="input-group">
+            <input type="url" id="printerCommonFormUrl" name="printerCommonFormUrl" 
+              placeholder="https://docs.google.com/forms/d/...">
+            <button type="button" class="btn btn-info btn-sm" onclick="validateFormUrl('printerCommonFormUrl')">
+              <i class="fas fa-check"></i>
+              検証
+            </button>
+          </div>
+          <small class="help-text">
+            例: https://docs.google.com/forms/d/1FAIpQLSe.../viewform<br>
+            拠点管理番号フィールドがあるGoogle FormsのURLを入力してください
+          </small>
+        </div>
+
+      </div>
+
+      <!-- 保存ボタン -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="resetCommonFormsSettings()">
+          <i class="fas fa-undo"></i>
+          リセット
+        </button>
+        <button type="button" class="btn btn-success" onclick="saveCommonFormsSettings()">
           <i class="fas fa-save"></i>
           設定を保存
         </button>

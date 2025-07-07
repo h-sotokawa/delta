@@ -2607,3 +2607,123 @@ function getFormStorageFolderId(locationId, deviceCategory) {
     };
   }
 }
+
+// ========================================
+// 共通フォームURL設定関連
+// ========================================
+
+/**
+ * 共通フォームURL設定を取得
+ */
+function getCommonFormsSettings() {
+  const startTime = startPerformanceTimer();
+  addLog('共通フォームURL設定取得開始');
+  
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    
+    const settings = {
+      terminalCommonFormUrl: properties.getProperty('TERMINAL_COMMON_FORM_URL') || '',
+      printerCommonFormUrl: properties.getProperty('PRINTER_COMMON_FORM_URL') || ''
+    };
+    
+    endPerformanceTimer(startTime, '共通フォームURL設定取得');
+    addLog('共通フォームURL設定取得完了', settings);
+    
+    return settings;
+  } catch (error) {
+    endPerformanceTimer(startTime, '共通フォームURL設定取得エラー');
+    addLog('共通フォームURL設定取得エラー', { error: error.toString() });
+    throw new Error('共通フォームURL設定の取得に失敗しました: ' + error.toString());
+  }
+}
+
+/**
+ * 共通フォームURL設定を保存
+ */
+function saveCommonFormsSettings(settings) {
+  const startTime = startPerformanceTimer();
+  addLog('共通フォームURL設定保存開始', settings);
+  
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    
+    // 設定値を保存
+    if (settings.terminalCommonFormUrl) {
+      properties.setProperty('TERMINAL_COMMON_FORM_URL', settings.terminalCommonFormUrl);
+    } else {
+      properties.deleteProperty('TERMINAL_COMMON_FORM_URL');
+    }
+    
+    if (settings.printerCommonFormUrl) {
+      properties.setProperty('PRINTER_COMMON_FORM_URL', settings.printerCommonFormUrl);
+    } else {
+      properties.deleteProperty('PRINTER_COMMON_FORM_URL');
+    }
+    
+    endPerformanceTimer(startTime, '共通フォームURL設定保存');
+    addLog('共通フォームURL設定保存完了');
+    
+    return {
+      success: true,
+      message: '共通フォームURL設定が正常に保存されました'
+    };
+  } catch (error) {
+    endPerformanceTimer(startTime, '共通フォームURL設定保存エラー');
+    addLog('共通フォームURL設定保存エラー', { error: error.toString() });
+    throw new Error('共通フォームURL設定の保存に失敗しました: ' + error.toString());
+  }
+}
+
+/**
+ * Google FormsのURLを検証
+ */
+function validateGoogleFormUrl(formUrl) {
+  const startTime = startPerformanceTimer();
+  addLog('Google FormsのURL検証開始', { formUrl });
+  
+  try {
+    // URLの形式チェック
+    const urlPattern = /^https:\/\/docs\.google\.com\/forms\/d\/([a-zA-Z0-9_-]+)/;
+    const match = formUrl.match(urlPattern);
+    
+    if (!match) {
+      return {
+        valid: false,
+        error: 'Google FormsのURLの形式が正しくありません'
+      };
+    }
+    
+    const formId = match[1];
+    
+    try {
+      // FormAppを使ってフォームにアクセスを試行
+      const form = FormApp.openById(formId);
+      const title = form.getTitle();
+      
+      endPerformanceTimer(startTime, 'Google FormsのURL検証');
+      addLog('Google FormsのURL検証完了', { formId, title });
+      
+      return {
+        valid: true,
+        title: title,
+        formId: formId
+      };
+    } catch (formError) {
+      addLog('フォームアクセスエラー', { formId, error: formError.toString() });
+      
+      return {
+        valid: false,
+        error: 'フォームにアクセスできません。フォームが存在しないか、アクセス権限がありません'
+      };
+    }
+  } catch (error) {
+    endPerformanceTimer(startTime, 'Google FormsのURL検証エラー');
+    addLog('Google FormsのURL検証エラー', { error: error.toString() });
+    
+    return {
+      valid: false,
+      error: 'URL検証中にエラーが発生しました: ' + error.toString()
+    };
+  }
+}
