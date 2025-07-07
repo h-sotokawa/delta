@@ -695,6 +695,124 @@
     console.log('select要素のHTML:', locationSelect.outerHTML);
   };
   
+  // select要素を再作成する関数
+  window.recreateLocationSelect = function() {
+    console.log('=== SELECT要素の再作成 ===');
+    
+    const oldSelect = document.getElementById('location');
+    if (!oldSelect) {
+      console.error('既存のlocation要素が見つかりません');
+      return;
+    }
+    
+    // 親要素を取得
+    const parent = oldSelect.parentElement;
+    console.log('親要素:', parent);
+    
+    // 既存のオプションを保存
+    const options = [];
+    for (let i = 0; i < oldSelect.options.length; i++) {
+      options.push({
+        value: oldSelect.options[i].value,
+        text: oldSelect.options[i].text,
+        dataCode: oldSelect.options[i].getAttribute('data-code')
+      });
+    }
+    console.log('保存されたオプション:', options);
+    
+    // 新しいselect要素を作成
+    const newSelect = document.createElement('select');
+    newSelect.id = 'location';
+    newSelect.name = 'location';
+    newSelect.required = true;
+    newSelect.setAttribute('onchange', 'updateLocationNumber()');
+    newSelect.className = oldSelect.className;
+    
+    // オプションを追加
+    options.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.text;
+      if (opt.dataCode && opt.dataCode !== 'null') {
+        option.setAttribute('data-code', opt.dataCode);
+      }
+      newSelect.appendChild(option);
+    });
+    
+    // 古い要素を置き換え
+    parent.replaceChild(newSelect, oldSelect);
+    
+    console.log('新しいselect要素が作成されました');
+    console.log('新しい要素のHTML:', newSelect.outerHTML);
+  };
+  
+  // select要素の表示状態をチェックする関数
+  window.checkSelectVisibility = function() {
+    console.log('=== SELECT要素の表示状態チェック ===');
+    const locationSelect = document.getElementById('location');
+    
+    if (!locationSelect) {
+      console.error('location要素が見つかりません');
+      return;
+    }
+    
+    // 要素のスタイルを確認
+    const computedStyle = window.getComputedStyle(locationSelect);
+    console.log('Computed Style:', {
+      display: computedStyle.display,
+      visibility: computedStyle.visibility,
+      opacity: computedStyle.opacity,
+      width: computedStyle.width,
+      height: computedStyle.height,
+      position: computedStyle.position,
+      zIndex: computedStyle.zIndex,
+      overflow: computedStyle.overflow
+    });
+    
+    // 要素のサイズと位置
+    const rect = locationSelect.getBoundingClientRect();
+    console.log('Element Rect:', {
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+      visible: rect.width > 0 && rect.height > 0
+    });
+    
+    // 親要素の確認
+    let parent = locationSelect.parentElement;
+    let depth = 0;
+    while (parent && depth < 5) {
+      const parentStyle = window.getComputedStyle(parent);
+      console.log(`Parent ${depth}:`, {
+        tagName: parent.tagName,
+        id: parent.id,
+        className: parent.className,
+        display: parentStyle.display,
+        visibility: parentStyle.visibility,
+        overflow: parentStyle.overflow
+      });
+      parent = parent.parentElement;
+      depth++;
+    }
+    
+    // 強制的にスタイルをリセット
+    console.log('スタイルをリセットしています...');
+    locationSelect.style.display = 'block';
+    locationSelect.style.visibility = 'visible';
+    locationSelect.style.opacity = '1';
+    locationSelect.style.width = 'auto';
+    locationSelect.style.height = 'auto';
+    
+    // 再度チェック
+    const newRect = locationSelect.getBoundingClientRect();
+    console.log('リセット後のRect:', {
+      width: newRect.width,
+      height: newRect.height,
+      visible: newRect.width > 0 && newRect.height > 0
+    });
+  };
+  
   console.log('URL生成機能が登録されました');
   
   // ページ読み込み時にも初期化を実行（念のため）

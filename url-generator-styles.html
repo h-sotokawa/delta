@@ -188,6 +188,11 @@
     color: #374151;
     background: white;
     transition: all 0.3s ease;
+    width: 100%;
+    display: block;
+    appearance: auto;
+    -webkit-appearance: menulist;
+    -moz-appearance: menulist;
   }
 
   .form-group input:focus,
@@ -202,6 +207,19 @@
     color: #6b7280;
     margin-top: 5px;
     line-height: 1.4;
+  }
+  
+  /* select要素の表示を確実にする */
+  #location {
+    min-height: 48px;
+    cursor: pointer;
+  }
+  
+  /* select要素のoption表示を強制 */
+  #location option {
+    padding: 8px;
+    background: white;
+    color: #374151;
   }
 
   /* ========================================
