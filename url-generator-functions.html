@@ -98,20 +98,18 @@
     let formType, masterType, hasUrl;
     
     // カテゴリをマスタタイプにマッピング
-    // デスクトップPC、ノートPC、SV、CLなどは端末系として扱う
-    if (category === 'SV' || category === 'CL' || 
-        category === 'デスクトップPC' || category === 'ノートPC' || 
-        category === '端末' || category.includes('PC') || 
-        category.includes('サーバ') || category.includes('クライアント')) {
+    if (category === 'デスクトップPC' || category === 'サーバー' || 
+        category === 'ノートPC' || category === 'SV' || 
+        category === 'CL' || category === '端末') {
       formType = '端末用共通フォーム';
       masterType = '端末マスタ';
       hasUrl = window.commonFormSettings?.terminal || false;
-    } else if (category === 'プリンタ' || category.includes('プリンタ')) {
+    } else if (category === 'プリンタ') {
       formType = 'プリンタ・その他用共通フォーム';
       masterType = 'プリンタマスタ';
       hasUrl = window.commonFormSettings?.printer || false;
     } else {
-      // その他のカテゴリはプリンタ・その他用として扱う
+      // その他のカテゴリ
       formType = 'プリンタ・その他用共通フォーム';
       masterType = 'その他マスタ';
       hasUrl = window.commonFormSettings?.printer || false;
@@ -415,6 +413,15 @@
     const locationNumber = document.getElementById('locationNumber').value.trim();
     const deviceCategory = document.getElementById('deviceCategory').value;
     
+    console.log('生成前の値確認:', {
+      locationNumber: locationNumber,
+      deviceCategory: deviceCategory,
+      location: document.getElementById('location').value,
+      model: document.getElementById('model').value,
+      serialNumber: document.getElementById('serialNumber').value,
+      sequenceNumber: document.getElementById('sequenceNumber').value
+    });
+    
     // バリデーション
     if (!validateGenerationForm(locationNumber, deviceCategory)) {
       return;
@@ -462,8 +469,24 @@
     const serialNumber = document.getElementById('serialNumber').value.trim();
     const sequenceNumber = document.getElementById('sequenceNumber').value;
     
+    console.log('バリデーション詳細:', {
+      location: location,
+      model: model,
+      serialNumber: serialNumber,
+      sequenceNumber: sequenceNumber,
+      locationNumber: locationNumber,
+      deviceCategory: deviceCategory
+    });
+    
     if (!location) {
-      showErrorMessage('拠点を選択してください');
+      const locationSelect = document.getElementById('location');
+      console.error('拠点選択エラー詳細:', {
+        selectElement: locationSelect,
+        optionsLength: locationSelect ? locationSelect.options.length : 'null',
+        selectedIndex: locationSelect ? locationSelect.selectedIndex : 'null',
+        value: locationSelect ? locationSelect.value : 'null'
+      });
+      showErrorMessage('拠点を選択してください（拠点データが読み込まれていない可能性があります）');
       return false;
     }
     
@@ -512,21 +535,20 @@
     }
     
     // カテゴリに応じて必要なURL設定を確認
-    if (deviceCategory === 'SV' || deviceCategory === 'CL' || 
-        deviceCategory === 'デスクトップPC' || deviceCategory === 'ノートPC' || 
-        deviceCategory === '端末' || deviceCategory.includes('PC') || 
-        deviceCategory.includes('サーバ') || deviceCategory.includes('クライアント')) {
+    if (deviceCategory === 'デスクトップPC' || deviceCategory === 'サーバー' || 
+        deviceCategory === 'ノートPC' || deviceCategory === 'SV' || 
+        deviceCategory === 'CL' || deviceCategory === '端末') {
       if (!window.commonFormSettings.terminal) {
         showErrorMessage('端末用共通フォームURLが設定されていません。設定画面で設定してください。');
         return false;
       }
-    } else if (deviceCategory === 'プリンタ' || deviceCategory.includes('プリンタ')) {
+    } else if (deviceCategory === 'プリンタ') {
       if (!window.commonFormSettings.printer) {
         showErrorMessage('プリンタ・その他用共通フォームURLが設定されていません。設定画面で設定してください。');
         return false;
       }
     } else {
-      // その他のカテゴリもプリンタ・その他用として扱う
+      // その他のカテゴリ
       if (!window.commonFormSettings.printer) {
         showErrorMessage('プリンタ・その他用共通フォームURLが設定されていません。設定画面で設定してください。');
         return false;

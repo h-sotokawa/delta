@@ -21,17 +21,16 @@ function generateCommonFormUrl(locationNumber, deviceCategory) {
     let baseUrl;
     let formType;
     
-    // 端末系のカテゴリ判定
-    if (deviceCategory === 'SV' || deviceCategory === 'CL' || 
-        deviceCategory === 'デスクトップPC' || deviceCategory === 'ノートPC' || 
-        deviceCategory === '端末' || deviceCategory.includes('PC') || 
-        deviceCategory.includes('サーバ') || deviceCategory.includes('クライアント')) {
+    // カテゴリ判定をより厳密に
+    if (deviceCategory === 'デスクトップPC' || deviceCategory === 'サーバー' || 
+        deviceCategory === 'ノートPC' || deviceCategory === 'SV' || 
+        deviceCategory === 'CL' || deviceCategory === '端末') {
       baseUrl = settings.terminalCommonFormUrl;
       formType = '端末';
       if (!baseUrl) {
         throw new Error('端末用共通フォームURLが設定されていません');
       }
-    } else if (deviceCategory === 'プリンタ' || deviceCategory.includes('プリンタ')) {
+    } else if (deviceCategory === 'プリンタ') {
       baseUrl = settings.printerCommonFormUrl;
       formType = 'プリンタ';
       if (!baseUrl) {
@@ -247,6 +246,79 @@ function saveUrlToPrinterMaster(locationNumber, generatedUrl) {
 }
 
 /**
+ * その他マスタに共通フォームURLを保存
+ * @param {string} locationNumber - 拠点管理番号
+ * @param {string} generatedUrl - 生成されたURL
+ * @return {Object} 保存結果
+ */
+function saveUrlToOtherMaster(locationNumber, generatedUrl) {
+  const startTime = startPerformanceTimer();
+  addLog('その他マスタURL保存開始', { locationNumber, generatedUrl });
+  
+  try {
+    // その他マスタシートを取得
+    const spreadsheet = SpreadsheetApp.openById(getMainSpreadsheetId());
+    const sheet = spreadsheet.getSheetByName('その他マスタ');
+    
+    if (!sheet) {
+      throw new Error('その他マスタシートが見つかりません');
+    }
+    
+    // 拠点管理番号で該当行を検索
+    const data = sheet.getDataRange().getValues();
+    const headerRow = data[0];
+    
+    // 拠点管理番号の列インデックスを取得
+    const locationNumberColIndex = headerRow.indexOf('拠点管理番号');
+    if (locationNumberColIndex === -1) {
+      throw new Error('その他マスタに拠点管理番号列が見つかりません');
+    }
+    
+    // 共通フォームURL列を検索または作成
+    let urlColIndex = headerRow.indexOf('共通フォームURL');
+    if (urlColIndex === -1) {
+      // 列が存在しない場合は追加
+      urlColIndex = headerRow.length;
+      sheet.getRange(1, urlColIndex + 1).setValue('共通フォームURL');
+    }
+    
+    // 該当行を検索
+    let targetRow = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][locationNumberColIndex] === locationNumber) {
+        targetRow = i + 1; // 1-based indexing
+        break;
+      }
+    }
+    
+    if (targetRow === -1) {
+      throw new Error(`拠点管理番号 ${locationNumber} がその他マスタに見つかりません`);
+    }
+    
+    // URLを保存
+    sheet.getRange(targetRow, urlColIndex + 1).setValue(generatedUrl);
+    
+    endPerformanceTimer(startTime, 'その他マスタURL保存');
+    addLog('その他マスタURL保存完了', { locationNumber, targetRow, urlColIndex });
+    
+    return {
+      success: true,
+      savedRow: targetRow,
+      savedColumn: urlColIndex + 1
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, 'その他マスタURL保存エラー');
+    addLog('その他マスタURL保存エラー', { locationNumber, error: error.toString() });
+    
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
  * URL生成と保存を一括実行
  * @param {Object} requestData - リクエストデータ
  * @return {Object} 実行結果
@@ -274,19 +346,18 @@ function generateAndSaveCommonFormUrl(requestData) {
     let masterType;
     
     // カテゴリに応じて保存先を決定
-    if (deviceCategory === 'SV' || deviceCategory === 'CL' || 
-        deviceCategory === 'デスクトップPC' || deviceCategory === 'ノートPC' || 
-        deviceCategory === '端末' || deviceCategory.includes('PC') || 
-        deviceCategory.includes('サーバ') || deviceCategory.includes('クライアント')) {
+    if (deviceCategory === 'デスクトップPC' || deviceCategory === 'サーバー' || 
+        deviceCategory === 'ノートPC' || deviceCategory === 'SV' || 
+        deviceCategory === 'CL' || deviceCategory === '端末') {
       saveResult = saveUrlToTerminalMaster(locationNumber, urlResult.url);
       masterType = '端末マスタ';
-    } else if (deviceCategory === 'プリンタ' || deviceCategory.includes('プリンタ')) {
+    } else if (deviceCategory === 'プリンタ') {
       saveResult = saveUrlToPrinterMaster(locationNumber, urlResult.url);
       masterType = 'プリンタマスタ';
     } else {
-      // その他のカテゴリはプリンタマスタに保存
-      saveResult = saveUrlToPrinterMaster(locationNumber, urlResult.url);
-      masterType = 'プリンタマスタ';
+      // その他のカテゴリはその他マスタに保存
+      saveResult = saveUrlToOtherMaster(locationNumber, urlResult.url);
+      masterType = 'その他マスタ';
     }
     
     if (!saveResult.success) {
