@@ -106,6 +106,11 @@
       return;
     }
     
+    // 3段階確認プロセス
+    if (!showTripleConfirmation()) {
+      return;
+    }
+    
     const settings = {
       terminalCommonFormUrl: terminalUrl,
       printerCommonFormUrl: printerUrl
@@ -131,6 +136,58 @@
         }
       })
       .saveCommonFormsSettings(settings);
+  }
+
+  // ========================================
+  // 3段階確認ダイアログ
+  // ========================================
+  function showTripleConfirmation() {
+    // 第1段階確認
+    const step1 = confirm(
+      '⚠️ 重要な設定変更 ⚠️\n\n' +
+      '共通フォームURLの設定を変更します。\n' +
+      'この設定はシステム全体に影響します。\n\n' +
+      '続行してもよろしいですか？'
+    );
+    
+    if (!step1) {
+      showSettingsError('設定の保存をキャンセルしました');
+      return false;
+    }
+    
+    // 第2段階確認
+    const step2 = confirm(
+      '🔧 管理者権限の確認 🔧\n\n' +
+      'あなたはシステム管理者ですか？\n' +
+      '管理者以外の方による設定変更は\n' +
+      'システム障害の原因となる可能性があります。\n\n' +
+      '本当に変更を続行しますか？'
+    );
+    
+    if (!step2) {
+      showSettingsError('設定の保存をキャンセルしました');
+      return false;
+    }
+    
+    // 第3段階確認（最終確認）
+    const step3 = confirm(
+      '⚡ 最終確認 ⚡\n\n' +
+      '設定を保存すると、すぐにシステム全体に反映されます。\n' +
+      '変更前の設定には戻せません。\n\n' +
+      '✅ 設定内容を十分確認済み\n' +
+      '✅ 管理者の承認を得ている\n' +
+      '✅ 動作確認の準備ができている\n\n' +
+      '最終的に保存を実行してもよろしいですか？'
+    );
+    
+    if (!step3) {
+      showSettingsError('設定の保存をキャンセルしました');
+      return false;
+    }
+    
+    // 全ての確認をクリアした場合
+    showSettingsSuccess('3段階確認が完了しました。設定を保存します...');
+    return true;
   }
 
   // ========================================
