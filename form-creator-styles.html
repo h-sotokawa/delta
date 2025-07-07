@@ -323,16 +323,16 @@
   }
 
   .attr-location-number-input {
-    display: flex;
+    display: flex !important;
     align-items: center;
-    border: 2px solid #e2e8f0;
+    border: 2px solid #e2e8f0 !important;
     border-radius: 8px;
-    background: white;
+    background: white !important;
     overflow: hidden;
     transition: border-color 0.3s ease;
     margin-top: 10px;
-    min-height: 60px;
-    width: 100%;
+    min-height: 60px !important;
+    width: 100% !important;
     box-sizing: border-box;
   }
 
@@ -355,22 +355,33 @@
   }
 
   .attr-location-number-input input[type="text"] {
-    border: none;
-    padding: 18px 20px;
+    border: none !important;
+    padding: 18px 20px !important;
     flex: 1;
-    font-size: 1.1rem;
-    background: transparent;
-    color: #374151;
-    font-family: 'Courier New', monospace;
+    font-size: 1.1rem !important;
+    background: transparent !important;
+    color: #374151 !important;
+    font-family: 'Courier New', monospace !important;
     font-weight: 500;
     letter-spacing: 0.5px;
     min-width: 120px;
+    outline: none !important;
+    box-shadow: none !important;
+    cursor: text !important;
+    pointer-events: auto !important;
+    user-select: text !important;
   }
 
   .attr-location-number-input input[type="text"]:focus {
     border: none;
     box-shadow: none;
     outline: none;
+  }
+  
+  .attr-location-number-input input[type="text"]:disabled {
+    background: #f9fafb !important;
+    color: #9ca3af !important;
+    cursor: not-allowed !important;
   }
 
   /* フォームアクション */
@@ -946,6 +957,12 @@
   .attributes-grid .form-group {
     margin-bottom: 0;
   }
+  
+  /* 拠点管理番号の form-group は特別扱い */
+  .attributes-grid .location-number-group {
+    grid-column: 1 / -1; /* グリッド全体を使用 */
+    margin-top: 20px;
+  }
 
   .attributes-grid .form-group label {
     color: #374151;
@@ -962,6 +979,15 @@
     border-radius: 6px;
     font-size: 0.9rem;
     transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  
+  /* 拠点管理番号のラベルスタイル */
+  .attributes-grid .location-number-group label {
+    color: #374151;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: block;
+    font-size: 1rem;
   }
 
   .attributes-grid .form-group input:focus,

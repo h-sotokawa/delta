@@ -572,7 +572,7 @@
       } else if (field.type === 'special' && field.name === 'locationNumber') {
         // 拠点管理番号の特別な入力欄
         attributeFieldsHtml += `
-          <div class="form-group">
+          <div class="form-group location-number-group">
             <label for="attr-${field.name}">
               ${field.label} ${field.required ? '<span class="required">*</span>' : ''}
             </label>
@@ -583,7 +583,7 @@
               <div class="attr-location-number-input" id="attr-location-number-input" style="display: none;">
                 <span id="attr-location-prefix-generated" class="attr-location-prefix-generated"></span>
                 <input type="text" id="attr-location-suffix" name="attributes[locationNumberSuffix]" required
-                       placeholder="001" maxlength="50" disabled onchange="updateAttributeLocationNumber()">
+                       placeholder="001" maxlength="50" disabled onchange="updateAttributeLocationNumber()" oninput="updateFinalAttributeLocationNumber()">
               </div>
               <input type="hidden" id="attr-location-number" name="attributes[${field.name}]">
             </div>
@@ -1827,13 +1827,27 @@
         attrLocationSuffixInput.disabled = false;
         attrLocationSuffixInput.placeholder = '001';
         
+        console.log('入力欄を有効化しました:', {
+          disabled: attrLocationSuffixInput.disabled,
+          placeholder: attrLocationSuffixInput.placeholder,
+          type: attrLocationSuffixInput.type
+        });
+        
         // デフォルト値設定
         if (!attrLocationSuffixInput.value) {
           attrLocationSuffixInput.value = '001';
         }
         
+        console.log('入力欄の最終状態:', {
+          value: attrLocationSuffixInput.value,
+          readOnly: attrLocationSuffixInput.readOnly,
+          style: attrLocationSuffixInput.style.cssText
+        });
+        
         // 最終的な拠点管理番号を生成
         updateFinalAttributeLocationNumber();
+      } else {
+        console.error('入力欄が見つかりませんでした');
       }
     } else {
       if (attrLocationNumberInputContainer) {
