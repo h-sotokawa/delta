@@ -17,120 +17,8 @@
     console.log('共通フォームタブ要素:', commonFormsTab);
     console.log('共通フォーム設定セクション:', commonFormsSettings);
     
-    // 拠点マスタを読み込み
-    loadLocationMasterForSettings();
-    
-    // 初期状態では拠点選択を促す
-    showNoLocationMessage();
-  }
-
-  // ========================================
-  // 拠点選択関連
-  // ========================================
-  let currentSelectedLocation = '';
-  let locationMasterData = [];
-
-  // 拠点マスタデータを読み込む
-  function loadLocationMasterForSettings() {
-    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-      showDebugInfo('拠点マスタデータ読み込み開始', {});
-    }
-    
-    google.script.run
-      .withSuccessHandler(function(locations) {
-        locationMasterData = locations;
-        populateLocationSelector(locations);
-        
-        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('拠点マスタデータ読み込み完了', { locations });
-        }
-      })
-      .withFailureHandler(function(error) {
-        console.error('拠点マスタデータの読み込みに失敗しました:', error);
-        showSettingsError('拠点データの読み込みに失敗しました: ' + error.message);
-        
-        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('拠点マスタデータ読み込みエラー', { error });
-        }
-      })
-      .getLocationMaster();
-  }
-  
-  // 拠点選択セレクトボックスを更新
-  function populateLocationSelector(locations) {
-    const locationSelect = document.getElementById('selectedLocation');
-    if (!locationSelect) return;
-    
-    // 既存のオプションをクリア（デフォルトオプション以外）
-    locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
-    
-    // 拠点データが存在する場合のみ追加
-    if (locations && locations.length > 0) {
-      locations.forEach(function(location) {
-        // アクティブな拠点のみ表示
-        if (location.status === 'active') {
-          const option = document.createElement('option');
-          option.value = location.locationId;
-          option.textContent = location.locationName;
-          locationSelect.appendChild(option);
-        }
-      });
-    } else {
-      // データが無い場合のメッセージ
-      const option = document.createElement('option');
-      option.value = '';
-      option.textContent = '拠点データがありません';
-      option.disabled = true;
-      locationSelect.appendChild(option);
-    }
-  }
-
-  function onLocationChange() {
-    const selectedLocation = document.getElementById('selectedLocation').value;
-    currentSelectedLocation = selectedLocation;
-    
-    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-      showDebugInfo('拠点選択変更', { selectedLocation });
-    }
-    
-    if (selectedLocation) {
-      showLocationSettings(selectedLocation);
-      loadFormStorageSettings(selectedLocation);
-    } else {
-      showNoLocationMessage();
-    }
-  }
-
-  function showLocationSettings(locationId) {
-    // 拠点マスタデータから拠点名を取得
-    let locationName = locationId;
-    if (locationMasterData && locationMasterData.length > 0) {
-      const location = locationMasterData.find(loc => loc.locationId === locationId);
-      if (location) {
-        locationName = location.locationName;
-      }
-    }
-    
-    // UI要素の表示/非表示を制御
-    document.getElementById('no-location-message').style.display = 'none';
-    document.getElementById('formStorageSettingsForm').style.display = 'block';
-    document.getElementById('location-notice').style.display = 'block';
-    document.getElementById('location-notice-text').textContent = `現在の設定対象: ${locationName}`;
-  }
-
-  function showNoLocationMessage() {
-    // UI要素の表示/非表示を制御
-    document.getElementById('no-location-message').style.display = 'block';
-    document.getElementById('formStorageSettingsForm').style.display = 'none';
-    document.getElementById('location-notice').style.display = 'none';
-    
-    // フォームをクリア
-    const form = document.getElementById('formStorageSettingsForm');
-    if (form) {
-      form.reset();
-    }
-    
-    currentSelectedLocation = '';
+    // 共通フォームURL設定を初期読み込み
+    loadCommonFormsSettings();
   }
 
   // ========================================
@@ -139,216 +27,15 @@
   function showSettingsTab(tabId) {
     console.log('showSettingsTab called with tabId:', tabId);
     
-    try {
-      // 全てのタブボタンからactiveクラスを削除
-      const tabButtons = document.querySelectorAll('.tab-button');
-      console.log('Found tab buttons:', tabButtons.length);
-      tabButtons.forEach(tab => {
-        tab.classList.remove('active');
-      });
-      
-      // 全ての設定セクションを非表示
-      const settingSections = document.querySelectorAll('.settings-section');
-      console.log('Found setting sections:', settingSections.length);
-      settingSections.forEach(section => {
-        section.classList.remove('active');
-      });
-      
-      // 選択されたタブとセクションをアクティブ化
-      const targetTab = document.getElementById(tabId + '-tab');
-      const targetSection = document.getElementById(tabId + '-settings');
-      
-      console.log('Target tab element:', targetTab);
-      console.log('Target section element:', targetSection);
-      
-      if (targetTab) {
-        targetTab.classList.add('active');
-        console.log('Tab activated successfully');
-      } else {
-        console.error('Target tab not found:', tabId + '-tab');
-      }
-      
-      if (targetSection) {
-        targetSection.classList.add('active');
-        console.log('Section activated successfully');
-      } else {
-        console.error('Target section not found:', tabId + '-settings');
-      }
-      
-      // タブ固有の初期化処理
-      if (tabId === 'common-forms') {
-        console.log('Loading common forms settings...');
-        loadCommonFormsSettings();
-      }
-      
-      if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-        showDebugInfo('設定タブ切り替え', { tabId });
-      }
-    } catch (error) {
-      console.error('Error in showSettingsTab:', error);
-      showSettingsError('タブ切り替えエラー: ' + error.message);
-    }
-  }
-
-  // ========================================
-  // フォーム保存先設定の読み込み
-  // ========================================
-  function loadFormStorageSettings(locationId) {
-    if (!locationId) {
-      if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-        showDebugInfo('拠点IDが指定されていません', { locationId });
-      }
-      return;
+    // 共通フォームURLタブのみサポート
+    if (tabId === 'common-forms') {
+      console.log('Loading common forms settings...');
+      loadCommonFormsSettings();
     }
     
-    showSettingsLoading('設定を読み込み中...');
-    
-    google.script.run
-      .withSuccessHandler(function(settings) {
-        hideSettingsLoading();
-        displayFormStorageSettings(settings);
-        
-        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('フォーム保存先設定読み込み完了', { locationId, settings });
-        }
-      })
-      .withFailureHandler(function(error) {
-        hideSettingsLoading();
-        showSettingsError('設定の読み込みに失敗しました: ' + error.message);
-        
-        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('フォーム保存先設定読み込みエラー', { locationId, error });
-        }
-      })
-      .getFormStorageSettings(locationId);
-  }
-
-  // ========================================
-  // フォーム保存先設定の表示
-  // ========================================
-  function displayFormStorageSettings(settings) {
-    const form = document.getElementById('formStorageSettingsForm');
-    if (!form) return;
-    
-    // 拠点フォルダIDフィールドに設定値を反映
-    const locationFolderInput = document.getElementById('locationFolderId');
-    if (locationFolderInput && settings) {
-      locationFolderInput.value = settings.locationFolder || '';
+    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+      showDebugInfo('設定タブ切り替え', { tabId });
     }
-  }
-
-  // ========================================
-  // フォーム保存先設定の保存
-  // ========================================
-  function saveFormStorageSettings() {
-    const form = document.getElementById('formStorageSettingsForm');
-    if (!form) return;
-    
-    // 現在選択中の拠点を確認
-    if (!currentSelectedLocation) {
-      showSettingsError('拠点が選択されていません');
-      return;
-    }
-    
-    // フォームデータを収集
-    const locationFolderId = document.getElementById('locationFolderId').value.trim();
-    
-    // バリデーション
-    if (!validateFormStorageSettings(locationFolderId)) {
-      return;
-    }
-    
-    const settings = {
-      locationFolder: locationFolderId
-    };
-    
-    showSettingsLoading('設定を保存中...');
-    
-    google.script.run
-      .withSuccessHandler(function(result) {
-        hideSettingsLoading();
-        showSettingsSuccess('フォーム保存先設定が正常に保存されました');
-        
-        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('フォーム保存先設定保存完了', { locationId: currentSelectedLocation, result });
-        }
-      })
-      .withFailureHandler(function(error) {
-        hideSettingsLoading();
-        showSettingsError('設定の保存に失敗しました: ' + error.message);
-        
-        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('フォーム保存先設定保存エラー', { locationId: currentSelectedLocation, error });
-        }
-      })
-      .saveFormStorageSettings(currentSelectedLocation, settings);
-  }
-
-  // ========================================
-  // フォーム保存先設定のバリデーション
-  // ========================================
-  function validateFormStorageSettings(locationFolderId) {
-    // フォルダIDが設定されている必要がある
-    if (!locationFolderId) {
-      showSettingsError('フォルダIDを設定してください');
-      return false;
-    }
-    
-    // フォルダIDの形式チェック
-    const folderIdPattern = /^[a-zA-Z0-9_-]+$/;
-    
-    if (!folderIdPattern.test(locationFolderId)) {
-      showSettingsError('フォルダIDの形式が正しくありません');
-      return false;
-    }
-    
-    return true;
-  }
-
-  // ========================================
-  // Google Drive フォルダIDの検証
-  // ========================================
-  function validateFolderId(inputId) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    
-    const folderId = input.value.trim();
-    
-    if (!folderId) {
-      showSettingsError('フォルダIDを入力してください');
-      return;
-    }
-    
-    // フォルダIDの形式チェック
-    const folderIdPattern = /^[a-zA-Z0-9_-]+$/;
-    if (!folderIdPattern.test(folderId)) {
-      showSettingsError('フォルダIDの形式が正しくありません');
-      return;
-    }
-    
-    showSettingsLoading('フォルダIDを検証中...');
-    
-    google.script.run
-      .withSuccessHandler(function(result) {
-        hideSettingsLoading();
-        
-        if (result.valid) {
-          showSettingsSuccess(`フォルダ「${result.name}」への接続が確認できました`);
-          input.classList.add('valid');
-          input.classList.remove('invalid');
-        } else {
-          showSettingsError('フォルダにアクセスできません: ' + result.error);
-          input.classList.add('invalid');
-          input.classList.remove('valid');
-        }
-      })
-      .withFailureHandler(function(error) {
-        hideSettingsLoading();
-        showSettingsError('フォルダIDの検証に失敗しました: ' + error.message);
-        input.classList.add('invalid');
-        input.classList.remove('valid');
-      })
-      .validateDriveFolderId(folderId);
   }
 
   // ========================================
@@ -548,34 +235,6 @@
   }
 
   // ========================================
-  // 設定のリセット
-  // ========================================
-  function resetFormStorageSettings() {
-    if (!currentSelectedLocation) {
-      showSettingsError('拠点が選択されていません');
-      return;
-    }
-    
-    if (!confirm('フォーム保存先設定をリセットしてもよろしいですか？\n\n未保存の変更は失われます。')) {
-      return;
-    }
-    
-    // フォームをクリア
-    const form = document.getElementById('formStorageSettingsForm');
-    if (form) {
-      form.reset();
-      
-      // バリデーションクラスを削除
-      const input = document.getElementById('locationFolderId');
-      if (input) {
-        input.classList.remove('valid', 'invalid');
-      }
-    }
-    
-    showSettingsSuccess('設定をリセットしました');
-  }
-
-  // ========================================
   // UI通知関数
   // ========================================
   function showSettingsPopupMessage(message, type = 'info') {
@@ -635,17 +294,42 @@
   }
 
   // ========================================
-  // グローバル関数の登録
+  // DOM読み込み完了時の初期化
+  // ========================================
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, registering settings functions...');
+    
+    // 関数をwindowオブジェクトに登録してグローバルに利用可能にする
+    window.showSettingsTab = showSettingsTab;
+    window.saveCommonFormsSettings = saveCommonFormsSettings;
+    window.resetCommonFormsSettings = resetCommonFormsSettings;
+    window.validateFormUrl = validateFormUrl;
+    
+    console.log('Settings functions registered globally');
+    
+    // DOM要素の存在確認
+    const commonFormsTab = document.getElementById('common-forms-tab');
+    const commonFormsSettings = document.getElementById('common-forms-settings');
+    
+    console.log('共通フォームタブ要素:', commonFormsTab);
+    console.log('共通フォーム設定セクション:', commonFormsSettings);
+    
+    if (!commonFormsTab) {
+      console.error('共通フォームタブ要素が見つかりません');
+    }
+    if (!commonFormsSettings) {
+      console.error('共通フォーム設定セクション要素が見つかりません');
+    }
+  });
+  
+  // ========================================
+  // グローバル関数の登録（即座に実行）
   // ========================================
   // 関数をwindowオブジェクトに登録してグローバルに利用可能にする
   window.showSettingsTab = showSettingsTab;
-  window.onLocationChange = onLocationChange;
-  window.saveFormStorageSettings = saveFormStorageSettings;
-  window.resetFormStorageSettings = resetFormStorageSettings;
-  window.validateFolderId = validateFolderId;
   window.saveCommonFormsSettings = saveCommonFormsSettings;
   window.resetCommonFormsSettings = resetCommonFormsSettings;
   window.validateFormUrl = validateFormUrl;
   
-  console.log('Settings functions registered globally');
+  console.log('Settings functions registered globally (immediate)');
 </script>
