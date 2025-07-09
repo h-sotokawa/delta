@@ -527,14 +527,17 @@
     // フォームデータを収集
     const locationNumber = document.getElementById('locationNumber').value.trim();
     const deviceCategory = document.getElementById('deviceCategory').value;
+    const model = document.getElementById('model').value;
+    const serialNumber = document.getElementById('serialNumber').value.trim();
+    const sequenceNumber = document.getElementById('sequenceNumber').value;
     
     console.log('生成前の値確認:', {
       locationNumber: locationNumber,
       deviceCategory: deviceCategory,
       location: document.getElementById('location').value,
-      model: document.getElementById('model').value,
-      serialNumber: document.getElementById('serialNumber').value,
-      sequenceNumber: document.getElementById('sequenceNumber').value
+      model: model,
+      serialNumber: serialNumber,
+      sequenceNumber: sequenceNumber
     });
     
     // バリデーション
@@ -547,10 +550,34 @@
       return;
     }
     
+    // デバイス情報を取得（モデル選択から詳細情報を取得）
+    const modelSelect = document.getElementById('model');
+    const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+    let manufacturer = '';
+    
+    // モデル選択のtextContentから機種名とメーカーを分離
+    if (selectedOption && selectedOption.textContent) {
+      const parts = selectedOption.textContent.split(' (');
+      if (parts.length > 1) {
+        manufacturer = parts[1].replace(')', '');
+      }
+    }
+    
+    const deviceInfo = {
+      modelName: model,
+      manufacturer: manufacturer,
+      category: deviceCategory,
+      serialNumber: serialNumber,
+      sequenceNumber: sequenceNumber
+    };
+    
     const requestData = {
       locationNumber: locationNumber,
-      deviceCategory: deviceCategory
+      deviceCategory: deviceCategory,
+      deviceInfo: deviceInfo
     };
+    
+    console.log('送信データ:', requestData);
     
     showLoadingMessage('URL生成・保存中...');
     
@@ -561,7 +588,12 @@
         
         if (result.success) {
           showGenerationResult(result);
-          showSuccessMessage('URLの生成と保存が完了しました');
+          
+          if (result.isNewEntry) {
+            showSuccessMessage('新規デバイス情報を登録し、URLの生成と保存が完了しました');
+          } else {
+            showSuccessMessage('URLの生成と保存が完了しました');
+          }
         } else {
           showErrorMessage('URL生成・保存に失敗しました: ' + result.error);
         }
