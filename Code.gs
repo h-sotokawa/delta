@@ -2364,7 +2364,8 @@ function getCommonFormsSettings() {
     
     const settings = {
       terminalCommonFormUrl: properties.getProperty('TERMINAL_COMMON_FORM_URL') || '',
-      printerCommonFormUrl: properties.getProperty('PRINTER_COMMON_FORM_URL') || ''
+      printerCommonFormUrl: properties.getProperty('PRINTER_COMMON_FORM_URL') || '',
+      qrRedirectUrl: properties.getProperty('QR_REDIRECT_URL') || ''
     };
     
     endPerformanceTimer(startTime, '共通フォームURL設定取得');
@@ -2399,6 +2400,12 @@ function saveCommonFormsSettings(settings) {
       properties.setProperty('PRINTER_COMMON_FORM_URL', settings.printerCommonFormUrl);
     } else {
       properties.deleteProperty('PRINTER_COMMON_FORM_URL');
+    }
+    
+    if (settings.qrRedirectUrl) {
+      properties.setProperty('QR_REDIRECT_URL', settings.qrRedirectUrl);
+    } else {
+      properties.deleteProperty('QR_REDIRECT_URL');
     }
     
     endPerformanceTimer(startTime, '共通フォームURL設定保存');

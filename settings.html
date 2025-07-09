@@ -90,6 +90,27 @@
             拠点管理番号フィールドがあるGoogle FormsのURLを入力してください
           </small>
         </div>
+        
+        <!-- QRコード中間ページURL -->
+        <div class="setting-item">
+          <label for="qrRedirectUrl">
+            <i class="fas fa-qrcode"></i>
+            QRコード中間ページURL
+            <span class="setting-description">QRコード読み取り時にアクセスする中間ページのURL</span>
+          </label>
+          <div class="input-group">
+            <input type="url" id="qrRedirectUrl" name="qrRedirectUrl" 
+              placeholder="https://script.google.com/macros/s/.../exec">
+            <button type="button" class="btn btn-info btn-sm" onclick="validateQrUrl('qrRedirectUrl')">
+              <i class="fas fa-check"></i>
+              検証
+            </button>
+          </div>
+          <small class="help-text">
+            例: https://script.google.com/macros/s/AKfycbw.../exec<br>
+            GAS Web AppのURLを入力してください（QRコードに埋め込まれるURL）
+          </small>
+        </div>
 
       </div>
 

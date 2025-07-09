@@ -75,9 +75,11 @@
     
     const terminalUrlInput = document.getElementById('terminalCommonFormUrl');
     const printerUrlInput = document.getElementById('printerCommonFormUrl');
+    const qrRedirectUrlInput = document.getElementById('qrRedirectUrl');
     
     console.log('terminalUrlInput element:', terminalUrlInput);
     console.log('printerUrlInput element:', printerUrlInput);
+    console.log('qrRedirectUrlInput element:', qrRedirectUrlInput);
     
     if (terminalUrlInput && settings) {
       terminalUrlInput.value = settings.terminalCommonFormUrl || '';
@@ -87,6 +89,11 @@
     if (printerUrlInput && settings) {
       printerUrlInput.value = settings.printerCommonFormUrl || '';
       console.log('Set printer URL to:', printerUrlInput.value);
+    }
+    
+    if (qrRedirectUrlInput && settings) {
+      qrRedirectUrlInput.value = settings.qrRedirectUrl || '';
+      console.log('Set QR redirect URL to:', qrRedirectUrlInput.value);
     }
   }
 
@@ -100,9 +107,10 @@
     // フォームデータを収集
     const terminalUrl = document.getElementById('terminalCommonFormUrl').value.trim();
     const printerUrl = document.getElementById('printerCommonFormUrl').value.trim();
+    const qrRedirectUrl = document.getElementById('qrRedirectUrl').value.trim();
     
     // バリデーション
-    if (!validateCommonFormsSettings(terminalUrl, printerUrl)) {
+    if (!validateCommonFormsSettings(terminalUrl, printerUrl, qrRedirectUrl)) {
       return;
     }
     
@@ -113,7 +121,8 @@
     
     const settings = {
       terminalCommonFormUrl: terminalUrl,
-      printerCommonFormUrl: printerUrl
+      printerCommonFormUrl: printerUrl,
+      qrRedirectUrl: qrRedirectUrl
     };
     
     showSettingsLoading('共通フォームURL設定を保存中...');
@@ -193,7 +202,7 @@
   // ========================================
   // 共通フォームURL設定のバリデーション
   // ========================================
-  function validateCommonFormsSettings(terminalUrl, printerUrl) {
+  function validateCommonFormsSettings(terminalUrl, printerUrl, qrRedirectUrl) {
     // 少なくとも一つのURLが設定されている必要がある
     if (!terminalUrl && !printerUrl) {
       showSettingsError('少なくとも一つの共通フォームURLを設定してください');
@@ -201,15 +210,21 @@
     }
     
     // URLの形式チェック
-    const urlPattern = /^https:\/\/docs\.google\.com\/forms\/d\/[a-zA-Z0-9_-]+/;
+    const formUrlPattern = /^https:\/\/docs\.google\.com\/forms\/d\/[a-zA-Z0-9_-]+/;
+    const gasUrlPattern = /^https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec/;
     
-    if (terminalUrl && !urlPattern.test(terminalUrl)) {
+    if (terminalUrl && !formUrlPattern.test(terminalUrl)) {
       showSettingsError('端末用共通フォームURLの形式が正しくありません');
       return false;
     }
     
-    if (printerUrl && !urlPattern.test(printerUrl)) {
+    if (printerUrl && !formUrlPattern.test(printerUrl)) {
       showSettingsError('プリンタ・その他用共通フォームURLの形式が正しくありません');
+      return false;
+    }
+    
+    if (qrRedirectUrl && !gasUrlPattern.test(qrRedirectUrl)) {
+      showSettingsError('QRコード中間ページURLの形式が正しくありません');
       return false;
     }
     
@@ -261,6 +276,54 @@
       })
       .validateGoogleFormUrl(formUrl);
   }
+  
+  // ========================================
+  // QRコード中間ページURLの検証
+  // ========================================
+  function validateQrUrl(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    const qrUrl = input.value.trim();
+    
+    if (!qrUrl) {
+      showSettingsError('QRコード中間ページURLを入力してください');
+      return;
+    }
+    
+    // URLの形式チェック
+    const urlPattern = /^https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec/;
+    if (!urlPattern.test(qrUrl)) {
+      showSettingsError('GAS Web AppのURLの形式が正しくありません');
+      return;
+    }
+    
+    // URLにアクセスして検証
+    showSettingsLoading('QRコード中間ページURLを検証中...');
+    
+    // テスト用パラメータを追加
+    const testUrl = qrUrl + '?id=TEST_desktop_Model_Serial_001';
+    
+    fetch(testUrl)
+      .then(response => {
+        hideSettingsLoading();
+        if (response.ok) {
+          showSettingsSuccess('QRコード中間ページへの接続が確認できました');
+          input.classList.add('valid');
+          input.classList.remove('invalid');
+        } else {
+          showSettingsError('QRコード中間ページにアクセスできません: HTTPステータス ' + response.status);
+          input.classList.add('invalid');
+          input.classList.remove('valid');
+        }
+      })
+      .catch(error => {
+        hideSettingsLoading();
+        showSettingsError('QRコード中間ページURLの検証に失敗しました: ' + error.message);
+        input.classList.add('invalid');
+        input.classList.remove('valid');
+      });
+  }
 
   // ========================================
   // 共通フォームURL設定のリセット
@@ -278,6 +341,7 @@
       // バリデーションクラスを削除
       const terminalInput = document.getElementById('terminalCommonFormUrl');
       const printerInput = document.getElementById('printerCommonFormUrl');
+      const qrInput = document.getElementById('qrRedirectUrl');
       
       if (terminalInput) {
         terminalInput.classList.remove('valid', 'invalid');
@@ -285,6 +349,10 @@
       
       if (printerInput) {
         printerInput.classList.remove('valid', 'invalid');
+      }
+      
+      if (qrInput) {
+        qrInput.classList.remove('valid', 'invalid');
       }
     }
     
