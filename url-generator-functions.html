@@ -111,14 +111,12 @@
     const category = categorySelect.value;
     let formType, masterType, hasUrl;
     
-    // カテゴリをマスタタイプにマッピング
-    if (category === 'デスクトップPC' || category === 'サーバー' || 
-        category === 'ノートPC' || category === 'SV' || 
-        category === 'CL' || category === '端末') {
+    // カテゴリをマスタタイプにマッピング（英語カテゴリベース）
+    if (category === 'desktop' || category === 'laptop' || category === 'server') {
       formType = '端末用共通フォーム';
       masterType = '端末マスタ';
       hasUrl = window.commonFormSettings?.terminal || false;
-    } else if (category === 'プリンタ') {
+    } else if (category === 'printer') {
       formType = 'プリンタ・その他用共通フォーム';
       masterType = 'プリンタマスタ';
       hasUrl = window.commonFormSettings?.printer || false;
@@ -249,6 +247,14 @@
             innerHTML: locationSelect.innerHTML.substring(0, 500) + '...'
           });
           
+          // 拠点が読み込まれた後、最初のデフォルトオプションを強調
+          if (addedCount > 0) {
+            const firstOption = locationSelect.options[0];
+            if (firstOption && firstOption.value === '') {
+              firstOption.textContent = `拠点を選択してください (${addedCount}件の拠点が利用可能)`;
+            }
+          }
+          
           // 追加直後に要素が存在するか再確認
           setTimeout(() => {
             const checkSelect = document.getElementById('location');
@@ -316,12 +322,24 @@
         categorySelect.disabled = false;
         
         if (result.success && result.categories && result.categories.length > 0) {
+          // カテゴリ表示名のマッピング（英語→日本語表示）
+          const displayMapping = {
+            'desktop': 'デスクトップ',
+            'laptop': 'ノートパソコン',
+            'server': 'サーバー',
+            'printer': 'プリンタ',
+            'other': 'その他'
+          };
+          
           result.categories.forEach(function(category) {
             const option = document.createElement('option');
+            // 値と内部処理は英語のまま
             option.value = category;
-            option.textContent = category;
+            // 表示のみ日本語にする
+            option.textContent = displayMapping[category] || category;
+            
             categorySelect.appendChild(option);
-            console.log(`カテゴリ追加: ${category}`);
+            console.log(`カテゴリ追加: ${displayMapping[category] || category} (値: ${category})`);
           });
           
           console.log(`合計 ${result.categories.length} 件のカテゴリを追加`);
@@ -364,8 +382,12 @@
         modelSelect.disabled = false;
         
         if (result.success && result.models && result.models.length > 0) {
-          // カテゴリに応じてフィルタリング
-          // モデルのカテゴリが選択されたカテゴリと一致するものを抽出
+          // カテゴリに応じてフィルタリング（英語カテゴリで直接マッチング）
+          console.log('モデルフィルタリング:', {
+            selectedCategory: category,
+            totalModels: result.models.length
+          });
+          
           const filteredModels = result.models.filter(function(model) {
             return model.category === category;
           });
@@ -424,7 +446,7 @@
     // 拠点コードを取得
     const locationSelect = document.getElementById('location');
     const selectedOption = locationSelect.options[locationSelect.selectedIndex];
-    const locationCode = selectedOption.getAttribute('data-code') || location;
+    const locationCode = selectedOption ? selectedOption.getAttribute('data-code') || location : location;
     
     console.log('拠点コード取得:', {
       selectedIndex: locationSelect.selectedIndex,
@@ -433,8 +455,16 @@
       locationCode: locationCode
     });
     
-    // 拠点管理番号を生成（形式: 拠点_カテゴリ_モデル_製造番号_連番）
-    const locationNumber = `${locationCode}_${category}_${model}_${serialNumber}_${String(sequenceNumber).padStart(3, '0')}`;
+    // カテゴリは既に英語形式で取得されているので、そのまま使用
+    const englishCategory = category;
+    
+    console.log('カテゴリ情報:', {
+      selectedCategory: category,
+      englishCategory: englishCategory
+    });
+    
+    // 拠点管理番号を生成（形式: 拠点コード_カテゴリ_モデル_製造番号_連番）
+    const locationNumber = `${locationCode}_${englishCategory}_${model}_${serialNumber}_${String(sequenceNumber).padStart(3, '0')}`;
     
     locationNumberInput.value = locationNumber;
     console.log('拠点管理番号生成完了:', locationNumber);
@@ -447,6 +477,8 @@
     const form = document.getElementById('urlGenerationForm');
     if (!form) return;
     
+    console.log('URL生成処理開始');
+    
     // 拠点データが読み込まれているか確認
     const locationSelect = document.getElementById('location');
     if (locationSelect && locationSelect.options.length <= 1) {
@@ -458,6 +490,31 @@
         generateAndSaveUrlInternal();
       }, 100);
       return;
+    }
+    
+    // 拠点選択状態を事前確認
+    if (locationSelect) {
+      const currentLocation = locationSelect.value;
+      const selectedIndex = locationSelect.selectedIndex;
+      
+      console.log('拠点選択状態の事前確認:', {
+        value: currentLocation,
+        selectedIndex: selectedIndex,
+        optionsLength: locationSelect.options.length,
+        selectedOptionText: selectedIndex >= 0 ? locationSelect.options[selectedIndex].textContent : null
+      });
+      
+      // 選択はされているが値が空の場合の修復
+      if (!currentLocation && selectedIndex > 0) {
+        const selectedOption = locationSelect.options[selectedIndex];
+        if (selectedOption && selectedOption.value) {
+          console.log('拠点選択の自動修復を実行:', selectedOption.value);
+          locationSelect.value = selectedOption.value;
+          
+          // 拠点管理番号を更新
+          updateLocationNumber();
+        }
+      }
     }
     
     generateAndSaveUrlInternal();
@@ -522,7 +579,25 @@
   // ========================================
   function validateGenerationForm(locationNumber, deviceCategory) {
     // 全フィールドのバリデーション
-    const location = document.getElementById('location').value;
+    const locationSelect = document.getElementById('location');
+    
+    // 拠点選択の値を複数の方法で取得を試行
+    let location = '';
+    if (locationSelect) {
+      location = locationSelect.value;
+      
+      // valueが空の場合、selectedIndexから値を取得を試行
+      if (!location && locationSelect.selectedIndex > 0) {
+        const selectedOption = locationSelect.options[locationSelect.selectedIndex];
+        if (selectedOption) {
+          location = selectedOption.value;
+          // selectの値を更新
+          locationSelect.value = location;
+          console.log('selectedIndexから拠点値を復元:', location);
+        }
+      }
+    }
+    
     const model = document.getElementById('model').value;
     const serialNumber = document.getElementById('serialNumber').value.trim();
     const sequenceNumber = document.getElementById('sequenceNumber').value;
@@ -533,18 +608,80 @@
       serialNumber: serialNumber,
       sequenceNumber: sequenceNumber,
       locationNumber: locationNumber,
-      deviceCategory: deviceCategory
+      deviceCategory: deviceCategory,
+      locationSelectExists: !!locationSelect,
+      selectedIndex: locationSelect ? locationSelect.selectedIndex : null,
+      optionsCount: locationSelect ? locationSelect.options.length : null
     });
     
-    if (!location) {
+    if (!location || location === '') {
       const locationSelect = document.getElementById('location');
       console.error('拠点選択エラー詳細:', {
         selectElement: locationSelect,
         optionsLength: locationSelect ? locationSelect.options.length : 'null',
         selectedIndex: locationSelect ? locationSelect.selectedIndex : 'null',
-        value: locationSelect ? locationSelect.value : 'null'
+        value: locationSelect ? locationSelect.value : 'null',
+        allOptions: locationSelect ? Array.from(locationSelect.options).map((opt, index) => ({
+          index: index,
+          value: opt.value,
+          text: opt.textContent,
+          selected: opt.selected
+        })) : 'null'
       });
-      showErrorMessage('拠点を選択してください（拠点データが読み込まれていない可能性があります）');
+      
+      // より詳細なエラーメッセージを提供
+      if (locationSelect && locationSelect.options.length > 1) {
+        const availableLocations = Array.from(locationSelect.options)
+          .filter(opt => opt.value !== '')
+          .map(opt => opt.textContent);
+        console.log('拠点データは読み込まれています。利用可能な拠点:', availableLocations);
+        
+        // 実際に選択されているかチェック
+        const selectedOption = locationSelect.options[locationSelect.selectedIndex];
+        const isProperlySelected = selectedOption && selectedOption.value !== '';
+        
+        if (isProperlySelected) {
+          console.log('拠点は選択されていますが、値が取得できません:', {
+            selectedValue: selectedOption.value,
+            selectedText: selectedOption.textContent,
+            selectedIndex: locationSelect.selectedIndex
+          });
+          
+          // 自動修復を試行
+          console.log('自動修復を試行中...');
+          locationSelect.value = selectedOption.value;
+          
+          // changeイベントを手動で発火
+          const changeEvent = new Event('change', { bubbles: true });
+          locationSelect.dispatchEvent(changeEvent);
+          
+          // 拠点管理番号を再生成
+          setTimeout(() => {
+            updateLocationNumber();
+            // 再度バリデーションを実行
+            const newLocation = locationSelect.value;
+            if (newLocation && newLocation !== '') {
+              console.log('自動修復が成功しました。新しい拠点値:', newLocation);
+              showSuccessMessage('拠点の選択を自動修復しました: ' + selectedOption.textContent);
+              // バリデーションを再実行
+              return validateGenerationForm(document.getElementById('locationNumber').value, deviceCategory);
+            } else {
+              showErrorMessage('拠点の選択修復に失敗しました。手動で再選択してください。');
+            }
+          }, 100);
+          
+          return false; // 修復処理中のため一旦false返却
+        } else {
+          showErrorMessage('拠点を選択してください。利用可能な拠点: ' + availableLocations.join(', '));
+        }
+      } else {
+        showErrorMessage('拠点を選択してください（拠点データが読み込まれていません）');
+        // 拠点データの再読み込みを試行
+        setTimeout(() => {
+          console.log('拠点データの再読み込みを試行中...');
+          loadLocations();
+        }, 1000);
+      }
       return false;
     }
     
@@ -941,6 +1078,52 @@
       .testLocationMaster();
   };
   
+  // 機種マスタのカテゴリを英語に変換する関数
+  window.convertCategoriesToEnglish = function() {
+    console.log('=== 機種マスタカテゴリ英語変換開始 ===');
+    const debugOutput = document.getElementById('debugOutput');
+    const debugContent = document.getElementById('debugContent');
+    
+    debugOutput.style.display = 'block';
+    debugContent.textContent = '機種マスタのカテゴリを英語に変換中...\n';
+    
+    if (!confirm('機種マスタのカテゴリを日本語から英語に変換します。\n\n例: SV → server, CL → desktop\n\n実行してもよろしいですか？')) {
+      debugContent.textContent += 'キャンセルされました。\n';
+      return;
+    }
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('変換結果:', result);
+        debugContent.textContent += '\n=== 変換結果 ===\n';
+        debugContent.textContent += `成功: ${result.success}\n`;
+        debugContent.textContent += `メッセージ: ${result.message}\n`;
+        debugContent.textContent += `更新件数: ${result.updatedCount}\n`;
+        
+        if (result.updates && result.updates.length > 0) {
+          debugContent.textContent += '\n=== 変更内容 ===\n';
+          result.updates.forEach(update => {
+            debugContent.textContent += `行${update.row}: "${update.currentCategory}" → "${update.newCategory}"\n`;
+          });
+        }
+        
+        // 変換後にカテゴリ一覧を再読み込み
+        setTimeout(() => {
+          debugContent.textContent += '\nカテゴリ一覧を再読み込み中...\n';
+          loadCategories();
+        }, 1000);
+        
+        showSuccessMessage('カテゴリの英語変換が完了しました');
+      })
+      .withFailureHandler(function(error) {
+        console.error('変換エラー:', error);
+        debugContent.textContent += '\n=== エラー ===\n';
+        debugContent.textContent += error.toString();
+        showErrorMessage('カテゴリ変換に失敗しました: ' + error.message);
+      })
+      .convertModelMasterCategoriesToEnglish();
+  };
+  
   // 直接オプションを追加するテスト関数
   window.testDirectAddOption = function() {
     console.log('=== 直接オプション追加テスト ===');
@@ -1023,6 +1206,80 @@
       console.error('location要素が見つかりません');
       return;
     }
+    
+    // 現在の選択状態を詳細チェック
+    const debugOutput = document.getElementById('debugOutput');
+    const debugContent = document.getElementById('debugContent');
+    
+    debugOutput.style.display = 'block';
+    
+    const currentState = {
+      value: locationSelect.value,
+      selectedIndex: locationSelect.selectedIndex,
+      optionsLength: locationSelect.options.length,
+      disabled: locationSelect.disabled,
+      display: window.getComputedStyle(locationSelect).display,
+      visibility: window.getComputedStyle(locationSelect).visibility,
+      selectedOption: locationSelect.selectedIndex >= 0 ? {
+        value: locationSelect.options[locationSelect.selectedIndex].value,
+        text: locationSelect.options[locationSelect.selectedIndex].text,
+        dataCode: locationSelect.options[locationSelect.selectedIndex].getAttribute('data-code')
+      } : null
+    };
+    
+    debugContent.textContent = '=== SELECT要素の詳細状態 ===\n';
+    debugContent.textContent += JSON.stringify(currentState, null, 2);
+    debugContent.textContent += '\n\n=== 全オプション一覧 ===\n';
+    
+    for (let i = 0; i < locationSelect.options.length; i++) {
+      const opt = locationSelect.options[i];
+      debugContent.textContent += `${i}: value="${opt.value}", text="${opt.text}", selected=${opt.selected}\n`;
+    }
+    
+    console.log('現在の選択状態:', currentState);
+    
+    // 手動で姫路を選択してテスト
+    setTimeout(() => {
+      console.log('=== 手動で姫路を選択してテスト ===');
+      
+      // 姫路のオプションを探す
+      let himejiiOption = null;
+      for (let i = 0; i < locationSelect.options.length; i++) {
+        if (locationSelect.options[i].text.includes('姫路') || locationSelect.options[i].value === 'himeji') {
+          himejiiOption = locationSelect.options[i];
+          locationSelect.selectedIndex = i;
+          break;
+        }
+      }
+      
+      if (himejiiOption) {
+        console.log('姫路オプションを選択しました:', himejiiOption);
+        
+        // 手動でchangeイベントをトリガー
+        const changeEvent = new Event('change', { bubbles: true });
+        locationSelect.dispatchEvent(changeEvent);
+        
+        // onchangeを手動で呼び出し
+        if (typeof updateLocationNumber === 'function') {
+          updateLocationNumber();
+        }
+        
+        setTimeout(() => {
+          console.log('選択後の状態:');
+          console.log('value:', locationSelect.value);
+          console.log('selectedIndex:', locationSelect.selectedIndex);
+          console.log('拠点管理番号フィールド:', document.getElementById('locationNumber').value);
+          
+          debugContent.textContent += '\n\n=== 姫路選択後の状態 ===\n';
+          debugContent.textContent += `value: ${locationSelect.value}\n`;
+          debugContent.textContent += `selectedIndex: ${locationSelect.selectedIndex}\n`;
+          debugContent.textContent += `拠点管理番号: ${document.getElementById('locationNumber').value}\n`;
+        }, 500);
+      } else {
+        console.log('姫路オプションが見つかりません');
+        debugContent.textContent += '\n\n=== エラー ===\n姫路オプションが見つかりません\n';
+      }
+    }, 1000);
     
     // 要素のスタイルを確認
     const computedStyle = window.getComputedStyle(locationSelect);

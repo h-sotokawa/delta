@@ -1797,12 +1797,16 @@ function getAvailableCategories() {
       };
     }
     
+    // カテゴリを英語に統一して取得
     const categories = [...new Set(result.models.map(model => model.category))].filter(cat => cat);
+    
+    // 英語カテゴリのみを返すように設定
+    const englishCategories = ['desktop', 'laptop', 'server', 'printer', 'other'];
     
     return {
       success: true,
-      categories: categories,
-      totalCount: categories.length
+      categories: englishCategories,
+      totalCount: englishCategories.length
     };
     
   } catch (error) {
@@ -1810,6 +1814,101 @@ function getAvailableCategories() {
       success: false,
       error: error.toString(),
       categories: []
+    };
+  }
+}
+
+/**
+ * 機種マスタのカテゴリを日本語から英語に変換
+ * @return {Object} 変換結果
+ */
+function convertModelMasterCategoriesToEnglish() {
+  const startTime = startPerformanceTimer();
+  addLog('機種マスタカテゴリ英語変換開始');
+  
+  try {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+    if (!spreadsheetId) {
+      throw new Error('スプレッドシートIDが設定されていません');
+    }
+    
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAMES.model);
+    
+    if (!sheet) {
+      throw new Error('機種マスタシートが見つかりません');
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    const headerRow = data[0];
+    
+    // カテゴリ列のインデックスを取得
+    const categoryColIndex = headerRow.indexOf('カテゴリ');
+    if (categoryColIndex === -1) {
+      throw new Error('カテゴリ列が見つかりません');
+    }
+    
+    // 日本語→英語カテゴリマッピング
+    const categoryMapping = {
+      'SV': 'server',
+      'CL': 'desktop',
+      'ノートブック': 'laptop',
+      'ノートPC': 'laptop',
+      'デスクトップPC': 'desktop',
+      'サーバー': 'server',
+      'プリンタ': 'printer',
+      'その他': 'other'
+    };
+    
+    let updatedCount = 0;
+    const updates = [];
+    
+    // データ行をチェック（1行目はヘッダーなのでスキップ）
+    for (let i = 1; i < data.length; i++) {
+      const currentCategory = data[i][categoryColIndex];
+      const englishCategory = categoryMapping[currentCategory];
+      
+      if (englishCategory && currentCategory !== englishCategory) {
+        updates.push({
+          row: i + 1,
+          currentCategory: currentCategory,
+          newCategory: englishCategory
+        });
+        data[i][categoryColIndex] = englishCategory;
+        updatedCount++;
+      }
+    }
+    
+    // 更新を実行
+    if (updates.length > 0) {
+      // カテゴリ列のみを一括更新
+      const categoryValues = data.slice(1).map(row => [row[categoryColIndex]]);
+      const range = sheet.getRange(2, categoryColIndex + 1, categoryValues.length, 1);
+      range.setValues(categoryValues);
+      
+      addLog('機種マスタカテゴリ英語変換完了', {
+        updatedCount: updatedCount,
+        updates: updates
+      });
+    }
+    
+    endPerformanceTimer(startTime, '機種マスタカテゴリ英語変換');
+    
+    return {
+      success: true,
+      message: `${updatedCount}個のカテゴリを英語に変換しました`,
+      updatedCount: updatedCount,
+      updates: updates,
+      totalRows: data.length - 1
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, '機種マスタカテゴリ英語変換エラー');
+    addLog('機種マスタカテゴリ英語変換エラー', { error: error.toString() });
+    
+    return {
+      success: false,
+      error: error.toString()
     };
   }
 }

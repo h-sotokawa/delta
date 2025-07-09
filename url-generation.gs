@@ -39,8 +39,9 @@ function generateCommonFormUrl(locationNumber, deviceCategory, generateQrUrl = f
     let baseUrl;
     let formType;
     
-    // カテゴリ判定をより厳密に
-    if (deviceCategory === 'デスクトップPC' || deviceCategory === 'サーバー' || 
+    // カテゴリ判定（英語・日本語両方に対応）
+    if (deviceCategory === 'desktop' || deviceCategory === 'laptop' || deviceCategory === 'server' ||
+        deviceCategory === 'デスクトップPC' || deviceCategory === 'サーバー' || 
         deviceCategory === 'ノートPC' || deviceCategory === 'SV' || 
         deviceCategory === 'CL' || deviceCategory === '端末') {
       baseUrl = settings.terminalCommonFormUrl;
@@ -48,7 +49,7 @@ function generateCommonFormUrl(locationNumber, deviceCategory, generateQrUrl = f
       if (!baseUrl) {
         throw new Error('端末用共通フォームURLが設定されていません');
       }
-    } else if (deviceCategory === 'プリンタ') {
+    } else if (deviceCategory === 'printer' || deviceCategory === 'プリンタ') {
       baseUrl = settings.printerCommonFormUrl;
       formType = 'プリンタ';
       if (!baseUrl) {
@@ -385,13 +386,14 @@ function generateAndSaveCommonFormUrl(requestData) {
     let saveResult;
     let masterType;
     
-    // カテゴリに応じて保存先を決定
-    if (deviceCategory === 'デスクトップPC' || deviceCategory === 'サーバー' || 
+    // カテゴリに応じて保存先を決定（英語・日本語両方に対応）
+    if (deviceCategory === 'desktop' || deviceCategory === 'laptop' || deviceCategory === 'server' ||
+        deviceCategory === 'デスクトップPC' || deviceCategory === 'サーバー' || 
         deviceCategory === 'ノートPC' || deviceCategory === 'SV' || 
         deviceCategory === 'CL' || deviceCategory === '端末') {
       saveResult = saveUrlToTerminalMaster(locationNumber, urlResult.url);
       masterType = '端末マスタ';
-    } else if (deviceCategory === 'プリンタ') {
+    } else if (deviceCategory === 'printer' || deviceCategory === 'プリンタ') {
       saveResult = saveUrlToPrinterMaster(locationNumber, urlResult.url);
       masterType = 'プリンタマスタ';
     } else {
@@ -451,13 +453,14 @@ function saveQrUrlToMaster(locationNumber, deviceCategory, qrUrl) {
     let masterType;
     let saveResult;
     
-    // カテゴリに応じて保存先を決定
-    if (deviceCategory === 'デスクトップPC' || deviceCategory === 'サーバー' || 
+    // カテゴリに応じて保存先を決定（英語・日本語両方に対応）
+    if (deviceCategory === 'desktop' || deviceCategory === 'laptop' || deviceCategory === 'server' ||
+        deviceCategory === 'デスクトップPC' || deviceCategory === 'サーバー' || 
         deviceCategory === 'ノートPC' || deviceCategory === 'SV' || 
         deviceCategory === 'CL' || deviceCategory === '端末') {
       saveResult = saveQrUrlToTerminalMaster(locationNumber, qrUrl);
       masterType = '端末マスタ';
-    } else if (deviceCategory === 'プリンタ') {
+    } else if (deviceCategory === 'printer' || deviceCategory === 'プリンタ') {
       saveResult = saveQrUrlToPrinterMaster(locationNumber, qrUrl);
       masterType = 'プリンタマスタ';
     } else {
