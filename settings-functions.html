@@ -211,7 +211,8 @@
     
     // URLの形式チェック
     const formUrlPattern = /^https:\/\/docs\.google\.com\/forms\/d\/[a-zA-Z0-9_-]+/;
-    const gasUrlPattern = /^https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec/;
+    // 個人向けと企業向けの両方のGAS URLパターンに対応
+    const gasUrlPattern = /^https:\/\/script\.google\.com\/(a\/macros\/[a-zA-Z0-9.-]+\/s\/|macros\/s\/)[a-zA-Z0-9_-]+\/exec/;
     
     if (terminalUrl && !formUrlPattern.test(terminalUrl)) {
       showSettingsError('端末用共通フォームURLの形式が正しくありません');
@@ -291,8 +292,8 @@
       return;
     }
     
-    // URLの形式チェック
-    const urlPattern = /^https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec/;
+    // URLの形式チェック（個人向けと企業向けの両方に対応）
+    const urlPattern = /^https:\/\/script\.google\.com\/(a\/macros\/[a-zA-Z0-9.-]+\/s\/|macros\/s\/)[a-zA-Z0-9_-]+\/exec/;
     if (!urlPattern.test(qrUrl)) {
       showSettingsError('GAS Web AppのURLの形式が正しくありません');
       return;

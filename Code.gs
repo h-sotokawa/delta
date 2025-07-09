@@ -1435,8 +1435,8 @@ function addModelMasterData(modelData) {
     // 機種IDを自動生成
     const modelId = generateNextModelId();
     
-    // 文字列として確実に保存するため、先頭にアポストロフィを付ける（Sheetsでは表示されない）
-    const formattedDateString = "'" + dateString;
+    // 文字列として確実に保存（2025年1月対応：アポストロフィなし）
+    const formattedDateString = dateString;
     
     const newRowData = [
       modelId, // 機種ID（自動生成）
@@ -1512,8 +1512,8 @@ function updateModelMasterData(rowIndex, modelData) {
     const currentDate = new Date();
     const dateString = Utilities.formatDate(currentDate, Session.getScriptTimeZone(), 'yyyy/MM/dd');
     
-    // 文字列として確実に保存するため、先頭にアポストロフィを付ける
-    const formattedDateString = "'" + dateString;
+    // 文字列として確実に保存（2025年1月対応：アポストロフィなし）
+    const formattedDateString = dateString;
     
     const oldData = sheet.getRange(actualRow, 1, 1, 7).getValues()[0]; // 機種ID列追加により7列に変更
     
@@ -1979,7 +1979,7 @@ function fixExistingDateFormats() {
       // 作成日の修正
       if (createdValue instanceof Date) {
         const dateString = Utilities.formatDate(createdValue, Session.getScriptTimeZone(), 'yyyy/MM/dd');
-        const formattedDateString = "'" + dateString; // 文字列として確実に保存
+        const formattedDateString = dateString; // 文字列として確実に保存（2025年1月対応：アポストロフィなし）
         createdDateCell.setValue(formattedDateString);
         createdDateCell.setNumberFormat('@'); // 文字列フォーマット
         updatedCount++;
@@ -1989,7 +1989,7 @@ function fixExistingDateFormats() {
       // 更新日の修正
       if (updatedValue instanceof Date) {
         const dateString = Utilities.formatDate(updatedValue, Session.getScriptTimeZone(), 'yyyy/MM/dd');
-        const formattedDateString = "'" + dateString; // 文字列として確実に保存
+        const formattedDateString = dateString; // 文字列として確実に保存（2025年1月対応：アポストロフィなし）
         updatedDateCell.setValue(formattedDateString);
         updatedDateCell.setNumberFormat('@'); // 文字列フォーマット
         updatedCount++;
@@ -2505,9 +2505,9 @@ function getLocationMasterSheet() {
       
       // 初期データを挿入
       const initialData = [
-        ['osaka', '大阪', 'OSK', '', 'active', "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')],
-        ['kobe', '神戸', 'KOB', '', 'active', "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')],
-        ['himeji', '姫路', 'HMJ', '', 'active', "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')]
+        ['osaka', '大阪', 'OSK', '', 'active', Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')],
+        ['kobe', '神戸', 'KOB', '', 'active', Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')],
+        ['himeji', '姫路', 'HMJ', '', 'active', Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')]
       ];
       
       if (initialData.length > 0) {
@@ -2644,8 +2644,8 @@ function addLocation(locationData) {
       locationData.locationCode,
       locationData.groupEmail || '',
       locationData.status || 'active',
-      "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'),
-      "'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')
+      Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'),
+      Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')
     ];
     
     sheet.appendRow(newRow);
@@ -2695,7 +2695,7 @@ function updateLocation(locationId, updateData) {
         }
         
         // 更新日を更新
-        sheet.getRange(row, 7).setValue("'" + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'));
+        sheet.getRange(row, 7).setValue(Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'));
         sheet.getRange(row, 7).setNumberFormat('@'); // テキスト形式
         
         endPerformanceTimer(startTime, '拠点情報更新');
