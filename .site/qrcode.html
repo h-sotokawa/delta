@@ -1,0 +1,112 @@
+<div style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
+    <h2>代替機ステータス登録</h2>
+    <div id="device-info" style="margin: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <p><strong>拠点管理番号：</strong></p>
+        <p id="location-number" style="font-size: 1.2em; color: #333;">読み込み中...</p>
+        <p id="device-type" style="color: #666;"></p>
+    </div>
+    <p id="message">フォームへ移動します...</p>
+</div>
+
+<script>
+    const CONFIG = {
+        // フォーム設定
+        forms: {
+            terminal: {
+                formUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSe53HZRJiAZM7VCZUejMTgQ34RxfV9K4Kn-20uHqFiUQKvKaQ/viewform',
+                entryField: 'entry.1372464946'
+            },
+            printer: {
+                formUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSfkxqPsHQpeKhWTBO6y3dUyvHoUKw365Wrdzsi1NNMbJ6C5mQ/viewform',
+                entryField: 'entry.1109208984'
+            }
+        },
+
+        // カテゴリ別設定
+        categories: {
+            // 端末用フォーム
+            'desktop': {
+                formType: 'terminal',
+                displayName: 'デスクトップ'
+            },
+            'laptop': {
+                formType: 'terminal',
+                displayName: 'ノートパソコン'
+            },
+            'server': {
+                formType: 'terminal',
+                displayName: 'サーバー'
+            },
+
+            // プリンタ用フォーム
+            'printer': {
+                formType: 'printer',
+                displayName: 'プリンタ'
+            },
+            'other': {
+                formType: 'printer',
+                displayName: 'その他'
+            }
+        },
+
+        // デフォルト設定
+        default: {
+            formType: 'terminal',
+            displayName: '端末'
+        }
+    };
+
+    function redirect() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const locationNumber = urlParams.get('id');
+
+        if (!locationNumber) {
+            document.getElementById('message').textContent = 'エラー：拠点管理番号がありません';
+            document.getElementById('location-number').textContent = '不明';
+            return;
+        }
+
+        // 拠点管理番号を表示
+        document.getElementById('location-number').textContent = locationNumber;
+
+        // カテゴリを判別
+        const category = getCategoryFromLocationNumber(locationNumber);
+        const categoryConfig = CONFIG.categories[category] || CONFIG.default;
+        const formConfig = CONFIG.forms[categoryConfig.formType];
+
+        // デバイスタイプを表示
+        document.getElementById('device-type').textContent = `デバイスタイプ: ${categoryConfig.displayName}`;
+
+        // リダイレクト
+        setTimeout(() => {
+            const redirectUrl = `${formConfig.formUrl}?${formConfig.entryField}=${encodeURIComponent(locationNumber)}`;
+            window.location.href = redirectUrl;
+        }, 1500);
+    }
+
+    function getCategoryFromLocationNumber(locationNumber) {
+        // 拠点管理番号の形式: 拠点_カテゴリ_モデル_製造番号_連番
+        const parts = locationNumber.split('_');
+
+        if (parts.length >= 2) {
+            const category = parts[1].toLowerCase(); // 小文字に変換
+
+            // 定義されたカテゴリから検索
+            if (CONFIG.categories[category]) {
+                return category;
+            }
+
+            // 部分マッチング（念のため）
+            for (const [key, value] of Object.entries(CONFIG.categories)) {
+                if (category.includes(key) || key.includes(category)) {
+                    return key;
+                }
+            }
+        }
+
+        // デフォルト（端末用）
+        return 'desktop';
+    }
+
+    redirect();
+</script>
