@@ -62,6 +62,9 @@
     setTimeout(() => {
       hideOpeningScreen();
       
+      // ダッシュボードページを明示的に表示
+      showPage('dashboard');
+      
       // バックグラウンドでデータ読み込みを開始
       startBackgroundPreload();
     }, 8000); // 8秒後にダッシュボードを表示

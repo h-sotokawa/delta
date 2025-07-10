@@ -3,7 +3,7 @@
   // ========================================
   // グローバル変数
   // ========================================
-  const DEBUG_MODE = true; // 本番環境では false に設定
+  const DEBUG_MODE = false; // 本番環境では false に設定
   let currentLocation = '';
   let columnOrder = [];
   let draggedColumnIndex = -1;
@@ -17,6 +17,8 @@
     if (DEBUG_MODE) {
       // デバッグモードの場合はオープニングをスキップして直接初期化
       showDebugInfo('デバッグモード: オープニングスキップ', {});
+      // ダッシュボードページを明示的に表示
+      showPage('dashboard');
       initializeLocations();
     } else {
       // 本番モードの場合はオープニング画面を表示してデータ一括読み込みを開始
