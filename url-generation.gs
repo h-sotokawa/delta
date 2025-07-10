@@ -100,22 +100,29 @@ function generateCommonFormUrl(locationNumber, deviceCategory, generateQrUrl = f
  */
 function addLocationNumberParameter(baseUrl, locationNumber) {
   try {
-    // URLオブジェクトを作成
-    const url = new URL(baseUrl);
+    console.log('URL生成:', { baseUrl, locationNumber });
     
-    // 既存のパラメータがある場合は追加、ない場合は新規作成
-    if (url.search) {
-      // 既にパラメータがある場合
-      return `${baseUrl}&entry.123456789=${encodeURIComponent(locationNumber)}`;
+    // 既にパラメータを含むURLの場合、拠点管理番号のみを設定
+    if (baseUrl.includes('entry.') && baseUrl.includes('=')) {
+      // 既存のentry.XXXXパラメータがある場合
+      // 例: https://docs.google.com/forms/.../viewform?entry.1372464946=
+      // 最後の=の後に拠点管理番号を追加
+      if (baseUrl.endsWith('=')) {
+        return `${baseUrl}${encodeURIComponent(locationNumber)}`;
+      } else {
+        // 他のパラメータがある場合は&で区切って追加
+        return `${baseUrl}&entry.1372464946=${encodeURIComponent(locationNumber)}`;
+      }
     } else {
-      // パラメータがない場合
+      // パラメータがない場合は?で追加
       const separator = baseUrl.includes('?') ? '&' : '?';
-      return `${baseUrl}${separator}entry.123456789=${encodeURIComponent(locationNumber)}`;
+      return `${baseUrl}${separator}entry.1372464946=${encodeURIComponent(locationNumber)}`;
     }
   } catch (error) {
-    // URLパースエラーの場合は単純に追加
+    console.error('URL生成エラー:', error);
+    // エラーの場合は単純に追加
     const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}entry.123456789=${encodeURIComponent(locationNumber)}`;
+    return `${baseUrl}${separator}entry.1372464946=${encodeURIComponent(locationNumber)}`;
   }
 }
 
@@ -617,28 +624,28 @@ function saveQrUrlToMaster(locationNumber, deviceCategory, qrUrl, deviceInfo = n
 /**
  * 端末マスタにQRコード用URLを保存
  */
-function saveQrUrlToTerminalMaster(locationNumber, qrUrl) {
-  return saveQrUrlToMasterSheet('端末マスタ', locationNumber, qrUrl);
+function saveQrUrlToTerminalMaster(locationNumber, qrUrl, deviceInfo = null) {
+  return saveQrUrlToMasterSheet('端末マスタ', locationNumber, qrUrl, deviceInfo);
 }
 
 /**
  * プリンタマスタにQRコード用URLを保存
  */
-function saveQrUrlToPrinterMaster(locationNumber, qrUrl) {
-  return saveQrUrlToMasterSheet('プリンタマスタ', locationNumber, qrUrl);
+function saveQrUrlToPrinterMaster(locationNumber, qrUrl, deviceInfo = null) {
+  return saveQrUrlToMasterSheet('プリンタマスタ', locationNumber, qrUrl, deviceInfo);
 }
 
 /**
  * その他マスタにQRコード用URLを保存
  */
-function saveQrUrlToOtherMaster(locationNumber, qrUrl) {
-  return saveQrUrlToMasterSheet('その他マスタ', locationNumber, qrUrl);
+function saveQrUrlToOtherMaster(locationNumber, qrUrl, deviceInfo = null) {
+  return saveQrUrlToMasterSheet('その他マスタ', locationNumber, qrUrl, deviceInfo);
 }
 
 /**
- * 指定されたマスタシートにQRコード用URLを保存
+ * 指定されたマスタシートにQRコード用URLを保存（自動登録機能付き）
  */
-function saveQrUrlToMasterSheet(sheetName, locationNumber, qrUrl) {
+function saveQrUrlToMasterSheet(sheetName, locationNumber, qrUrl, deviceInfo = null) {
   try {
     const spreadsheet = SpreadsheetApp.openById(getMainSpreadsheetId());
     const sheet = spreadsheet.getSheetByName(sheetName);

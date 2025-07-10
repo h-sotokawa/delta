@@ -581,20 +581,48 @@
     
     showLoadingMessage('URL生成・保存中...');
     
+    // 通常のURL生成
     google.script.run
       .withSuccessHandler(function(result) {
-        hideLoadingMessage();
-        console.log('URL生成・保存成功:', result);
+        console.log('通常URL生成・保存成功:', result);
         
         if (result.success) {
-          showGenerationResult(result);
+          // 次にQRコード用URLも生成・保存
+          const qrRequestData = {
+            locationNumber: locationNumber,
+            deviceCategory: deviceCategory,
+            deviceInfo: deviceInfo,
+            generateQrUrl: true
+          };
           
-          if (result.isNewEntry) {
-            showSuccessMessage('新規デバイス情報を登録し、URLの生成と保存が完了しました');
-          } else {
-            showSuccessMessage('URLの生成と保存が完了しました');
-          }
+          google.script.run
+            .withSuccessHandler(function(qrResult) {
+              hideLoadingMessage();
+              console.log('QRコード用URL生成・保存成功:', qrResult);
+              
+              // 通常URLとQRコードURLの両方が成功した場合
+              if (qrResult.success) {
+                showGenerationResult(result, qrResult);
+                
+                if (result.isNewEntry) {
+                  showSuccessMessage('新規デバイス情報を登録し、通常URLとQRコード用URLの生成と保存が完了しました');
+                } else {
+                  showSuccessMessage('通常URLとQRコード用URLの生成と保存が完了しました');
+                }
+              } else {
+                showGenerationResult(result);
+                showErrorMessage('通常URLは成功しましたが、QRコード用URLの生成に失敗しました: ' + qrResult.error);
+              }
+            })
+            .withFailureHandler(function(qrError) {
+              hideLoadingMessage();
+              console.error('QRコード用URL生成エラー:', qrError);
+              showGenerationResult(result);
+              showErrorMessage('通常URLは成功しましたが、QRコード用URLの生成に失敗しました: ' + qrError.message);
+            })
+            .generateAndSaveCommonFormUrl(qrRequestData);
         } else {
+          hideLoadingMessage();
           showErrorMessage('URL生成・保存に失敗しました: ' + result.error);
         }
       })
@@ -788,7 +816,7 @@
   // ========================================
   // 生成結果表示
   // ========================================
-  function showGenerationResult(result) {
+  function showGenerationResult(result, qrResult = null) {
     const resultSection = document.getElementById('resultSection');
     const resultContent = document.getElementById('resultContent');
     
@@ -796,6 +824,7 @@
     
     // 結果データをグローバルに保存
     window.generatedResult = result;
+    window.qrGeneratedResult = qrResult;
     
     resultContent.innerHTML = `
       <div class="result-item">
@@ -825,12 +854,24 @@
       <div class="result-item full-width">
         <div class="result-label">
           <i class="fas fa-link"></i>
-          生成されたURL
+          共通フォームURL
         </div>
         <div class="result-value url-display">
           <input type="text" id="generatedUrl" value="${result.generatedUrl}" readonly>
         </div>
       </div>
+      
+      ${qrResult && qrResult.success ? `
+      <div class="result-item full-width">
+        <div class="result-label">
+          <i class="fas fa-qrcode"></i>
+          QRコード用URL
+        </div>
+        <div class="result-value url-display">
+          <input type="text" id="qrGeneratedUrl" value="${qrResult.qrUrl}" readonly>
+        </div>
+      </div>
+      ` : ''}
       
       <div class="result-item">
         <div class="result-label">
@@ -840,6 +881,16 @@
         <div class="result-value">${new Date().toLocaleString('ja-JP')}</div>
       </div>
     `;
+    
+    // QRコード用URLボタンの表示制御
+    const copyQrUrlBtn = document.getElementById('copyQrUrlBtn');
+    if (copyQrUrlBtn) {
+      if (qrResult && qrResult.success) {
+        copyQrUrlBtn.style.display = 'inline-block';
+      } else {
+        copyQrUrlBtn.style.display = 'none';
+      }
+    }
     
     resultSection.style.display = 'block';
     resultSection.scrollIntoView({ behavior: 'smooth' });
@@ -891,7 +942,16 @@
     if (urlInput) {
       urlInput.select();
       document.execCommand('copy');
-      showSuccessMessage('URLをクリップボードにコピーしました');
+      showSuccessMessage('共通フォームURLをクリップボードにコピーしました');
+    }
+  }
+  
+  function copyQrUrlToClipboard() {
+    const qrUrlInput = document.getElementById('qrGeneratedUrl');
+    if (qrUrlInput) {
+      qrUrlInput.select();
+      document.execCommand('copy');
+      showSuccessMessage('QRコード用URLをクリップボードにコピーしました');
     }
   }
 
@@ -964,6 +1024,7 @@
   window.loadLocations = loadLocations;
   window.loadModels = loadModels;
   window.updateLocationNumber = updateLocationNumber;
+  window.copyQrUrlToClipboard = copyQrUrlToClipboard;
   
   // 静的な拠点データを追加するフォールバック関数
   function addStaticLocations() {
