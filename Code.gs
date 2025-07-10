@@ -2452,6 +2452,34 @@ function getFormStorageFolderId(locationId, deviceCategory) {
 // ========================================
 
 /**
+ * デフォルトのentry IDを移行する（初回のみ）
+ * @param {PropertiesService} properties - プロパティサービス
+ */
+function migrateDefaultEntryIds(properties) {
+  const DEFAULT_ENTRY_ID = '1372464946';
+  const MIGRATION_FLAG = 'ENTRY_ID_MIGRATED';
+  
+  // 既に移行済みかチェック
+  if (properties.getProperty(MIGRATION_FLAG) === 'true') {
+    return;
+  }
+  
+  // entry IDが未設定の場合、デフォルト値を設定
+  if (!properties.getProperty('TERMINAL_ENTRY_ID')) {
+    properties.setProperty('TERMINAL_ENTRY_ID', DEFAULT_ENTRY_ID);
+    addLog('端末用entry IDをデフォルト値で初期化', { entryId: DEFAULT_ENTRY_ID });
+  }
+  
+  if (!properties.getProperty('PRINTER_ENTRY_ID')) {
+    properties.setProperty('PRINTER_ENTRY_ID', DEFAULT_ENTRY_ID);
+    addLog('プリンタ用entry IDをデフォルト値で初期化', { entryId: DEFAULT_ENTRY_ID });
+  }
+  
+  // 移行フラグを設定
+  properties.setProperty(MIGRATION_FLAG, 'true');
+}
+
+/**
  * 共通フォームURL設定を取得
  */
 function getCommonFormsSettings() {
@@ -2461,10 +2489,15 @@ function getCommonFormsSettings() {
   try {
     const properties = PropertiesService.getScriptProperties();
     
+    // 既存の設定を移行（初回のみ）
+    migrateDefaultEntryIds(properties);
+    
     const settings = {
       terminalCommonFormUrl: properties.getProperty('TERMINAL_COMMON_FORM_URL') || '',
       printerCommonFormUrl: properties.getProperty('PRINTER_COMMON_FORM_URL') || '',
-      qrRedirectUrl: properties.getProperty('QR_REDIRECT_URL') || ''
+      qrRedirectUrl: properties.getProperty('QR_REDIRECT_URL') || '',
+      terminalEntryId: properties.getProperty('TERMINAL_ENTRY_ID') || '',
+      printerEntryId: properties.getProperty('PRINTER_ENTRY_ID') || ''
     };
     
     endPerformanceTimer(startTime, '共通フォームURL設定取得');
@@ -2505,6 +2538,19 @@ function saveCommonFormsSettings(settings) {
       properties.setProperty('QR_REDIRECT_URL', settings.qrRedirectUrl);
     } else {
       properties.deleteProperty('QR_REDIRECT_URL');
+    }
+    
+    // Entry IDの保存
+    if (settings.terminalEntryId) {
+      properties.setProperty('TERMINAL_ENTRY_ID', settings.terminalEntryId);
+    } else {
+      properties.deleteProperty('TERMINAL_ENTRY_ID');
+    }
+    
+    if (settings.printerEntryId) {
+      properties.setProperty('PRINTER_ENTRY_ID', settings.printerEntryId);
+    } else {
+      properties.deleteProperty('PRINTER_ENTRY_ID');
     }
     
     endPerformanceTimer(startTime, '共通フォームURL設定保存');

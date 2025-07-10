@@ -64,8 +64,8 @@ function generateCommonFormUrl(locationNumber, deviceCategory, generateQrUrl = f
       }
     }
     
-    // URLパラメータとして拠点管理番号を追加
-    const generatedUrl = addLocationNumberParameter(baseUrl, locationNumber);
+    // URLパラメータとして拠点管理番号を追加（フォームタイプに応じたentry IDを使用）
+    const generatedUrl = addLocationNumberParameter(baseUrl, locationNumber, formType, settings);
     
     endPerformanceTimer(startTime, 'URL生成');
     addLog('URL生成完了', { locationNumber, deviceCategory, generatedUrl });
@@ -96,33 +96,33 @@ function generateCommonFormUrl(locationNumber, deviceCategory, generateQrUrl = f
  * 共通フォームURLに拠点管理番号をパラメータとして追加
  * @param {string} baseUrl - 基本URL
  * @param {string} locationNumber - 拠点管理番号
+ * @param {string} formType - フォームタイプ（端末/プリンタ/その他）
+ * @param {Object} settings - 設定情報（entry IDを含む）
  * @return {string} パラメータ付きURL
  */
-function addLocationNumberParameter(baseUrl, locationNumber) {
+function addLocationNumberParameter(baseUrl, locationNumber, formType, settings) {
   try {
-    console.log('URL生成:', { baseUrl, locationNumber });
+    console.log('URL生成:', { baseUrl, locationNumber, formType, settings });
     
-    // 既にパラメータを含むURLの場合、拠点管理番号のみを設定
-    if (baseUrl.includes('entry.') && baseUrl.includes('=')) {
-      // 既存のentry.XXXXパラメータがある場合
-      // 例: https://docs.google.com/forms/.../viewform?entry.1372464946=
-      // 最後の=の後に拠点管理番号を追加
-      if (baseUrl.endsWith('=')) {
-        return `${baseUrl}${encodeURIComponent(locationNumber)}`;
-      } else {
-        // 他のパラメータがある場合は&で区切って追加
-        return `${baseUrl}&entry.1372464946=${encodeURIComponent(locationNumber)}`;
-      }
-    } else {
-      // パラメータがない場合は?で追加
-      const separator = baseUrl.includes('?') ? '&' : '?';
-      return `${baseUrl}${separator}entry.1372464946=${encodeURIComponent(locationNumber)}`;
+    // フォームタイプに応じたentry IDを取得
+    let entryId;
+    if (formType === '端末') {
+      entryId = settings.terminalEntryId;
+    } else if (formType === 'プリンタ' || formType === 'その他') {
+      entryId = settings.printerEntryId;
     }
+    
+    // entry IDが設定されていない場合はエラー
+    if (!entryId) {
+      throw new Error(`${formType}用のEntry IDが設定されていません。システム設定から設定してください。`);
+    }
+    
+    // URLにパラメータを追加
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}entry.${entryId}=${encodeURIComponent(locationNumber)}`;
   } catch (error) {
     console.error('URL生成エラー:', error);
-    // エラーの場合は単純に追加
-    const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}entry.1372464946=${encodeURIComponent(locationNumber)}`;
+    throw error;
   }
 }
 

@@ -76,10 +76,14 @@
     const terminalUrlInput = document.getElementById('terminalCommonFormUrl');
     const printerUrlInput = document.getElementById('printerCommonFormUrl');
     const qrRedirectUrlInput = document.getElementById('qrRedirectUrl');
+    const terminalEntryIdInput = document.getElementById('terminalEntryId');
+    const printerEntryIdInput = document.getElementById('printerEntryId');
     
     console.log('terminalUrlInput element:', terminalUrlInput);
     console.log('printerUrlInput element:', printerUrlInput);
     console.log('qrRedirectUrlInput element:', qrRedirectUrlInput);
+    console.log('terminalEntryIdInput element:', terminalEntryIdInput);
+    console.log('printerEntryIdInput element:', printerEntryIdInput);
     
     if (terminalUrlInput && settings) {
       terminalUrlInput.value = settings.terminalCommonFormUrl || '';
@@ -95,6 +99,16 @@
       qrRedirectUrlInput.value = settings.qrRedirectUrl || '';
       console.log('Set QR redirect URL to:', qrRedirectUrlInput.value);
     }
+    
+    if (terminalEntryIdInput && settings) {
+      terminalEntryIdInput.value = settings.terminalEntryId || '';
+      console.log('Set terminal Entry ID to:', terminalEntryIdInput.value);
+    }
+    
+    if (printerEntryIdInput && settings) {
+      printerEntryIdInput.value = settings.printerEntryId || '';
+      console.log('Set printer Entry ID to:', printerEntryIdInput.value);
+    }
   }
 
   // ========================================
@@ -108,9 +122,11 @@
     const terminalUrl = document.getElementById('terminalCommonFormUrl').value.trim();
     const printerUrl = document.getElementById('printerCommonFormUrl').value.trim();
     const qrRedirectUrl = document.getElementById('qrRedirectUrl').value.trim();
+    const terminalEntryId = document.getElementById('terminalEntryId').value.trim();
+    const printerEntryId = document.getElementById('printerEntryId').value.trim();
     
     // バリデーション
-    if (!validateCommonFormsSettings(terminalUrl, printerUrl, qrRedirectUrl)) {
+    if (!validateCommonFormsSettings(terminalUrl, printerUrl, qrRedirectUrl, terminalEntryId, printerEntryId)) {
       return;
     }
     
@@ -122,7 +138,9 @@
     const settings = {
       terminalCommonFormUrl: terminalUrl,
       printerCommonFormUrl: printerUrl,
-      qrRedirectUrl: qrRedirectUrl
+      qrRedirectUrl: qrRedirectUrl,
+      terminalEntryId: terminalEntryId,
+      printerEntryId: printerEntryId
     };
     
     showSettingsLoading('共通フォームURL設定を保存中...');
@@ -202,7 +220,7 @@
   // ========================================
   // 共通フォームURL設定のバリデーション
   // ========================================
-  function validateCommonFormsSettings(terminalUrl, printerUrl, qrRedirectUrl) {
+  function validateCommonFormsSettings(terminalUrl, printerUrl, qrRedirectUrl, terminalEntryId, printerEntryId) {
     // 少なくとも一つのURLが設定されている必要がある
     if (!terminalUrl && !printerUrl) {
       showSettingsError('少なくとも一つの共通フォームURLを設定してください');
@@ -226,6 +244,30 @@
     
     if (qrRedirectUrl && !gasUrlPattern.test(qrRedirectUrl)) {
       showSettingsError('QRコード中間ページURLの形式が正しくありません');
+      return false;
+    }
+    
+    // Entry IDのバリデーション
+    const entryIdPattern = /^[0-9]+$/;
+    
+    if (terminalUrl && terminalEntryId && !entryIdPattern.test(terminalEntryId)) {
+      showSettingsError('端末用Entry IDは数字のみ入力してください');
+      return false;
+    }
+    
+    if (printerUrl && printerEntryId && !entryIdPattern.test(printerEntryId)) {
+      showSettingsError('プリンタ用Entry IDは数字のみ入力してください');
+      return false;
+    }
+    
+    // URLが設定されている場合はEntry IDも必須
+    if (terminalUrl && !terminalEntryId) {
+      showSettingsError('端末用フォームのEntry IDを入力してください');
+      return false;
+    }
+    
+    if (printerUrl && !printerEntryId) {
+      showSettingsError('プリンタ用フォームのEntry IDを入力してください');
       return false;
     }
     
@@ -343,6 +385,8 @@
       const terminalInput = document.getElementById('terminalCommonFormUrl');
       const printerInput = document.getElementById('printerCommonFormUrl');
       const qrInput = document.getElementById('qrRedirectUrl');
+      const terminalEntryInput = document.getElementById('terminalEntryId');
+      const printerEntryInput = document.getElementById('printerEntryId');
       
       if (terminalInput) {
         terminalInput.classList.remove('valid', 'invalid');
@@ -354,6 +398,14 @@
       
       if (qrInput) {
         qrInput.classList.remove('valid', 'invalid');
+      }
+      
+      if (terminalEntryInput) {
+        terminalEntryInput.value = '';
+      }
+      
+      if (printerEntryInput) {
+        printerEntryInput.value = '';
       }
     }
     

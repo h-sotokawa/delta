@@ -65,8 +65,22 @@
             </button>
           </div>
           <small class="help-text">
-            例: https://docs.google.com/forms/d/1FAIpQLSe.../viewform?usp=pp_url&entry.123456789=<br>
+            例: https://docs.google.com/forms/d/1FAIpQLSe.../viewform<br>
             拠点管理番号フィールドがあるGoogle FormsのURLを入力してください
+          </small>
+          
+          <!-- 端末用Entry ID -->
+          <label for="terminalEntryId" style="margin-top: 10px;">
+            <i class="fas fa-key"></i>
+            拠点管理番号フィールドのEntry ID
+            <span class="setting-description">端末用フォームの拠点管理番号を受け取るフィールドのID</span>
+          </label>
+          <div class="input-group">
+            <input type="text" id="terminalEntryId" name="terminalEntryId" 
+              placeholder="例: 1372464946" pattern="[0-9]+">
+          </div>
+          <small class="help-text">
+            フォームの事前入力URLから確認できます。entry.の後の数字部分を入力してください
           </small>
         </div>
 
@@ -86,8 +100,22 @@
             </button>
           </div>
           <small class="help-text">
-            例: https://docs.google.com/forms/d/1FAIpQLSe.../viewform?usp=pp_url&entry.123456789=<br>
+            例: https://docs.google.com/forms/d/1FAIpQLSe.../viewform<br>
             拠点管理番号フィールドがあるGoogle FormsのURLを入力してください
+          </small>
+          
+          <!-- プリンタ用Entry ID -->
+          <label for="printerEntryId" style="margin-top: 10px;">
+            <i class="fas fa-key"></i>
+            拠点管理番号フィールドのEntry ID
+            <span class="setting-description">プリンタ・その他用フォームの拠点管理番号を受け取るフィールドのID</span>
+          </label>
+          <div class="input-group">
+            <input type="text" id="printerEntryId" name="printerEntryId" 
+              placeholder="例: 1372464947" pattern="[0-9]+">
+          </div>
+          <small class="help-text">
+            フォームの事前入力URLから確認できます。entry.の後の数字部分を入力してください
           </small>
         </div>
         
