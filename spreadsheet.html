@@ -4,14 +4,11 @@
     <h1>スプレッドシートビューアー</h1>
     <div id="popupMessage" class="popup-message" style="display:none;"></div>
     
-    <!-- シートタイプ選択（最初に表示） -->
-    <div class="sheet-type-selector">
-      <label for="sheetType">シートタイプを選択：</label>
-      <select id="sheetType" onchange="handleSheetTypeChange()">
-        <option value="">選択してください</option>
-        <option value="normal">通常データ</option>
-        <option value="audit">監査データ</option>
-        <option value="summary">サマリー</option>
+    <!-- データタイプ選択（データタイプマスタから動的に読み込み） -->
+    <div class="data-type-selector">
+      <label for="dataType">データタイプを選択：</label>
+      <select id="dataType" onchange="handleDataTypeChange()">
+        <option value="">読み込み中...</option>
       </select>
     </div>
     

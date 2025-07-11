@@ -7,6 +7,9 @@
   // 拠点マスタデータ（動的読み込み）
   let spreadsheetLocationMasterData = [];
   
+  // データタイプマスタデータ（動的読み込み）
+  let dataTypeMasterData = [];
+  
   // 拠点IDから拠点名を取得（拠点マスタベース）
   function getLocationNameByIdSpreadsheet(locationId) {
     if (spreadsheetLocationMasterData && spreadsheetLocationMasterData.length > 0) {
@@ -35,6 +38,9 @@
     // 拠点マスタを読み込み
     loadLocationMasterForSpreadsheet();
     
+    // データタイプマスタを読み込み
+    loadDataTypeMaster();
+    
     google.script.run
       .withSuccessHandler(function(response) {
         if (response.success) {
@@ -54,6 +60,44 @@
         errorDiv.textContent = '拠点一覧の取得に失敗しました: ' + error;
       })
       .getLocations();
+  }
+  
+  // データタイプマスタを読み込み
+  function loadDataTypeMaster() {
+    google.script.run
+      .withSuccessHandler(function(response) {
+        if (response.success) {
+          dataTypeMasterData = response.dataTypes || [];
+          console.log('データタイプマスタ読み込み完了:', dataTypeMasterData);
+          
+          // データタイプドロップダウンを更新
+          const dataTypeSelect = document.getElementById('dataType');
+          if (dataTypeSelect) {
+            dataTypeSelect.innerHTML = '<option value="">データタイプを選択してください</option>';
+            
+            dataTypeMasterData.forEach(dataType => {
+              const option = document.createElement('option');
+              option.value = dataType.dataTypeId;
+              option.textContent = dataType.dataTypeName;
+              if (dataType.description) {
+                option.title = dataType.description;
+              }
+              dataTypeSelect.appendChild(option);
+            });
+          }
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('データタイプマスタ読み込み失敗:', error);
+        dataTypeMasterData = [];
+        
+        // エラー時のフォールバック
+        const dataTypeSelect = document.getElementById('dataType');
+        if (dataTypeSelect) {
+          dataTypeSelect.innerHTML = '<option value="">データタイプの読み込みに失敗しました</option>';
+        }
+      })
+      .getDataTypeMaster(true); // アクティブなデータタイプのみ取得
   }
 
   // デバイスタイプ変更時の処理
@@ -2954,17 +2998,35 @@
     }
   }
   
-  // シートタイプ変更イベントハンドラー
-  function handleSheetTypeChange() {
-    const sheetType = document.getElementById('sheetType').value;
+  // データタイプ変更イベントハンドラー
+  function handleDataTypeChange() {
+    const dataTypeId = document.getElementById('dataType').value;
     
-    showDebugInfo('シートタイプ変更', { sheetType });
+    showDebugInfo('データタイプ変更', { dataTypeId });
     
-    // 各セクションの表示/非表示を制御
-    updateLocationVisibility(sheetType);
-    updateAuditSheetVisibility(sheetType);
-    updateSummaryRefreshVisibility(sheetType);
-    updateQuerySelectorVisibility(sheetType);
+    if (!dataTypeId) {
+      // データタイプが選択されていない場合
+      document.querySelector('.location-selector').style.display = 'none';
+      document.querySelector('.audit-sheet-selector').style.display = 'none';
+      document.querySelector('.summary-refresh-selector').style.display = 'none';
+      document.querySelector('.query-selector').style.display = 'none';
+      
+      const tableContainer = document.getElementById('tableContainer');
+      const errorDiv = document.getElementById('error');
+      tableContainer.innerHTML = '';
+      errorDiv.textContent = '';
+      return;
+    }
+    
+    // 選択されたデータタイプの情報を取得
+    const selectedDataType = dataTypeMasterData.find(dt => dt.dataTypeId === dataTypeId);
+    if (!selectedDataType) {
+      console.error('選択されたデータタイプが見つかりません:', dataTypeId);
+      return;
+    }
+    
+    // データタイプに応じてUIを更新
+    updateUIForDataType(selectedDataType);
     
     // テーブルをクリア
     const tableContainer = document.getElementById('tableContainer');
@@ -2972,12 +3034,42 @@
     tableContainer.innerHTML = '';
     errorDiv.textContent = '';
     
-    // データを読み込み（シートタイプが選択されている場合のみ）
-    if (sheetType) {
-      if (DEBUG_MODE) {
-        showDebugInfo('loadDataBasedOnSheetType呼び出し', { sheetType });
-      }
-      loadDataBasedOnSheetType();
+    // データを読み込み
+    if (DEBUG_MODE) {
+      showDebugInfo('loadDataBasedOnDataType呼び出し', { dataTypeId });
+    }
+    loadDataBasedOnDataType();
+  }
+  
+  // データタイプに応じてUIを更新
+  function updateUIForDataType(dataType) {
+    const dataTypeId = dataType.dataTypeId;
+    
+    // 各セクションの表示/非表示を制御
+    if (dataTypeId === 'NORMAL') {
+      // 通常データの場合
+      document.querySelector('.location-selector').style.display = 'block';
+      document.querySelector('.audit-sheet-selector').style.display = 'none';
+      document.querySelector('.summary-refresh-selector').style.display = 'none';
+      document.querySelector('.query-selector').style.display = 'block';
+    } else if (dataTypeId === 'AUDIT') {
+      // 監査データの場合
+      document.querySelector('.location-selector').style.display = 'none';
+      document.querySelector('.audit-sheet-selector').style.display = 'block';
+      document.querySelector('.summary-refresh-selector').style.display = 'none';
+      document.querySelector('.query-selector').style.display = 'none';
+    } else if (dataTypeId === 'SUMMARY') {
+      // サマリーデータの場合
+      document.querySelector('.location-selector').style.display = 'none';
+      document.querySelector('.audit-sheet-selector').style.display = 'none';
+      document.querySelector('.summary-refresh-selector').style.display = 'block';
+      document.querySelector('.query-selector').style.display = 'none';
+    } else {
+      // その他のデータタイプ（カスタム）
+      document.querySelector('.location-selector').style.display = 'block';
+      document.querySelector('.audit-sheet-selector').style.display = 'none';
+      document.querySelector('.summary-refresh-selector').style.display = 'none';
+      document.querySelector('.query-selector').style.display = 'block';
     }
   }
   
@@ -3004,13 +3096,13 @@
       }
     }
     
-    loadDataBasedOnSheetType();
+    loadDataBasedOnDataType();
   }
   
-  // シートタイプに基づいてデータを読み込み
-  function loadDataBasedOnSheetType() {
+  // データタイプに基づいてデータを読み込み
+  function loadDataBasedOnDataType() {
+    const dataTypeId = document.getElementById('dataType').value;
     const locationSelect = document.getElementById('location');
-    const sheetType = document.getElementById('sheetType').value;
     const auditSheet = document.getElementById('auditSheet').value;
     const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
     
@@ -3021,7 +3113,11 @@
     errorDiv.textContent = '';
     tableContainer.innerHTML = '';
     
-    if (sheetType === 'normal') {
+    if (!dataTypeId) {
+      return;
+    }
+    
+    if (dataTypeId === 'NORMAL') {
       // 通常データ：拠点選択が必要
       const location = locationSelect.value;
       if (!location) {
@@ -3030,7 +3126,7 @@
       }
       loadSpreadsheet(location, queryType);
       
-    } else if (sheetType === 'audit') {
+    } else if (dataTypeId === 'AUDIT') {
       // 監査データ：監査シート選択が必要
       if (!auditSheet) {
         errorDiv.textContent = '監査シートを選択してください';
@@ -3194,7 +3290,7 @@
       // 拠点が選択されたらデータを読み込み
       const location = document.getElementById('location').value;
       if (location) {
-        loadDataBasedOnSheetType();
+        loadDataBasedOnDataType();
       }
     } else {
       // 通常データ以外の場合は何もしない

@@ -1,0 +1,456 @@
+<!-- custody-status-ui.html - 預り機ステータス管理UI -->
+<script>
+// ========================================
+// 預り機ステータス管理UI
+// ========================================
+
+/**
+ * 預り機ステータスの編集可能セルを作成
+ * @param {string} currentStatus - 現在のステータス
+ * @param {number} rowIndex - 行インデックス
+ * @param {boolean} canEdit - 編集可能かどうか
+ * @returns {string} HTMLコンテンツ
+ */
+function createCustodyStatusCell(currentStatus, rowIndex, canEdit) {
+  if (!canEdit) {
+    // 編集不可の場合はグレーアウト表示
+    return `<span class="custody-status-readonly" title="編集条件：貸出中かつユーザー機預り有り">${currentStatus || '-'}</span>`;
+  }
+  
+  // 編集可能な場合はドロップダウンを表示
+  const options = ['返却待ち', '返却済み', '廃棄予定', 'その他'];
+  let html = `<select class="custody-status-select" data-row="${rowIndex}" onchange="handleCustodyStatusChange(this)">`;
+  html += `<option value="">${currentStatus || '選択してください'}</option>`;
+  
+  options.forEach(option => {
+    const selected = option === currentStatus ? 'selected' : '';
+    html += `<option value="${option}" ${selected}>${option}</option>`;
+  });
+  
+  html += '</select>';
+  return html;
+}
+
+/**
+ * 預り機ステータス変更ハンドラ
+ * @param {HTMLElement} selectElement - セレクト要素
+ */
+function handleCustodyStatusChange(selectElement) {
+  const rowIndex = parseInt(selectElement.dataset.row);
+  const newStatus = selectElement.value;
+  const oldStatus = selectElement.options[0].text === '選択してください' ? '' : selectElement.options[0].text;
+  
+  if (!newStatus || newStatus === oldStatus) {
+    return;
+  }
+  
+  // 変更理由を入力
+  CommonUI.prompt('変更理由を入力してください（任意）', {
+    title: '預り機ステータス変更',
+    defaultValue: '',
+    confirmText: '変更',
+    cancelText: 'キャンセル'
+  }).then(reason => {
+    if (reason !== null) {
+      // ステータスを更新
+      updateCustodyStatusOnServer(rowIndex, newStatus, reason || '');
+    } else {
+      // キャンセルされた場合は元に戻す
+      selectElement.value = oldStatus;
+    }
+  });
+}
+
+/**
+ * サーバー側で預り機ステータスを更新
+ * @param {number} rowIndex - 行インデックス
+ * @param {string} newStatus - 新しいステータス
+ * @param {string} reason - 変更理由
+ */
+function updateCustodyStatusOnServer(rowIndex, newStatus, reason) {
+  CommonUI.showLoading('預り機ステータスを更新中...');
+  
+  // 現在のシート名を取得
+  const sheetName = getCurrentSheetName();
+  
+  google.script.run
+    .withSuccessHandler(function(response) {
+      CommonUI.hideLoading();
+      
+      if (response.success) {
+        CommonUI.showSuccess('預り機ステータスを更新しました');
+        
+        // テーブルを再読み込み（または該当セルのみ更新）
+        refreshCurrentView();
+      } else {
+        CommonUI.showError(response.error || '更新に失敗しました');
+        
+        // エラーの場合は元に戻す
+        const selectElement = document.querySelector(`.custody-status-select[data-row="${rowIndex}"]`);
+        if (selectElement) {
+          selectElement.selectedIndex = 0;
+        }
+      }
+    })
+    .withFailureHandler(function(error) {
+      CommonUI.hideLoading();
+      CommonUI.showError('通信エラーが発生しました: ' + error);
+      
+      // エラーの場合は元に戻す
+      const selectElement = document.querySelector(`.custody-status-select[data-row="${rowIndex}"]`);
+      if (selectElement) {
+        selectElement.selectedIndex = 0;
+      }
+    })
+    .updateCustodyStatus({
+      sheetName: sheetName,
+      rowIndex: rowIndex,
+      custodyStatus: newStatus,
+      changeReason: reason
+    });
+}
+
+/**
+ * 一括で預り機ステータスを更新
+ */
+function batchUpdateCustodyStatus() {
+  // 選択されている行を取得
+  const selectedRows = getSelectedRows();
+  
+  if (selectedRows.length === 0) {
+    CommonUI.showWarning('更新する行を選択してください');
+    return;
+  }
+  
+  // 編集可能な行のみフィルタ
+  const editableRows = selectedRows.filter(row => {
+    const selectElement = document.querySelector(`.custody-status-select[data-row="${row.index}"]`);
+    return selectElement && !selectElement.disabled;
+  });
+  
+  if (editableRows.length === 0) {
+    CommonUI.showWarning('選択された行に編集可能な預り機ステータスがありません');
+    return;
+  }
+  
+  // ステータス選択ダイアログを表示
+  showBatchUpdateDialog(editableRows);
+}
+
+/**
+ * 一括更新ダイアログを表示
+ * @param {Array} rows - 更新対象の行
+ */
+function showBatchUpdateDialog(rows) {
+  const modalContent = `
+    <div class="batch-update-dialog">
+      <p>${rows.length}件の預り機ステータスを一括更新します。</p>
+      
+      <div class="form-group">
+        <label for="batchStatus">新しいステータス:</label>
+        <select id="batchStatus" class="form-control">
+          <option value="">選択してください</option>
+          <option value="返却待ち">返却待ち</option>
+          <option value="返却済み">返却済み</option>
+          <option value="廃棄予定">廃棄予定</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="batchReason">変更理由（任意）:</label>
+        <textarea id="batchReason" class="form-control" rows="3"></textarea>
+      </div>
+      
+      <div class="selected-items">
+        <strong>対象:</strong>
+        <ul>
+          ${rows.map(row => `<li>行 ${row.index}: ${row.locationNumber || '(拠点管理番号なし)'}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
+  `;
+  
+  const modal = CommonUI.createModal({
+    title: '預り機ステータス一括更新',
+    content: modalContent,
+    buttons: [
+      {
+        text: 'キャンセル',
+        class: 'btn-secondary',
+        onClick: () => CommonUI.closeModal()
+      },
+      {
+        text: '更新',
+        class: 'btn-primary',
+        onClick: () => {
+          const status = document.getElementById('batchStatus').value;
+          const reason = document.getElementById('batchReason').value;
+          
+          if (!status) {
+            CommonUI.showWarning('ステータスを選択してください');
+            return;
+          }
+          
+          CommonUI.closeModal();
+          executeBatchUpdate(rows, status, reason);
+        }
+      }
+    ]
+  });
+}
+
+/**
+ * 一括更新を実行
+ * @param {Array} rows - 更新対象の行
+ * @param {string} status - 新しいステータス
+ * @param {string} reason - 変更理由
+ */
+function executeBatchUpdate(rows, status, reason) {
+  CommonUI.showLoading('一括更新を実行中...');
+  
+  const sheetName = getCurrentSheetName();
+  const updates = rows.map(row => ({
+    rowIndex: row.index,
+    custodyStatus: status
+  }));
+  
+  google.script.run
+    .withSuccessHandler(function(response) {
+      CommonUI.hideLoading();
+      
+      if (response.success) {
+        CommonUI.showSuccess(response.message);
+        
+        // 失敗した行がある場合は詳細を表示
+        if (response.results && response.results.some(r => !r.success)) {
+          const failures = response.results.filter(r => !r.success);
+          console.warn('一括更新で失敗した行:', failures);
+        }
+        
+        // テーブルを再読み込み
+        refreshCurrentView();
+      } else {
+        CommonUI.showError(response.error || '一括更新に失敗しました');
+      }
+    })
+    .withFailureHandler(function(error) {
+      CommonUI.hideLoading();
+      CommonUI.showError('通信エラーが発生しました: ' + error);
+    })
+    .batchUpdateCustodyStatus({
+      sheetName: sheetName,
+      updates: updates,
+      changeReason: reason
+    });
+}
+
+/**
+ * 預り機ステータスサマリーカードを作成
+ * @param {Object} summary - サマリーデータ
+ * @returns {string} HTMLコンテンツ
+ */
+function createCustodyStatusSummaryCard(summary) {
+  const statusColors = {
+    '返却待ち': '#ffc107',
+    '返却済み': '#28a745',
+    '廃棄予定': '#dc3545',
+    'その他': '#6c757d',
+    '未設定': '#e9ecef'
+  };
+  
+  let html = `
+    <div class="custody-status-summary-card">
+      <h3>預り機ステータス状況</h3>
+      <div class="summary-total">
+        <span class="label">預り機総数:</span>
+        <span class="value">${summary.total}台</span>
+      </div>
+      
+      <div class="status-breakdown">
+  `;
+  
+  Object.entries(summary.byStatus).forEach(([status, count]) => {
+    const percentage = summary.total > 0 ? (count / summary.total * 100).toFixed(1) : 0;
+    const color = statusColors[status] || '#6c757d';
+    
+    html += `
+      <div class="status-item">
+        <div class="status-header">
+          <span class="status-name" style="color: ${color}">● ${status}</span>
+          <span class="status-count">${count}台 (${percentage}%)</span>
+        </div>
+        <div class="status-bar">
+          <div class="status-bar-fill" style="width: ${percentage}%; background-color: ${color}"></div>
+        </div>
+      </div>
+    `;
+  });
+  
+  html += `
+      </div>
+    </div>
+  `;
+  
+  return html;
+}
+
+/**
+ * 現在のシート名を取得
+ * @returns {string} シート名
+ */
+function getCurrentSheetName() {
+  // 現在表示中のデータタイプから判定
+  const dataType = document.getElementById('dataType').value;
+  const deviceType = document.getElementById('deviceType').value;
+  
+  if (dataType === 'NORMAL' && deviceType === 'terminal') {
+    return MASTER_SHEET_NAMES.terminal;
+  } else if (dataType === 'NORMAL' && deviceType === 'printer') {
+    return MASTER_SHEET_NAMES.printer;
+  }
+  
+  return MASTER_SHEET_NAMES.terminal; // デフォルト
+}
+
+/**
+ * 選択されている行を取得
+ * @returns {Array} 選択行の情報
+ */
+function getSelectedRows() {
+  const selectedRows = [];
+  const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+  
+  checkboxes.forEach(checkbox => {
+    const row = checkbox.closest('tr');
+    if (row) {
+      selectedRows.push({
+        index: parseInt(row.dataset.rowIndex),
+        locationNumber: row.dataset.locationNumber || ''
+      });
+    }
+  });
+  
+  return selectedRows;
+}
+
+/**
+ * 現在のビューを更新
+ */
+function refreshCurrentView() {
+  // 現在のデータタイプと拠点に基づいて再読み込み
+  const dataTypeId = document.getElementById('dataType').value;
+  if (dataTypeId) {
+    loadDataBasedOnDataType();
+  }
+}
+</script>
+
+<style>
+/* 預り機ステータス管理UI用スタイル */
+.custody-status-select {
+  padding: 4px 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 120px;
+}
+
+.custody-status-select:disabled,
+.custody-status-readonly {
+  color: #6c757d;
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.custody-status-readonly {
+  display: inline-block;
+  padding: 4px 8px;
+}
+
+.batch-update-dialog .form-group {
+  margin-bottom: 15px;
+}
+
+.batch-update-dialog .form-control {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.batch-update-dialog .selected-items {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.batch-update-dialog .selected-items ul {
+  margin: 5px 0 0 20px;
+  padding: 0;
+}
+
+.custody-status-summary-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.custody-status-summary-card h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.summary-total {
+  font-size: 18px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.summary-total .label {
+  color: #6c757d;
+}
+
+.summary-total .value {
+  font-weight: bold;
+  color: #333;
+  margin-left: 10px;
+}
+
+.status-breakdown .status-item {
+  margin-bottom: 15px;
+}
+
+.status-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.status-name {
+  font-weight: 500;
+}
+
+.status-count {
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.status-bar {
+  height: 8px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.status-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+</style>
