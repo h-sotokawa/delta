@@ -145,6 +145,25 @@
       }, 100);
     }
 
+    // データタイプマスタページの場合、データタイプマスタ機能を初期化
+    if (pageId === 'data-type-master') {
+      if (DEBUG_MODE) {
+        showDebugInfo('showPage: データタイプマスタページ表示', { pageId });
+      }
+      setTimeout(() => {
+        if (typeof onDataTypeMasterPageShow === 'function') {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage遅延実行: データタイプマスタ機能初期化', {});
+          }
+          onDataTypeMasterPageShow();
+        } else {
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage: onDataTypeMasterPageShow関数が見つからない', {});
+          }
+        }
+      }, 100);
+    }
+
     // 設定ページの場合、設定機能を初期化
     if (pageId === 'settings') {
       if (DEBUG_MODE) {

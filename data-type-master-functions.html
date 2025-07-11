@@ -1,0 +1,361 @@
+<!-- data-type-master-functions.html - データタイプマスタ管理機能 -->
+<script>
+// ========================================
+// データタイプマスタ管理機能
+// ========================================
+
+// ページ初期化
+function onDataTypeMasterPageShow() {
+  console.log('データタイプマスタページが表示されました');
+  loadDataTypeList();
+}
+
+// データタイプ一覧を読み込み
+function loadDataTypeList() {
+  CommonUI.showLoading('データタイプ一覧を読み込み中...');
+  
+  google.script.run
+    .withSuccessHandler(function(response) {
+      CommonUI.hideLoading();
+      
+      if (response.success) {
+        displayDataTypeList(response.dataTypes);
+      } else {
+        CommonUI.showError('データタイプ一覧の読み込みに失敗しました: ' + (response.error || '不明なエラー'));
+      }
+    })
+    .withFailureHandler(function(error) {
+      CommonUI.hideLoading();
+      CommonUI.showError('通信エラーが発生しました: ' + error);
+    })
+    .getDataTypeMaster(false); // 全てのデータタイプを取得（非アクティブも含む）
+}
+
+// データタイプ一覧を表示
+function displayDataTypeList(dataTypes) {
+  const tbody = document.getElementById('dataTypeTableBody');
+  tbody.innerHTML = '';
+  
+  if (!dataTypes || dataTypes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">データタイプが登録されていません</td></tr>';
+    return;
+  }
+  
+  dataTypes.forEach(function(dataType) {
+    const row = document.createElement('tr');
+    row.setAttribute('data-datatype-id', dataType.dataTypeId);
+    
+    const statusBadge = dataType.status === 'active' 
+      ? '<span class="badge badge-success">有効</span>'
+      : '<span class="badge badge-secondary">無効</span>';
+    
+    row.innerHTML = `
+      <td>${escapeHtml(dataType.dataTypeId)}</td>
+      <td>${escapeHtml(dataType.dataTypeName)}</td>
+      <td>${escapeHtml(dataType.description || '')}</td>
+      <td>${dataType.displayOrder}</td>
+      <td>${statusBadge}</td>
+      <td>${dataType.updatedAt || ''}</td>
+      <td>
+        <button class="btn btn-sm btn-info" onclick="showDataTypeDetail('${escapeHtml(dataType.dataTypeId)}')" title="詳細">
+          <i class="fas fa-eye"></i>
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="editDataType('${escapeHtml(dataType.dataTypeId)}')" title="編集">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn btn-sm btn-danger" onclick="deleteDataType('${escapeHtml(dataType.dataTypeId)}')" title="削除" ${dataType.dataTypeId === 'NORMAL' || dataType.dataTypeId === 'AUDIT' || dataType.dataTypeId === 'SUMMARY' ? 'disabled' : ''}>
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    `;
+    
+    tbody.appendChild(row);
+  });
+}
+
+// データタイプ追加モーダルを表示
+function showAddDataTypeModal() {
+  document.getElementById('dataTypeModalTitle').textContent = 'データタイプを追加';
+  document.getElementById('dataTypeForm').reset();
+  document.getElementById('editDataTypeId').value = '';
+  document.getElementById('dataTypeId').disabled = false;
+  document.getElementById('dataTypeModal').style.display = 'block';
+}
+
+// データタイプ編集
+function editDataType(dataTypeId) {
+  CommonUI.showLoading('データタイプ情報を読み込み中...');
+  
+  // 現在の一覧から該当データを探す
+  const row = document.querySelector(`tr[data-datatype-id="${dataTypeId}"]`);
+  if (!row) {
+    CommonUI.hideLoading();
+    CommonUI.showError('データタイプが見つかりません');
+    return;
+  }
+  
+  // サーバーから最新データを取得
+  google.script.run
+    .withSuccessHandler(function(response) {
+      CommonUI.hideLoading();
+      
+      if (response.success && response.dataTypes.length > 0) {
+        const dataType = response.dataTypes.find(dt => dt.dataTypeId === dataTypeId);
+        if (dataType) {
+          showEditDataTypeModal(dataType);
+        } else {
+          CommonUI.showError('データタイプが見つかりません');
+        }
+      } else {
+        CommonUI.showError('データタイプの取得に失敗しました');
+      }
+    })
+    .withFailureHandler(function(error) {
+      CommonUI.hideLoading();
+      CommonUI.showError('通信エラーが発生しました: ' + error);
+    })
+    .getDataTypeMaster(false);
+}
+
+// 編集モーダルを表示
+function showEditDataTypeModal(dataType) {
+  document.getElementById('dataTypeModalTitle').textContent = 'データタイプを編集';
+  document.getElementById('editDataTypeId').value = dataType.dataTypeId;
+  document.getElementById('dataTypeId').value = dataType.dataTypeId;
+  document.getElementById('dataTypeId').disabled = true;
+  document.getElementById('dataTypeName').value = dataType.dataTypeName;
+  document.getElementById('description').value = dataType.description || '';
+  document.getElementById('displayOrder').value = dataType.displayOrder;
+  document.getElementById('filterCondition').value = dataType.filterCondition || '';
+  document.getElementById('dataSourceConfig').value = JSON.stringify(dataType.dataSourceConfig || {}, null, 2);
+  document.getElementById('displayColumnConfig').value = JSON.stringify(dataType.displayColumnConfig || {}, null, 2);
+  document.getElementById('status').value = dataType.status;
+  
+  document.getElementById('dataTypeModal').style.display = 'block';
+}
+
+// データタイプ保存
+function saveDataType() {
+  const form = document.getElementById('dataTypeForm');
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+  
+  const editDataTypeId = document.getElementById('editDataTypeId').value;
+  const isEdit = !!editDataTypeId;
+  
+  // JSON形式の検証
+  let dataSourceConfig = {};
+  let displayColumnConfig = {};
+  
+  try {
+    const sourceConfigText = document.getElementById('dataSourceConfig').value;
+    if (sourceConfigText) {
+      dataSourceConfig = JSON.parse(sourceConfigText);
+    }
+  } catch (e) {
+    CommonUI.showError('データソース設定のJSON形式が正しくありません');
+    return;
+  }
+  
+  try {
+    const columnConfigText = document.getElementById('displayColumnConfig').value;
+    if (columnConfigText) {
+      displayColumnConfig = JSON.parse(columnConfigText);
+    }
+  } catch (e) {
+    CommonUI.showError('表示列設定のJSON形式が正しくありません');
+    return;
+  }
+  
+  const dataTypeData = {
+    dataTypeId: document.getElementById('dataTypeId').value,
+    dataTypeName: document.getElementById('dataTypeName').value,
+    description: document.getElementById('description').value,
+    displayOrder: parseInt(document.getElementById('displayOrder').value),
+    filterCondition: document.getElementById('filterCondition').value,
+    dataSourceConfig: dataSourceConfig,
+    displayColumnConfig: displayColumnConfig,
+    status: document.getElementById('status').value
+  };
+  
+  CommonUI.showLoading(isEdit ? 'データタイプを更新中...' : 'データタイプを追加中...');
+  
+  const apiCall = isEdit ? 
+    google.script.run.updateDataType(editDataTypeId, dataTypeData) :
+    google.script.run.addDataType(dataTypeData);
+  
+  apiCall
+    .withSuccessHandler(function(response) {
+      CommonUI.hideLoading();
+      
+      if (response.success) {
+        CommonUI.showSuccess(response.message);
+        closeDataTypeModal();
+        loadDataTypeList();
+      } else {
+        CommonUI.showError(response.error || '保存に失敗しました');
+      }
+    })
+    .withFailureHandler(function(error) {
+      CommonUI.hideLoading();
+      CommonUI.showError('通信エラーが発生しました: ' + error);
+    });
+}
+
+// データタイプ削除
+function deleteDataType(dataTypeId) {
+  // システムデフォルトのデータタイプは削除不可
+  if (dataTypeId === 'NORMAL' || dataTypeId === 'AUDIT' || dataTypeId === 'SUMMARY') {
+    CommonUI.showWarning('システムデフォルトのデータタイプは削除できません');
+    return;
+  }
+  
+  CommonUI.confirm(`データタイプ「${dataTypeId}」を削除してもよろしいですか？\n\nこの操作は元に戻せません。`, {
+    title: 'データタイプの削除',
+    confirmText: '削除',
+    cancelText: 'キャンセル'
+  }).then(confirmed => {
+    if (confirmed) {
+      executeDeleteDataType(dataTypeId);
+    }
+  });
+}
+
+// データタイプ削除実行
+function executeDeleteDataType(dataTypeId) {
+  CommonUI.showLoading('データタイプを削除中...');
+  
+  google.script.run
+    .withSuccessHandler(function(response) {
+      CommonUI.hideLoading();
+      
+      if (response.success) {
+        CommonUI.showSuccess('データタイプを削除しました');
+        loadDataTypeList();
+      } else {
+        CommonUI.showError(response.error || '削除に失敗しました');
+      }
+    })
+    .withFailureHandler(function(error) {
+      CommonUI.hideLoading();
+      CommonUI.showError('通信エラーが発生しました: ' + error);
+    })
+    .deleteDataType(dataTypeId);
+}
+
+// データタイプ詳細表示
+function showDataTypeDetail(dataTypeId) {
+  const row = document.querySelector(`tr[data-datatype-id="${dataTypeId}"]`);
+  if (!row) {
+    CommonUI.showError('データタイプが見つかりません');
+    return;
+  }
+  
+  // サーバーから最新データを取得
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response.success && response.dataTypes.length > 0) {
+        const dataType = response.dataTypes.find(dt => dt.dataTypeId === dataTypeId);
+        if (dataType) {
+          displayDataTypeDetail(dataType);
+        } else {
+          CommonUI.showError('データタイプが見つかりません');
+        }
+      } else {
+        CommonUI.showError('データタイプの取得に失敗しました');
+      }
+    })
+    .withFailureHandler(function(error) {
+      CommonUI.showError('通信エラーが発生しました: ' + error);
+    })
+    .getDataTypeMaster(false);
+}
+
+// データタイプ詳細を表示
+function displayDataTypeDetail(dataType) {
+  const content = `
+    <table class="detail-table">
+      <tr>
+        <th>データタイプID</th>
+        <td>${escapeHtml(dataType.dataTypeId)}</td>
+      </tr>
+      <tr>
+        <th>データタイプ名</th>
+        <td>${escapeHtml(dataType.dataTypeName)}</td>
+      </tr>
+      <tr>
+        <th>説明</th>
+        <td>${escapeHtml(dataType.description || '(なし)')}</td>
+      </tr>
+      <tr>
+        <th>表示順序</th>
+        <td>${dataType.displayOrder}</td>
+      </tr>
+      <tr>
+        <th>フィルタ条件</th>
+        <td>${escapeHtml(dataType.filterCondition || '(なし)')}</td>
+      </tr>
+      <tr>
+        <th>データソース設定</th>
+        <td><pre class="json-display">${JSON.stringify(dataType.dataSourceConfig || {}, null, 2)}</pre></td>
+      </tr>
+      <tr>
+        <th>表示列設定</th>
+        <td><pre class="json-display">${JSON.stringify(dataType.displayColumnConfig || {}, null, 2)}</pre></td>
+      </tr>
+      <tr>
+        <th>ステータス</th>
+        <td>${dataType.status === 'active' ? '<span class="badge badge-success">有効</span>' : '<span class="badge badge-secondary">無効</span>'}</td>
+      </tr>
+      <tr>
+        <th>作成日</th>
+        <td>${dataType.createdAt || ''}</td>
+      </tr>
+      <tr>
+        <th>更新日</th>
+        <td>${dataType.updatedAt || ''}</td>
+      </tr>
+    </table>
+  `;
+  
+  document.getElementById('dataTypeDetailContent').innerHTML = content;
+  document.getElementById('dataTypeDetailModal').style.display = 'block';
+}
+
+// モーダルを閉じる
+function closeDataTypeModal() {
+  document.getElementById('dataTypeModal').style.display = 'none';
+}
+
+function closeDataTypeDetailModal() {
+  document.getElementById('dataTypeDetailModal').style.display = 'none';
+}
+
+// 一覧を更新
+function refreshDataTypeList() {
+  loadDataTypeList();
+}
+
+// ユーティリティ関数
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// モーダルの外側クリックで閉じる
+window.addEventListener('click', function(event) {
+  const dataTypeModal = document.getElementById('dataTypeModal');
+  const detailModal = document.getElementById('dataTypeDetailModal');
+  
+  if (event.target === dataTypeModal) {
+    closeDataTypeModal();
+  }
+  if (event.target === detailModal) {
+    closeDataTypeDetailModal();
+  }
+});
+</script>
