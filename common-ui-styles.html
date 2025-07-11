@@ -1,0 +1,362 @@
+<!-- common-ui-styles.html - 共通UIコンポーネントのスタイル -->
+<style>
+/* ========================================
+   共通UI通知スタイル
+   ======================================== */
+.common-ui-notification {
+  position: fixed;
+  z-index: 9999;
+  max-width: 400px;
+  min-width: 300px;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.common-ui-notification.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* 位置設定 */
+.common-ui-notification.top-center {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+}
+
+.common-ui-notification.top-center.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+.common-ui-notification.top-right {
+  top: 20px;
+  right: 20px;
+}
+
+.common-ui-notification.bottom-center {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+}
+
+.common-ui-notification.bottom-center.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+.common-ui-notification.bottom-right {
+  bottom: 20px;
+  right: 20px;
+  transform: translateY(20px);
+}
+
+/* 通知コンテンツ */
+.notification-content {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: white;
+  border-left: 4px solid;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* 通知タイプ別スタイル */
+.common-ui-notification.success .notification-content {
+  border-left-color: #28a745;
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.common-ui-notification.error .notification-content {
+  border-left-color: #dc3545;
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.common-ui-notification.warning .notification-content {
+  border-left-color: #ffc107;
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.common-ui-notification.info .notification-content {
+  border-left-color: #17a2b8;
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.common-ui-notification.loading .notification-content {
+  border-left-color: #007bff;
+  background-color: #e7f3ff;
+  color: #004085;
+}
+
+/* アイコン */
+.notification-icon {
+  margin-right: 12px;
+  font-size: 20px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.common-ui-notification.success .notification-icon {
+  color: #28a745;
+}
+
+.common-ui-notification.error .notification-icon {
+  color: #dc3545;
+}
+
+.common-ui-notification.warning .notification-icon {
+  color: #ffc107;
+}
+
+.common-ui-notification.info .notification-icon {
+  color: #17a2b8;
+}
+
+/* メッセージ */
+.notification-message {
+  flex: 1;
+  word-wrap: break-word;
+}
+
+/* 閉じるボタン */
+.notification-close {
+  margin-left: 12px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notification-close:hover {
+  opacity: 1;
+}
+
+/* ローディングスピナー */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 123, 255, 0.3);
+  border-top-color: #007bff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ========================================
+   モーダルダイアログスタイル
+   ======================================== */
+.common-ui-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.common-ui-modal.show {
+  opacity: 1;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+}
+
+.common-ui-modal.show .modal-content {
+  transform: scale(1);
+}
+
+/* モーダルヘッダー */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  opacity: 1;
+}
+
+/* モーダルボディ */
+.modal-body {
+  padding: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modal-body p {
+  margin: 0 0 16px;
+  line-height: 1.5;
+  color: #555;
+}
+
+.modal-body input.form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.15s;
+}
+
+.modal-body input.form-control:focus {
+  outline: none;
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* モーダルフッター */
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px 20px;
+  border-top: 1px solid #e9ecef;
+  background-color: #f8f9fa;
+}
+
+/* ボタンスタイル */
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: none;
+  line-height: 1.5;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #545b62;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 576px) {
+  .common-ui-notification {
+    max-width: calc(100vw - 40px);
+    min-width: auto;
+  }
+  
+  .common-ui-notification.top-right,
+  .common-ui-notification.bottom-right {
+    right: 10px;
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 10px;
+  }
+  
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 15px;
+  }
+}
+
+/* ダークモード対応（将来の拡張用） */
+@media (prefers-color-scheme: dark) {
+  /* ダークモード時のスタイルを定義可能 */
+}
+
+/* アクセシビリティ向上 */
+@media (prefers-reduced-motion: reduce) {
+  .common-ui-notification,
+  .common-ui-modal,
+  .modal-content,
+  .btn {
+    transition: none;
+  }
+  
+  .spinner {
+    animation: none;
+    border-top-color: transparent;
+  }
+}
+</style>

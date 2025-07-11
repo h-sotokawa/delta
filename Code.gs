@@ -4,48 +4,33 @@
 
 // 拠点IDから拠点名を取得（拠点マスタベース）
 function getLocationNameById(locationId) {
-  try {
+  return safeExecute(() => {
     const location = getLocationById(locationId);
     return location ? location.locationName : locationId;
-  } catch (error) {
-    addLog('拠点名取得エラー', { locationId, error: error.toString() });
-    return locationId;
-  }
+  }, 'getLocationNameById', locationId);
 }
 
 // 拠点IDから拠点コードを取得（拠点マスタベース）
 function getLocationCodeById(locationId) {
-  try {
+  return safeExecute(() => {
     const location = getLocationById(locationId);
     return location ? location.locationCode : locationId;
-  } catch (error) {
-    addLog('拠点コード取得エラー', { locationId, error: error.toString() });
-    return locationId;
-  }
+  }, 'getLocationCodeById', locationId);
 }
 
 // 全拠点の名前マッピングを取得（互換性維持用）
 function getLocationNamesMapping() {
-  try {
+  return safeExecute(() => {
     const locations = getLocationMaster();
     const mapping = {};
     locations.forEach(location => {
       mapping[location.locationId] = location.locationName;
     });
     return mapping;
-  } catch (error) {
-    addLog('拠点名マッピング取得エラー', { error: error.toString() });
-    return {}; // 空のオブジェクトを返す
-  }
+  }, 'getLocationNamesMapping', {});
 }
 
-// 端末・プリンタ・機種マスタシート名
-const MASTER_SHEET_NAMES = {
-  terminal: '端末マスタ',
-  printer: 'プリンタマスタ',
-  other: 'その他マスタ',
-  model: '機種マスタ'
-};
+// マスタシート名はconfig.gsで定義
 
 // 旧マッピングは削除済み - 拠点マスタベースに統一
 
@@ -77,8 +62,7 @@ function getTargetSheetNameByCategory(deviceCategory) {
   return MASTER_SHEET_NAMES.terminal;
 }
 
-// デバッグモード（本番環境ではfalseに設定）
-const DEBUG = false;
+// デバッグモードはconfig.gsで定義
 
 // パフォーマンス監視用
 let performanceMetrics = {

@@ -494,35 +494,26 @@
     }
   }
 
+  // 共通UIコンポーネントを使用するshowMessage関数
   function showMessage(message, type) {
-    // 既存のメッセージがあれば削除
-    const existingMessage = document.querySelector('.message-toast');
-    if (existingMessage) {
-      existingMessage.remove();
+    const options = {
+      duration: 3000
+    };
+    
+    switch(type) {
+      case 'success':
+        CommonUI.showSuccess(message, options);
+        break;
+      case 'error':
+        CommonUI.showError(message, options);
+        break;
+      case 'info':
+        CommonUI.showInfo(message, options);
+        break;
+      default:
+        CommonUI.showInfo(message, options);
+        break;
     }
-    
-    // メッセージ要素を作成
-    const messageElement = document.createElement('div');
-    messageElement.className = `message-toast ${type}`;
-    
-    let iconClass = 'fa-exclamation-triangle';
-    if (type === 'success') iconClass = 'fa-check-circle';
-    else if (type === 'info') iconClass = 'fa-info-circle';
-    
-    messageElement.innerHTML = `
-      <i class="fas ${iconClass}"></i>
-      <span>${message}</span>
-    `;
-    
-    // ページに追加
-    document.body.appendChild(messageElement);
-    
-    // 3秒後に自動削除
-    setTimeout(() => {
-      if (messageElement.parentNode) {
-        messageElement.remove();
-      }
-    }, 3000);
   }
 
   // モーダルの外側クリックで閉じる

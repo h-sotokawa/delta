@@ -904,43 +904,22 @@
   // ========================================
   // メッセージ表示関数
   // ========================================
+  // 共通UIコンポーネントを使用する通知関数
+  // ========================================
   function showSuccessMessage(message) {
-    const successDiv = document.getElementById('success-message');
-    const successText = document.getElementById('success-text');
-    
-    if (successDiv && successText) {
-      successText.textContent = message;
-      successDiv.style.display = 'block';
-      
-      setTimeout(() => {
-        successDiv.style.display = 'none';
-      }, 3000);
-    }
+    CommonUI.showSuccess(message, { duration: 3000 });
   }
 
   function showErrorMessage(message) {
-    const errorDiv = document.getElementById('error-message');
-    const errorText = document.getElementById('error-text');
-    
-    if (errorDiv && errorText) {
-      errorText.textContent = message;
-      errorDiv.style.display = 'block';
-      
-      setTimeout(() => {
-        errorDiv.style.display = 'none';
-      }, 5000);
-    }
+    CommonUI.showError(message, { duration: 5000 });
   }
 
   function showLoadingMessage(message) {
-    showSuccessMessage(message);
+    CommonUI.showLoading(message);
   }
 
   function hideLoadingMessage() {
-    const successDiv = document.getElementById('success-message');
-    if (successDiv) {
-      successDiv.style.display = 'none';
-    }
+    CommonUI.hideLoading();
   }
 
   // ========================================

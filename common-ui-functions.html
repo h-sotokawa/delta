@@ -1,0 +1,423 @@
+<!-- common-ui-functions.html - 共通UIコンポーネント -->
+<script>
+// ========================================
+// 共通UI通知システム
+// ========================================
+const CommonUI = (function() {
+  'use strict';
+  
+  // 通知タイプの定義
+  const NotificationType = {
+    SUCCESS: 'success',
+    ERROR: 'error',
+    WARNING: 'warning',
+    INFO: 'info',
+    LOADING: 'loading'
+  };
+  
+  // デフォルト設定
+  const DEFAULT_DURATION = 3000; // 3秒
+  const DEFAULT_POSITION = 'top-center';
+  
+  // 通知キュー管理
+  let notificationQueue = [];
+  let currentNotification = null;
+  
+  /**
+   * 通知を表示
+   * @param {string} message - 表示するメッセージ
+   * @param {string} type - 通知タイプ
+   * @param {Object} options - オプション設定
+   */
+  function showNotification(message, type, options = {}) {
+    const notification = {
+      id: Date.now().toString(),
+      message: message,
+      type: type,
+      duration: options.duration || DEFAULT_DURATION,
+      persistent: options.persistent || false,
+      position: options.position || DEFAULT_POSITION,
+      callback: options.callback || null
+    };
+    
+    if (type === NotificationType.LOADING || options.immediate) {
+      // ローディングや即時表示の場合は既存の通知をクリア
+      clearCurrentNotification();
+      displayNotification(notification);
+    } else {
+      // その他の場合はキューに追加
+      notificationQueue.push(notification);
+      processQueue();
+    }
+    
+    return notification.id;
+  }
+  
+  /**
+   * 通知を実際に表示
+   * @param {Object} notification - 通知オブジェクト
+   */
+  function displayNotification(notification) {
+    currentNotification = notification;
+    
+    // 既存の通知コンテナを削除
+    const existingContainer = document.getElementById('commonUINotification');
+    if (existingContainer) {
+      existingContainer.remove();
+    }
+    
+    // 通知要素を作成
+    const container = document.createElement('div');
+    container.id = 'commonUINotification';
+    container.className = `common-ui-notification ${notification.type} ${notification.position}`;
+    
+    // アイコンを設定
+    const icon = getIconForType(notification.type);
+    
+    // HTMLを構築
+    container.innerHTML = `
+      <div class="notification-content">
+        ${icon ? `<span class="notification-icon">${icon}</span>` : ''}
+        <span class="notification-message">${notification.message}</span>
+        ${!notification.persistent && notification.type !== NotificationType.LOADING ? 
+          '<button class="notification-close" onclick="CommonUI.dismiss()">&times;</button>' : ''}
+      </div>
+    `;
+    
+    // ボディに追加
+    document.body.appendChild(container);
+    
+    // アニメーション用のクラスを追加
+    setTimeout(() => container.classList.add('show'), 10);
+    
+    // 永続的でない場合は自動的に削除
+    if (!notification.persistent && notification.type !== NotificationType.LOADING) {
+      setTimeout(() => {
+        dismissNotification(notification.id);
+      }, notification.duration);
+    }
+    
+    // コールバックを実行
+    if (notification.callback) {
+      notification.callback();
+    }
+  }
+  
+  /**
+   * 通知タイプに応じたアイコンを取得
+   * @param {string} type - 通知タイプ
+   * @returns {string} アイコンHTML
+   */
+  function getIconForType(type) {
+    const icons = {
+      success: '✓',
+      error: '✕',
+      warning: '⚠',
+      info: 'ⓘ',
+      loading: '<span class="spinner"></span>'
+    };
+    return icons[type] || '';
+  }
+  
+  /**
+   * 現在の通知をクリア
+   */
+  function clearCurrentNotification() {
+    if (currentNotification) {
+      dismissNotification(currentNotification.id);
+    }
+  }
+  
+  /**
+   * 通知を削除
+   * @param {string} notificationId - 通知ID
+   */
+  function dismissNotification(notificationId) {
+    const container = document.getElementById('commonUINotification');
+    if (container && currentNotification && currentNotification.id === notificationId) {
+      container.classList.remove('show');
+      setTimeout(() => {
+        container.remove();
+        currentNotification = null;
+        processQueue();
+      }, 300);
+    }
+  }
+  
+  /**
+   * キューを処理
+   */
+  function processQueue() {
+    if (!currentNotification && notificationQueue.length > 0) {
+      const next = notificationQueue.shift();
+      displayNotification(next);
+    }
+  }
+  
+  // ========================================
+  // 便利メソッド
+  // ========================================
+  
+  /**
+   * 成功メッセージを表示
+   * @param {string} message - メッセージ
+   * @param {Object} options - オプション
+   */
+  function showSuccess(message, options = {}) {
+    return showNotification(message, NotificationType.SUCCESS, options);
+  }
+  
+  /**
+   * エラーメッセージを表示
+   * @param {string} message - メッセージ
+   * @param {Object} options - オプション
+   */
+  function showError(message, options = {}) {
+    return showNotification(message, NotificationType.ERROR, { 
+      ...options, 
+      duration: options.duration || 5000 // エラーは長めに表示
+    });
+  }
+  
+  /**
+   * 警告メッセージを表示
+   * @param {string} message - メッセージ
+   * @param {Object} options - オプション
+   */
+  function showWarning(message, options = {}) {
+    return showNotification(message, NotificationType.WARNING, options);
+  }
+  
+  /**
+   * 情報メッセージを表示
+   * @param {string} message - メッセージ
+   * @param {Object} options - オプション
+   */
+  function showInfo(message, options = {}) {
+    return showNotification(message, NotificationType.INFO, options);
+  }
+  
+  /**
+   * ローディング表示
+   * @param {string} message - メッセージ
+   * @returns {string} 通知ID
+   */
+  function showLoading(message = '処理中...') {
+    return showNotification(message, NotificationType.LOADING, { 
+      persistent: true,
+      immediate: true 
+    });
+  }
+  
+  /**
+   * ローディングを非表示
+   */
+  function hideLoading() {
+    if (currentNotification && currentNotification.type === NotificationType.LOADING) {
+      dismissNotification(currentNotification.id);
+    }
+  }
+  
+  /**
+   * すべての通知をクリア
+   */
+  function clearAll() {
+    notificationQueue = [];
+    clearCurrentNotification();
+  }
+  
+  // ========================================
+  // モーダルダイアログ
+  // ========================================
+  
+  /**
+   * 確認ダイアログを表示
+   * @param {string} message - メッセージ
+   * @param {Object} options - オプション
+   * @returns {Promise<boolean>} ユーザーの選択結果
+   */
+  function confirm(message, options = {}) {
+    return new Promise((resolve) => {
+      const modal = createModal({
+        title: options.title || '確認',
+        content: message,
+        buttons: [
+          {
+            text: options.cancelText || 'キャンセル',
+            class: 'btn-secondary',
+            onClick: () => {
+              closeModal(modal);
+              resolve(false);
+            }
+          },
+          {
+            text: options.confirmText || 'OK',
+            class: 'btn-primary',
+            onClick: () => {
+              closeModal(modal);
+              resolve(true);
+            }
+          }
+        ]
+      });
+    });
+  }
+  
+  /**
+   * プロンプトダイアログを表示
+   * @param {string} message - メッセージ
+   * @param {Object} options - オプション
+   * @returns {Promise<string|null>} 入力値またはnull
+   */
+  function prompt(message, options = {}) {
+    return new Promise((resolve) => {
+      const inputId = 'promptInput_' + Date.now();
+      const content = `
+        <p>${message}</p>
+        <input type="text" id="${inputId}" class="form-control" 
+               value="${options.defaultValue || ''}" 
+               placeholder="${options.placeholder || ''}">
+      `;
+      
+      const modal = createModal({
+        title: options.title || '入力',
+        content: content,
+        buttons: [
+          {
+            text: options.cancelText || 'キャンセル',
+            class: 'btn-secondary',
+            onClick: () => {
+              closeModal(modal);
+              resolve(null);
+            }
+          },
+          {
+            text: options.confirmText || 'OK',
+            class: 'btn-primary',
+            onClick: () => {
+              const value = document.getElementById(inputId).value;
+              closeModal(modal);
+              resolve(value);
+            }
+          }
+        ]
+      });
+      
+      // フォーカスを入力フィールドに設定
+      setTimeout(() => {
+        const input = document.getElementById(inputId);
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }, 100);
+    });
+  }
+  
+  /**
+   * モーダルを作成
+   * @param {Object} config - モーダル設定
+   * @returns {HTMLElement} モーダル要素
+   */
+  function createModal(config) {
+    // 既存のモーダルを削除
+    const existing = document.getElementById('commonUIModal');
+    if (existing) {
+      existing.remove();
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'commonUIModal';
+    modal.className = 'common-ui-modal';
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    
+    // ヘッダー
+    if (config.title) {
+      const header = document.createElement('div');
+      header.className = 'modal-header';
+      header.innerHTML = `
+        <h5 class="modal-title">${config.title}</h5>
+        <button class="modal-close" onclick="CommonUI.closeModal()">&times;</button>
+      `;
+      modalContent.appendChild(header);
+    }
+    
+    // ボディ
+    const body = document.createElement('div');
+    body.className = 'modal-body';
+    body.innerHTML = config.content;
+    modalContent.appendChild(body);
+    
+    // フッター
+    if (config.buttons && config.buttons.length > 0) {
+      const footer = document.createElement('div');
+      footer.className = 'modal-footer';
+      
+      config.buttons.forEach(buttonConfig => {
+        const button = document.createElement('button');
+        button.className = `btn ${buttonConfig.class || 'btn-primary'}`;
+        button.textContent = buttonConfig.text;
+        button.onclick = buttonConfig.onClick;
+        footer.appendChild(button);
+      });
+      
+      modalContent.appendChild(footer);
+    }
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // 表示アニメーション
+    setTimeout(() => modal.classList.add('show'), 10);
+    
+    return modal;
+  }
+  
+  /**
+   * モーダルを閉じる
+   * @param {HTMLElement} modal - モーダル要素
+   */
+  function closeModal(modal) {
+    if (!modal) {
+      modal = document.getElementById('commonUIModal');
+    }
+    
+    if (modal) {
+      modal.classList.remove('show');
+      setTimeout(() => modal.remove(), 300);
+    }
+  }
+  
+  // 公開API
+  return {
+    // 通知
+    showSuccess,
+    showError,
+    showWarning,
+    showInfo,
+    showLoading,
+    hideLoading,
+    showNotification,
+    dismiss: () => currentNotification && dismissNotification(currentNotification.id),
+    clearAll,
+    
+    // ダイアログ
+    confirm,
+    prompt,
+    closeModal,
+    
+    // 定数
+    NotificationType
+  };
+})();
+
+// グローバルに公開（後方互換性のため）
+function showSuccess(message, options) { return CommonUI.showSuccess(message, options); }
+function showError(message, options) { return CommonUI.showError(message, options); }
+function showWarning(message, options) { return CommonUI.showWarning(message, options); }
+function showInfo(message, options) { return CommonUI.showInfo(message, options); }
+function showLoading(message) { return CommonUI.showLoading(message); }
+function hideLoading() { return CommonUI.hideLoading(); }
+</script>

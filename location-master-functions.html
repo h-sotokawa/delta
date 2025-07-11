@@ -392,65 +392,33 @@
   }
 
   // ========================================
-  // UI通知関数
+  // UI通知関数（共通UIコンポーネントを使用）
   // ========================================
+  // showLocationPopupMessage関数を共通UIのshowNotificationにマッピング
   function showLocationPopupMessage(message, type = 'info') {
-    console.log(`[${type.toUpperCase()}] ${message}`); // デバッグ用
+    const options = {
+      duration: 5000,
+      immediate: true
+    };
     
-    const popup = document.getElementById('popupMessage');
-    if (!popup) {
-      console.warn('popupMessage要素が見つかりません。alertで表示します。');
-      // フォールバック：ポップアップ要素がない場合はalertを使用
-      if (type === 'error') {
-        alert('エラー: ' + message);
-      } else if (type === 'success') {
-        alert('成功: ' + message);
-      } else {
-        alert('情報: ' + message);
-      }
-      return;
+    switch(type) {
+      case 'success':
+        CommonUI.showSuccess(message, options);
+        break;
+      case 'error':
+        CommonUI.showError(message, options);
+        break;
+      case 'info':
+      default:
+        CommonUI.showInfo(message, options);
+        break;
     }
-    
-    popup.textContent = message;
-    popup.className = 'popup-message show';
-    
-    // メッセージタイプに応じてクラスを追加
-    if (type === 'success') {
-      popup.classList.add('success');
-    } else if (type === 'error') {
-      popup.classList.add('error');
-    } else if (type === 'info') {
-      popup.classList.add('info');
-    }
-    
-    // 表示を強制的に確実にする
-    popup.style.display = 'block';
-    popup.style.visibility = 'visible';
-    popup.style.opacity = '1';
-    popup.style.zIndex = '9999';
-    
-    console.log('ポップアップメッセージ表示:', {
-      message,
-      type,
-      element: popup,
-      className: popup.className,
-      style: popup.style.cssText
-    });
-    
-    setTimeout(() => {
-      popup.classList.remove('show');
-      setTimeout(() => {
-        popup.style.display = 'none';
-        popup.style.visibility = '';
-        popup.style.opacity = '';
-        popup.className = 'popup-message'; // クラスをリセット
-      }, 600);
-    }, 5000); // 3秒から5秒に延長
   }
 
+  // showLoading関数をカスタマイズ（フォーム無効化機能を維持）
   function showLoading(message) {
-    // ポップアップメッセージを表示
-    showLocationPopupMessage(message, 'info');
+    // 共通UIのローディング表示
+    CommonUI.showLoading(message);
     
     // 保存ボタンをローディング状態に変更
     const saveButton = document.querySelector('#locationModal .modal-footer .btn-primary');
@@ -467,7 +435,11 @@
     }
   }
 
+  // hideLoading関数をカスタマイズ（フォーム有効化機能を維持）
   function hideLoading() {
+    // 共通UIのローディング非表示
+    CommonUI.hideLoading();
+    
     // 保存ボタンを元の状態に戻す
     const saveButton = document.querySelector('#locationModal .modal-footer .btn-primary');
     if (saveButton) {
@@ -487,14 +459,6 @@
         document.getElementById('locationId').disabled = true;
       }
     }
-  }
-
-  function showSuccess(message) {
-    showLocationPopupMessage(message, 'success');
-  }
-
-  function showError(message) {
-    showLocationPopupMessage(message, 'error');
   }
 
   // ========================================
