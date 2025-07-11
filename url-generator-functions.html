@@ -283,6 +283,12 @@
               for (let i = 0; i < checkSelect.options.length; i++) {
                 console.log(`option[${i}]: value="${checkSelect.options[i].value}", text="${checkSelect.options[i].text}"`);
               }
+              
+              // 拠点が既に選択されている場合は拠点管理番号を更新
+              if (checkSelect.selectedIndex > 0) {
+                console.log('拠点が選択されているため、拠点管理番号を更新します');
+                updateLocationNumber();
+              }
             }
           }, 1000);
           
@@ -435,7 +441,8 @@
   function updateLocationNumber() {
     console.log('updateLocationNumber関数が呼び出されました');
     
-    const location = document.getElementById('location').value;
+    const locationSelect = document.getElementById('location');
+    const location = locationSelect ? locationSelect.value : '';
     const category = document.getElementById('deviceCategory').value;
     const model = document.getElementById('model').value;
     const serialNumber = document.getElementById('serialNumber').value.trim();
@@ -555,15 +562,82 @@
       sequenceNumber: sequenceNumber
     });
     
+    // 拠点管理番号が空の場合は再生成を試みる
+    if (!locationNumber) {
+      console.log('拠点管理番号が空のため、再生成を試みます');
+      
+      // 拠点の値を再確認
+      const locationSelect = document.getElementById('location');
+      if (locationSelect && locationSelect.selectedIndex > 0) {
+        // 選択されている場合は値を明示的に設定
+        const selectedOption = locationSelect.options[locationSelect.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+          locationSelect.value = selectedOption.value;
+          console.log('拠点の値を明示的に設定:', selectedOption.value);
+        }
+      }
+      
+      updateLocationNumber();
+      // 少し待ってから再取得
+      setTimeout(function() {
+        const updatedLocationNumber = document.getElementById('locationNumber').value.trim();
+        if (updatedLocationNumber) {
+          console.log('拠点管理番号の再生成成功:', updatedLocationNumber);
+          // 再生成された番号でバリデーションを実行
+          if (validateGenerationForm(updatedLocationNumber, deviceCategory)) {
+            // バリデーション成功時は処理を続行
+            proceedWithUrlGeneration(updatedLocationNumber, deviceCategory);
+          }
+        } else {
+          console.log('拠点管理番号の再生成失敗');
+          
+          // 各フィールドの値を確認
+          const debugInfo = {
+            location: document.getElementById('location').value,
+            deviceCategory: document.getElementById('deviceCategory').value,
+            model: document.getElementById('model').value,
+            serialNumber: document.getElementById('serialNumber').value,
+            sequenceNumber: document.getElementById('sequenceNumber').value
+          };
+          console.error('拠点管理番号生成失敗の原因:', debugInfo);
+          
+          // より具体的なエラーメッセージ
+          if (!debugInfo.location) {
+            showErrorMessage('拠点が選択されていません。拠点を選択してください。');
+          } else if (!debugInfo.model) {
+            showErrorMessage('モデルが選択されていません。モデルを選択してください。');
+          } else if (!debugInfo.serialNumber) {
+            showErrorMessage('製造番号が入力されていません。製造番号を入力してください。');
+          } else {
+            showErrorMessage('拠点管理番号を生成できませんでした。入力内容を確認してください。');
+          }
+        }
+      }, 200);
+      return;
+    }
+    
     // バリデーション
     if (!validateGenerationForm(locationNumber, deviceCategory)) {
       return;
     }
     
+    // URL生成処理を続行
+    proceedWithUrlGeneration(locationNumber, deviceCategory);
+  }
+  
+  function proceedWithUrlGeneration(locationNumber, deviceCategory) {
+    const form = document.getElementById('urlGenerationForm');
+    if (!form) return;
+    
     // 共通フォーム設定確認
     if (!checkCategorySettings(deviceCategory)) {
       return;
     }
+    
+    // フォームデータを再度取得
+    const model = document.getElementById('model').value;
+    const serialNumber = document.getElementById('serialNumber').value.trim();
+    const sequenceNumber = document.getElementById('sequenceNumber').value;
     
     // デバイス情報を取得（モデル選択から詳細情報を取得）
     const modelSelect = document.getElementById('model');
@@ -632,13 +706,16 @@
   // フォームバリデーション
   // ========================================
   function validateGenerationForm(locationNumber, deviceCategory) {
+    console.log('validateGenerationForm開始:', { locationNumber, deviceCategory });
+    
     // 全フィールドのバリデーション
     const locationSelect = document.getElementById('location');
     
-    // 拠点選択の値を複数の方法で取得を試行
+    // 拠点選択の値を取得
     let location = '';
     if (locationSelect) {
       location = locationSelect.value;
+      console.log('拠点選択の初期値:', location);
       
       // valueが空の場合、selectedIndexから値を取得を試行
       if (!location && locationSelect.selectedIndex > 0) {
@@ -669,12 +746,15 @@
     });
     
     if (!location || location === '') {
-      const locationSelect = document.getElementById('location');
+      // 実際に拠点が選択されていないかチェック
+      const actuallyNotSelected = !locationSelect || locationSelect.selectedIndex <= 0;
+      
       console.error('拠点選択エラー詳細:', {
         selectElement: locationSelect,
         optionsLength: locationSelect ? locationSelect.options.length : 'null',
         selectedIndex: locationSelect ? locationSelect.selectedIndex : 'null',
         value: locationSelect ? locationSelect.value : 'null',
+        actuallyNotSelected: actuallyNotSelected,
         allOptions: locationSelect ? Array.from(locationSelect.options).map((opt, index) => ({
           index: index,
           value: opt.value,
@@ -718,7 +798,8 @@
               console.log('自動修復が成功しました。新しい拠点値:', newLocation);
               showSuccessMessage('拠点の選択を自動修復しました: ' + selectedOption.textContent);
               // バリデーションを再実行
-              return validateGenerationForm(document.getElementById('locationNumber').value, deviceCategory);
+              const newLocationNumber = document.getElementById('locationNumber').value;
+              return validateGenerationForm(newLocationNumber, deviceCategory);
             } else {
               showErrorMessage('拠点の選択修復に失敗しました。手動で再選択してください。');
             }
@@ -726,7 +807,7 @@
           
           return false; // 修復処理中のため一旦false返却
         } else {
-          showErrorMessage('拠点を選択してください。利用可能な拠点: ' + availableLocations.join(', '));
+          showErrorMessage('拠点を選択してください');
         }
       } else {
         showErrorMessage('拠点を選択してください（拠点データが読み込まれていません）');
@@ -777,7 +858,15 @@
     }
     
     if (!locationNumber) {
-      showErrorMessage('拠点管理番号が生成されていません');
+      showErrorMessage('拠点管理番号が生成されていません。すべての項目を入力してください。');
+      console.error('拠点管理番号が生成されていません:', {
+        location: location,
+        deviceCategory: deviceCategory,
+        model: model,
+        serialNumber: serialNumber,
+        sequenceNumber: sequenceNumber,
+        locationNumber: locationNumber
+      });
       return false;
     }
     
@@ -788,6 +877,7 @@
       return false;
     }
     
+    console.log('バリデーション成功');
     return true;
   }
 
