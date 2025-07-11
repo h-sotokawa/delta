@@ -40,7 +40,22 @@ function formatDateForDataType(dateValue) {
  * @returns {Sheet} データタイプマスタシート
  */
 function getDataTypeMasterSheet() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  // 統一スプレッドシートIDを取得
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+  
+  if (!spreadsheetId) {
+    console.error('SPREADSHEET_ID_DESTINATION not found in script properties');
+    throw new Error('スプレッドシートIDが設定されていません');
+  }
+  
+  // スプレッドシートを開く
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  
+  if (!spreadsheet) {
+    console.error('Spreadsheet not found:', spreadsheetId);
+    throw new Error('スプレッドシートが見つかりません');
+  }
+  
   let sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAMES.dataType);
   
   if (!sheet) {
