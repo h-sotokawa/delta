@@ -1,133 +1,343 @@
-<!-- settings.html - システム設定ページ -->
-<div class="settings-container">
-  <!-- ポップアップメッセージ -->
-  <div id="settingsPopupMessage" class="popup-message"></div>
-
-  <div class="page-header">
+<div class="page-header">
     <h1><i class="fas fa-cog"></i> システム設定</h1>
-    <p>フォーム作成やマスタデータに関する設定を管理します</p>
-  </div>
-
-  <!-- 設定カテゴリタブ -->
-  <div class="settings-tabs">
-    <button class="tab-button active" onclick="showSettingsTab('common-forms')" id="common-forms-tab">
-      <i class="fas fa-link"></i>
-      共通フォームURL
-    </button>
-  </div>
-
-
-
-  <!-- 共通フォームURL設定 -->
-  <div id="common-forms-settings" class="settings-section active">
-    <div class="section-header">
-      <h2><i class="fas fa-link"></i> 共通フォームURL設定</h2>
-      <p>拠点管理番号を事前入力するための共通フォームURLを設定します</p>
-    </div>
-
-    <!-- 管理者向け警告 -->
-    <div class="admin-warning">
-      <div class="warning-header">
-        <i class="fas fa-exclamation-triangle"></i>
-        <strong>管理者専用設定</strong>
-      </div>
-      <div class="warning-content">
-        <p><strong>⚠️ 重要な注意事項</strong></p>
-        <ul>
-          <li>この設定は<strong>システム管理者のみ</strong>が変更してください</li>
-          <li>誤った設定は<strong>システム全体</strong>に影響を与える可能性があります</li>
-          <li>設定変更前に必ず<strong>管理者の承認</strong>を得てください</li>
-          <li>変更後は<strong>動作確認</strong>を必ず実施してください</li>
-        </ul>
-        <p class="warning-note">
-          <i class="fas fa-info-circle"></i>
-          不明な点がある場合は、システム管理者にお問い合わせください
-        </p>
-      </div>
-    </div>
-
-    <form id="commonFormsSettingsForm">
-      <div class="settings-grid">
-
-        <!-- 端末用共通フォームURL -->
-        <div class="setting-item">
-          <label for="terminalCommonFormUrl">
-            <i class="fas fa-desktop"></i>
-            端末用共通フォームURL
-            <span class="setting-description">SV・CLカテゴリで使用する共通フォームのURL</span>
-          </label>
-          <div class="input-group">
-            <input type="url" id="terminalCommonFormUrl" name="terminalCommonFormUrl" 
-              placeholder="https://docs.google.com/forms/d/...">
-            <button type="button" class="btn btn-info btn-sm" onclick="validateFormUrl('terminalCommonFormUrl')">
-              <i class="fas fa-check"></i>
-              検証
-            </button>
-          </div>
-          <small class="help-text">
-            例: https://docs.google.com/forms/d/1FAIpQLSe.../viewform?usp=pp_url&entry.123456789=<br>
-            拠点管理番号フィールドがあるGoogle FormsのURLを入力してください
-          </small>
-        </div>
-
-        <!-- プリンタ・その他用共通フォームURL -->
-        <div class="setting-item">
-          <label for="printerCommonFormUrl">
-            <i class="fas fa-print"></i>
-            プリンタ・その他用共通フォームURL
-            <span class="setting-description">プリンタ・その他カテゴリで使用する共通フォームのURL</span>
-          </label>
-          <div class="input-group">
-            <input type="url" id="printerCommonFormUrl" name="printerCommonFormUrl" 
-              placeholder="https://docs.google.com/forms/d/...">
-            <button type="button" class="btn btn-info btn-sm" onclick="validateFormUrl('printerCommonFormUrl')">
-              <i class="fas fa-check"></i>
-              検証
-            </button>
-          </div>
-          <small class="help-text">
-            例: https://docs.google.com/forms/d/1FAIpQLSe.../viewform?usp=pp_url&entry.123456789=<br>
-            拠点管理番号フィールドがあるGoogle FormsのURLを入力してください
-          </small>
-        </div>
-        
-        <!-- QRコード中間ページURL -->
-        <div class="setting-item">
-          <label for="qrRedirectUrl">
-            <i class="fas fa-qrcode"></i>
-            QRコード中間ページURL
-            <span class="setting-description">QRコード読み取り時にアクセスする中間ページのURL</span>
-          </label>
-          <div class="input-group">
-            <input type="url" id="qrRedirectUrl" name="qrRedirectUrl" 
-              placeholder="https://script.google.com/macros/s/.../exec">
-            <button type="button" class="btn btn-info btn-sm" onclick="validateQrUrl('qrRedirectUrl')">
-              <i class="fas fa-check"></i>
-              検証
-            </button>
-          </div>
-          <small class="help-text">
-            例: https://script.google.com/macros/s/AKfycbw.../exec<br>
-            　　https://script.google.com/a/macros/domain.com/s/AKfycbw.../exec<br>
-            GAS Web AppのURLを入力してください（個人向け・企業向け両方対応）
-          </small>
-        </div>
-
-      </div>
-
-      <!-- 保存ボタン -->
-      <div class="form-actions">
-        <button type="button" class="btn btn-secondary" onclick="resetCommonFormsSettings()">
-          <i class="fas fa-undo"></i>
-          リセット
-        </button>
-        <button type="button" class="btn btn-success" onclick="saveCommonFormsSettings()">
-          <i class="fas fa-save"></i>
-          設定を保存
-        </button>
-      </div>
-    </form>
-  </div>
-
-
+    <div class="description">共通設定と通知管理</div>
 </div>
+
+<!-- タブナビゲーション -->
+<ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="form-url-tab" data-bs-toggle="tab" data-bs-target="#form-url" type="button" role="tab">
+            <i class="fas fa-link"></i> 共通フォームURL
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="notification-tab" data-bs-toggle="tab" data-bs-target="#notification" type="button" role="tab">
+            <i class="fas fa-bell"></i> 通知設定
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab">
+            <i class="fas fa-cogs"></i> システム設定
+        </button>
+    </li>
+</ul>
+
+<!-- タブコンテンツ -->
+<div class="tab-content" id="settingsTabContent">
+    <!-- 共通フォームURL設定 -->
+    <div class="tab-pane fade show active" id="form-url" role="tabpanel">
+        <div class="card">
+            <div class="card-body">
+                <div class="alert alert-info mb-4" id="debugModeAlert">
+                    <i class="fas fa-info-circle"></i> 
+                    <span id="debugModeMessage">読み込み中...</span>
+                </div>
+
+                <form id="formUrlForm">
+                    <div class="mb-4">
+                        <label for="terminalFormUrl" class="form-label">
+                            <i class="fas fa-desktop"></i> 端末用共通フォームURL
+                        </label>
+                        <div class="input-group">
+                            <input type="url" class="form-control" id="terminalFormUrl" 
+                                   placeholder="https://docs.google.com/forms/d/...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="validateUrl('terminalFormUrl')">
+                                <i class="fas fa-check"></i> 検証
+                            </button>
+                        </div>
+                        <div class="form-text">端末（Server、Desktop、Laptop、Tablet）用のGoogle FormsのURL</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="printerFormUrl" class="form-label">
+                            <i class="fas fa-print"></i> プリンタ用共通フォームURL
+                        </label>
+                        <div class="input-group">
+                            <input type="url" class="form-control" id="printerFormUrl" 
+                                   placeholder="https://docs.google.com/forms/d/...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="validateUrl('printerFormUrl')">
+                                <i class="fas fa-check"></i> 検証
+                            </button>
+                        </div>
+                        <div class="form-text">プリンタ・その他機器用のGoogle FormsのURL</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="qrPageUrl" class="form-label">
+                            <i class="fas fa-qrcode"></i> QR中間ページURL
+                        </label>
+                        <div class="input-group">
+                            <input type="url" class="form-control" id="qrPageUrl" 
+                                   placeholder="https://script.google.com/macros/s/...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="validateUrl('qrPageUrl')">
+                                <i class="fas fa-check"></i> 検証
+                            </button>
+                        </div>
+                        <div class="form-text">QRコード経由でアクセスする中間ページのURL</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" onclick="resetFormUrls()">
+                            <i class="fas fa-undo"></i> リセット
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="saveFormUrlBtn">
+                            <i class="fas fa-save"></i> 設定を保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知設定 -->
+    <div class="tab-pane fade" id="notification" role="tabpanel">
+        <div class="card mb-4" id="logNotificationCard">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bug"></i> ログ通知設定（開発用）</h5>
+            </div>
+            <div class="card-body">
+                <form id="logNotificationForm">
+                    <div class="mb-3">
+                        <label for="errorNotificationEmail" class="form-label">
+                            <i class="fas fa-exclamation-circle"></i> エラー通知メール
+                        </label>
+                        <input type="text" class="form-control" id="errorNotificationEmail" 
+                               placeholder="admin@example.com, team@example.com">
+                        <div class="form-text">システムエラー発生時の通知先（カンマ区切りで複数指定可）</div>
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="testEmail('error')">
+                            <i class="fas fa-paper-plane"></i> テスト送信
+                        </button>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="alertNotificationEmail" class="form-label">
+                            <i class="fas fa-exclamation-triangle"></i> アラート通知メール
+                        </label>
+                        <input type="text" class="form-control" id="alertNotificationEmail" 
+                               placeholder="alert@example.com">
+                        <div class="form-text">重要イベント・警告の通知先</div>
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="testEmail('alert')">
+                            <i class="fas fa-paper-plane"></i> テスト送信
+                        </button>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> ログ通知設定を保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-envelope"></i> ステータス変更通知設定（運用）</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    ステータス変更通知の設定は拠点マスタで管理されています。
+                    各拠点のグループメールアドレスと通知ON/OFF設定は
+                    <a href="#" onclick="showLocationMaster()" class="alert-link">拠点マスタ</a>
+                    で設定してください。
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-check-label">
+                        <strong>グローバル通知設定</strong>
+                    </label>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="globalNotificationEnabled">
+                        <label class="form-check-label" for="globalNotificationEnabled">
+                            システム全体の通知を有効にする
+                        </label>
+                    </div>
+                    <div class="form-text">
+                        この設定をOFFにすると、拠点マスタの設定に関わらず全ての通知が停止されます。
+                    </div>
+                </div>
+
+                <!-- 拠点別通知状況一覧 -->
+                <div class="mt-4">
+                    <h6><i class="fas fa-list"></i> 拠点別通知設定状況</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>拠点</th>
+                                    <th>グループメール</th>
+                                    <th>通知設定</th>
+                                </tr>
+                            </thead>
+                            <tbody id="locationNotificationList">
+                                <tr>
+                                    <td colspan="3" class="text-center">
+                                        <div class="spinner-border spinner-border-sm" role="status">
+                                            <span class="visually-hidden">読み込み中...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- システム設定 -->
+    <div class="tab-pane fade" id="system" role="tabpanel">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-tools"></i> デバッグモード</h5>
+                
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="debugModeSwitch">
+                    <label class="form-check-label" for="debugModeSwitch">
+                        デバッグモードを有効にする
+                    </label>
+                </div>
+
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong>注意:</strong> デバッグモードを有効にすると、以下の設定が編集可能になります：
+                    <ul class="mb-0 mt-2">
+                        <li>共通フォームURL設定</li>
+                        <li>ログ通知設定（エラー・アラート通知）</li>
+                        <li>詳細なエラーログの表示</li>
+                    </ul>
+                </div>
+
+                <div class="mt-4">
+                    <h6><i class="fas fa-info-circle"></i> システム情報</h6>
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <th width="200">スプレッドシートID</th>
+                                <td><code id="spreadsheetId">-</code></td>
+                            </tr>
+                            <tr>
+                                <th>最終更新日時</th>
+                                <td id="lastSystemUpdate">-</td>
+                            </tr>
+                            <tr>
+                                <th>システムバージョン</th>
+                                <td>1.0.0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <button type="button" class="btn btn-primary" onclick="saveSystemSettings()">
+                        <i class="fas fa-save"></i> システム設定を保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 確認モーダル -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> 確認</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">この操作を実行してもよろしいですか？</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" id="confirmButton">確認</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* 設定画面専用スタイル */
+.nav-tabs .nav-link {
+    color: #6c757d;
+}
+
+.nav-tabs .nav-link.active {
+    font-weight: bold;
+}
+
+.form-control:disabled, .form-control[readonly] {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+
+.input-group .btn-outline-secondary {
+    border-color: #ced4da;
+}
+
+.input-group .btn-outline-secondary:hover {
+    background-color: #e9ecef;
+}
+
+code {
+    padding: 0.2rem 0.4rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+#confirmModal .modal-header {
+    background-color: #fff3cd;
+    border-bottom: 1px solid #ffeaa7;
+}
+
+#confirmModal .modal-title {
+    color: #856404;
+}
+
+.validation-success {
+    border-color: #28a745 !important;
+}
+
+.validation-error {
+    border-color: #dc3545 !important;
+}
+
+.test-email-result {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* ログ通知カードの表示制御 */
+#logNotificationCard.d-none {
+    display: none !important;
+}
+
+/* 拠点通知リストのスタイル */
+#locationNotificationList .badge {
+    font-size: 0.75rem;
+}
+
+.notification-enabled {
+    color: #28a745;
+}
+
+.notification-disabled {
+    color: #6c757d;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .nav-tabs .nav-link {
+        white-space: nowrap;
+    }
+}
+</style>

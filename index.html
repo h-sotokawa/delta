@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代替機管理システム</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #3498db;
+            --light-bg: #ecf0f1;
+            --dark-text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Meiryo', sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+        }
+
+        /* ヘッダーナビゲーション */
+        .navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+
+        .navbar-nav .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+        }
+
+        .navbar-nav .nav-link:hover {
+            background-color: rgba(255,255,255,0.1);
+            color: white !important;
+        }
+
+        .navbar-nav .nav-link.active {
+            background-color: var(--secondary-color);
+            color: white !important;
+        }
+
+        /* メインコンテンツ */
+        .main-content {
+            min-height: calc(100vh - 56px);
+            padding: 2rem 0;
+        }
+
+        /* ページヘッダー */
+        .page-header {
+            background-color: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .page-header h1 {
+            margin: 0;
+            color: var(--primary-color);
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .page-header .description {
+            margin-top: 0.5rem;
+            color: #7f8c8d;
+        }
+
+        /* カードスタイル */
+        .card {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-text {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        /* レスポンシブデザイン */
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .navbar-nav {
+                margin-top: 1rem;
+            }
+
+            .card {
+                margin-bottom: 1rem;
+            }
+        }
+
+        /* ローディングスピナー */
+        .spinner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 300px;
+        }
+
+        /* ボタンスタイル */
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: #34495e;
+            border-color: #34495e;
+        }
+
+        /* ユーザー情報 */
+        .user-info {
+            display: flex;
+            align-items: center;
+            color: rgba(255,255,255,0.9);
+            margin-left: auto;
+        }
+
+        .user-info i {
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダーナビゲーション -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#" onclick="showDashboard()">
+                <i class="fas fa-desktop"></i> 代替機管理システム
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" onclick="showDashboard()">
+                            <i class="fas fa-home"></i> ダッシュボード
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSpreadsheetViewer()">
+                            <i class="fas fa-table"></i> 統合ビューアー
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showUrlGenerator()">
+                            <i class="fas fa-link"></i> URL生成
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showMasterData()">
+                            <i class="fas fa-database"></i> マスタ管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSettings()">
+                            <i class="fas fa-cog"></i> 設定
+                        </a>
+                    </li>
+                </ul>
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="userEmail">読み込み中...</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- メインコンテンツ -->
+    <div class="main-content">
+        <div class="container-fluid">
+            <div id="contentArea">
+                <!-- 動的にコンテンツが挿入される -->
+                <div class="spinner-container">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">読み込み中...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- アプリケーションスクリプト -->
+    <script>
+        // グローバル変数
+        let currentView = 'dashboard';
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            // ユーザー情報の取得
+            google.script.run.withSuccessHandler(displayUserInfo)
+                .withFailureHandler(handleError)
+                .getUserEmail();
+
+            // ダッシュボードを表示
+            showDashboard();
+        });
+
+        // ユーザー情報表示
+        function displayUserInfo(email) {
+            document.getElementById('userEmail').textContent = email || 'ゲスト';
+        }
+
+        // エラーハンドリング
+        function handleError(error) {
+            console.error('エラー:', error);
+            showNotification('エラーが発生しました: ' + error.message, 'danger');
+        }
+
+        // 通知表示
+        function showNotification(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const contentArea = document.getElementById('contentArea');
+            contentArea.insertBefore(alertDiv, contentArea.firstChild);
+
+            // 5秒後に自動的に閉じる
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // ナビゲーションのアクティブ状態を更新
+        function updateNavigation(viewName) {
+            document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            const activeLink = document.querySelector(`.navbar-nav .nav-link[onclick*="${viewName}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+        }
+
+        // ローディング表示
+        function showLoading() {
+            document.getElementById('contentArea').innerHTML = `
+                <div class="spinner-container">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">読み込み中...</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ダッシュボード表示
+        function showDashboard() {
+            currentView = 'dashboard';
+            updateNavigation('showDashboard');
+            
+            document.getElementById('contentArea').innerHTML = `
+                <div class="page-header">
+                    <h1><i class="fas fa-home"></i> 代替機管理システムダッシュボード</h1>
+                    <div class="description">関西フィールドサービス課 代替機管理システム</div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100" onclick="showSpreadsheetViewer()" style="cursor: pointer;">
+                            <div class="card-body text-center">
+                                <div class="card-icon text-primary">
+                                    <i class="fas fa-table"></i>
+                                </div>
+                                <h5 class="card-title">統合ビューアー</h5>
+                                <p class="card-text">全デバイスの一元管理と状態確認</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100" onclick="showUrlGenerator()" style="cursor: pointer;">
+                            <div class="card-body text-center">
+                                <div class="card-icon text-success">
+                                    <i class="fas fa-link"></i>
+                                </div>
+                                <h5 class="card-title">URL生成</h5>
+                                <p class="card-text">拠点管理番号とフォームURLの生成</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100" onclick="showModelMaster()" style="cursor: pointer;">
+                            <div class="card-body text-center">
+                                <div class="card-icon text-warning">
+                                    <i class="fas fa-laptop"></i>
+                                </div>
+                                <h5 class="card-title">機種マスタ</h5>
+                                <p class="card-text">機器モデル情報の管理</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100" onclick="showLocationMaster()" style="cursor: pointer;">
+                            <div class="card-body text-center">
+                                <div class="card-icon text-info">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <h5 class="card-title">拠点マスタ</h5>
+                                <p class="card-text">拠点情報と通知設定の管理</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100" onclick="showSettings()" style="cursor: pointer;">
+                            <div class="card-body text-center">
+                                <div class="card-icon text-secondary">
+                                    <i class="fas fa-cog"></i>
+                                </div>
+                                <h5 class="card-title">システム設定</h5>
+                                <p class="card-text">共通設定と通知管理</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // スプレッドシートビューアー表示
+        function showSpreadsheetViewer() {
+            currentView = 'spreadsheet';
+            updateNavigation('showSpreadsheetViewer');
+            showLoading();
+
+            // スプレッドシートビューアーのHTMLを読み込む
+            google.script.run.withSuccessHandler(function(html) {
+                document.getElementById('contentArea').innerHTML = html;
+                // スプレッドシートビューアーの初期化関数を呼び出す
+                if (typeof initializeSpreadsheetViewer === 'function') {
+                    initializeSpreadsheetViewer();
+                }
+            }).withFailureHandler(handleError)
+            .getSpreadsheetViewerHtml();
+        }
+
+        // URL生成画面表示
+        function showUrlGenerator() {
+            currentView = 'urlGenerator';
+            updateNavigation('showUrlGenerator');
+            showLoading();
+
+            google.script.run.withSuccessHandler(function(html) {
+                document.getElementById('contentArea').innerHTML = html;
+                if (typeof initializeUrlGenerator === 'function') {
+                    initializeUrlGenerator();
+                }
+            }).withFailureHandler(handleError)
+            .getUrlGeneratorHtml();
+        }
+
+        // マスタデータ管理画面表示
+        function showMasterData() {
+            currentView = 'masterData';
+            updateNavigation('showMasterData');
+            
+            document.getElementById('contentArea').innerHTML = `
+                <div class="page-header">
+                    <h1><i class="fas fa-database"></i> マスタデータ管理</h1>
+                    <div class="description">システムマスタデータの管理</div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card h-100" onclick="showLocationMaster()" style="cursor: pointer;">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-map-marker-alt text-info"></i> 拠点マスタ
+                                </h5>
+                                <p class="card-text">拠点情報の管理</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card h-100" onclick="showModelMaster()" style="cursor: pointer;">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-laptop text-warning"></i> 機種マスタ
+                                </h5>
+                                <p class="card-text">機器モデル情報の管理</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 機種マスタ画面表示
+        function showModelMaster() {
+            currentView = 'modelMaster';
+            updateNavigation('showMasterData');
+            showLoading();
+
+            google.script.run.withSuccessHandler(function(html) {
+                document.getElementById('contentArea').innerHTML = html;
+                if (typeof initializeModelMaster === 'function') {
+                    initializeModelMaster();
+                }
+            }).withFailureHandler(handleError)
+            .getModelMasterHtml();
+        }
+
+        // 拠点マスタ画面表示
+        function showLocationMaster() {
+            currentView = 'locationMaster';
+            updateNavigation('showMasterData');
+            showLoading();
+
+            google.script.run.withSuccessHandler(function(html) {
+                document.getElementById('contentArea').innerHTML = html;
+                if (typeof initializeLocationMaster === 'function') {
+                    initializeLocationMaster();
+                }
+            }).withFailureHandler(handleError)
+            .getLocationMasterHtml();
+        }
+
+        // 設定画面表示
+        function showSettings() {
+            currentView = 'settings';
+            updateNavigation('showSettings');
+            showLoading();
+
+            google.script.run.withSuccessHandler(function(html) {
+                document.getElementById('contentArea').innerHTML = html;
+                if (typeof initializeSettings === 'function') {
+                    initializeSettings();
+                }
+            }).withFailureHandler(handleError)
+            .getSettingsHtml();
+        }
+    </script>
+</body>
+</html>

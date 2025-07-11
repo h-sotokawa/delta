@@ -1,461 +1,448 @@
-<!-- settings-functions.html - システム設定ページの機能 -->
 <script>
-  // ========================================
-  // ページ初期化
-  // ========================================
-  function onSettingsPageShow() {
-    console.log('onSettingsPageShow called');
+// 設定画面の初期化
+function initializeSettings() {
+    // 現在の設定を読み込む
+    loadCurrentSettings();
     
-    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-      showDebugInfo('設定ページ初期化開始', {});
-    }
+    // イベントリスナーの設定
+    setupSettingsEventListeners();
     
-    // DOM要素の確認
-    const commonFormsTab = document.getElementById('common-forms-tab');
-    const commonFormsSettings = document.getElementById('common-forms-settings');
-    
-    console.log('共通フォームタブ要素:', commonFormsTab);
-    console.log('共通フォーム設定セクション:', commonFormsSettings);
-    
-    // 共通フォームURL設定を初期読み込み
-    loadCommonFormsSettings();
-  }
+    // 拠点別通知設定の読み込み
+    loadLocationNotifications();
+}
 
-  // ========================================
-  // 設定タブ切り替え
-  // ========================================
-  function showSettingsTab(tabId) {
-    console.log('showSettingsTab called with tabId:', tabId);
+// イベントリスナーの設定
+function setupSettingsEventListeners() {
+    // フォームURL設定フォーム
+    document.getElementById('formUrlForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveFormUrls();
+    });
     
-    // 共通フォームURLタブのみサポート
-    if (tabId === 'common-forms') {
-      console.log('Loading common forms settings...');
-      loadCommonFormsSettings();
-    }
+    // ログ通知設定フォーム
+    document.getElementById('logNotificationForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveLogNotificationSettings();
+    });
     
-    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-      showDebugInfo('設定タブ切り替え', { tabId });
-    }
-  }
+    // デバッグモードスイッチ
+    document.getElementById('debugModeSwitch')?.addEventListener('change', function() {
+        handleDebugModeChange(this.checked);
+    });
+    
+    // グローバル通知設定
+    document.getElementById('globalNotificationEnabled')?.addEventListener('change', function() {
+        saveGlobalNotificationSetting(this.checked);
+    });
+}
 
-  // ========================================
-  // 共通フォームURL設定の読み込み
-  // ========================================
-  function loadCommonFormsSettings() {
-    console.log('loadCommonFormsSettings called');
-    showSettingsLoading('共通フォームURL設定を読み込み中...');
-    
-    google.script.run
-      .withSuccessHandler(function(settings) {
-        console.log('共通フォームURL設定読み込み成功:', settings);
-        hideSettingsLoading();
-        displayCommonFormsSettings(settings);
+// 現在の設定を読み込む
+function loadCurrentSettings() {
+    google.script.run.withSuccessHandler(function(settings) {
+        // デバッグモードの状態
+        const debugMode = settings.debugMode || false;
+        document.getElementById('debugModeSwitch').checked = debugMode;
+        updateDebugModeUI(debugMode);
         
-        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('共通フォームURL設定読み込み完了', { settings });
-        }
-      })
-      .withFailureHandler(function(error) {
-        console.error('共通フォームURL設定読み込みエラー:', error);
-        hideSettingsLoading();
-        showSettingsError('共通フォームURL設定の読み込みに失敗しました: ' + error.message);
+        // フォームURL設定
+        document.getElementById('terminalFormUrl').value = settings.terminalFormUrl || '';
+        document.getElementById('printerFormUrl').value = settings.printerFormUrl || '';
+        document.getElementById('qrPageUrl').value = settings.qrPageUrl || '';
         
-        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('共通フォームURL設定読み込みエラー', { error });
+        // ログ通知設定
+        document.getElementById('errorNotificationEmail').value = settings.errorNotificationEmail || '';
+        document.getElementById('alertNotificationEmail').value = settings.alertNotificationEmail || '';
+        
+        // グローバル通知設定
+        document.getElementById('globalNotificationEnabled').checked = settings.statusChangeNotificationEnabled || false;
+        
+        // システム情報
+        document.getElementById('spreadsheetId').textContent = settings.spreadsheetId || '-';
+        document.getElementById('lastSystemUpdate').textContent = settings.lastUpdate ? 
+            new Date(settings.lastUpdate).toLocaleString('ja-JP') : '-';
+            
+    }).withFailureHandler(handleError)
+    .getSystemSettings();
+}
+
+// デバッグモードの変更処理
+function handleDebugModeChange(enabled) {
+    showConfirmModal(
+        `デバッグモードを${enabled ? '有効' : '無効'}にしてもよろしいですか？`,
+        function() {
+            updateDebugMode(enabled);
+        },
+        function() {
+            // キャンセルされた場合は元に戻す
+            document.getElementById('debugModeSwitch').checked = !enabled;
         }
-      })
-      .getCommonFormsSettings();
-  }
+    );
+}
 
-  // ========================================
-  // 共通フォームURL設定の表示
-  // ========================================
-  function displayCommonFormsSettings(settings) {
-    console.log('displayCommonFormsSettings called with:', settings);
-    
-    const terminalUrlInput = document.getElementById('terminalCommonFormUrl');
-    const printerUrlInput = document.getElementById('printerCommonFormUrl');
-    const qrRedirectUrlInput = document.getElementById('qrRedirectUrl');
-    
-    console.log('terminalUrlInput element:', terminalUrlInput);
-    console.log('printerUrlInput element:', printerUrlInput);
-    console.log('qrRedirectUrlInput element:', qrRedirectUrlInput);
-    
-    if (terminalUrlInput && settings) {
-      terminalUrlInput.value = settings.terminalCommonFormUrl || '';
-      console.log('Set terminal URL to:', terminalUrlInput.value);
-    }
-    
-    if (printerUrlInput && settings) {
-      printerUrlInput.value = settings.printerCommonFormUrl || '';
-      console.log('Set printer URL to:', printerUrlInput.value);
-    }
-    
-    if (qrRedirectUrlInput && settings) {
-      qrRedirectUrlInput.value = settings.qrRedirectUrl || '';
-      console.log('Set QR redirect URL to:', qrRedirectUrlInput.value);
-    }
-  }
+// デバッグモードの更新
+function updateDebugMode(enabled) {
+    google.script.run.withSuccessHandler(function(result) {
+        if (result.success) {
+            updateDebugModeUI(enabled);
+            showNotification(
+                `デバッグモードを${enabled ? '有効' : '無効'}にしました。`,
+                'success'
+            );
+        } else {
+            showNotification('デバッグモードの更新に失敗しました。', 'danger');
+            document.getElementById('debugModeSwitch').checked = !enabled;
+        }
+    }).withFailureHandler(handleError)
+    .updateDebugMode(enabled);
+}
 
-  // ========================================
-  // 共通フォームURL設定の保存
-  // ========================================
-  function saveCommonFormsSettings() {
-    const form = document.getElementById('commonFormsSettingsForm');
-    if (!form) return;
+// デバッグモードUIの更新
+function updateDebugModeUI(debugMode) {
+    const alert = document.getElementById('debugModeAlert');
+    const message = document.getElementById('debugModeMessage');
+    const formInputs = document.querySelectorAll('#terminalFormUrl, #printerFormUrl, #qrPageUrl');
+    const logNotificationCard = document.getElementById('logNotificationCard');
     
-    // フォームデータを収集
-    const terminalUrl = document.getElementById('terminalCommonFormUrl').value.trim();
-    const printerUrl = document.getElementById('printerCommonFormUrl').value.trim();
-    const qrRedirectUrl = document.getElementById('qrRedirectUrl').value.trim();
+    if (debugMode) {
+        alert.className = 'alert alert-warning mb-4';
+        message.innerHTML = '<strong>🔧 デバッグモード: 有効</strong><br>管理者専用設定が編集可能です。';
+        
+        // フォームを編集可能にする
+        formInputs.forEach(input => {
+            input.removeAttribute('readonly');
+            input.classList.remove('form-control-plaintext');
+            input.classList.add('form-control');
+        });
+        
+        // ログ通知設定を表示
+        logNotificationCard.classList.remove('d-none');
+    } else {
+        alert.className = 'alert alert-info mb-4';
+        message.innerHTML = '🔒 デバッグモード: 無効<br>設定の変更にはデバッグモードを有効にしてください。';
+        
+        // フォームを読み取り専用にする
+        formInputs.forEach(input => {
+            input.setAttribute('readonly', 'readonly');
+            input.classList.remove('form-control');
+            input.classList.add('form-control-plaintext');
+        });
+        
+        // ログ通知設定を非表示
+        logNotificationCard.classList.add('d-none');
+    }
+}
+
+// URL検証
+function validateUrl(inputId) {
+    const input = document.getElementById(inputId);
+    const url = input.value.trim();
     
-    // バリデーション
-    if (!validateCommonFormsSettings(terminalUrl, printerUrl, qrRedirectUrl)) {
-      return;
+    if (!url) {
+        showNotification('URLを入力してください。', 'warning');
+        return;
     }
     
-    // 3段階確認プロセス
-    if (!showTripleConfirmation()) {
-      return;
+    // URL形式の検証
+    try {
+        const urlObj = new URL(url);
+        
+        // Google FormsまたはGoogle Apps Script URLかチェック
+        if (inputId !== 'qrPageUrl' && !url.includes('docs.google.com/forms')) {
+            throw new Error('Google FormsのURLを入力してください。');
+        }
+        if (inputId === 'qrPageUrl' && !url.includes('script.google.com')) {
+            throw new Error('Google Apps ScriptのURLを入力してください。');
+        }
+        
+        // 検証成功
+        input.classList.remove('validation-error');
+        input.classList.add('validation-success');
+        showNotification('URLの形式は有効です。', 'success');
+        
+        // 3秒後にクラスを削除
+        setTimeout(() => {
+            input.classList.remove('validation-success');
+        }, 3000);
+        
+    } catch (error) {
+        input.classList.remove('validation-success');
+        input.classList.add('validation-error');
+        showNotification(error.message || 'URLの形式が無効です。', 'danger');
+        
+        // 3秒後にクラスを削除
+        setTimeout(() => {
+            input.classList.remove('validation-error');
+        }, 3000);
+    }
+}
+
+// フォームURLの保存
+function saveFormUrls() {
+    const debugMode = document.getElementById('debugModeSwitch').checked;
+    if (!debugMode) {
+        showNotification('デバッグモードが無効のため、設定を変更できません。', 'warning');
+        return;
     }
     
     const settings = {
-      terminalCommonFormUrl: terminalUrl,
-      printerCommonFormUrl: printerUrl,
-      qrRedirectUrl: qrRedirectUrl
+        terminalFormUrl: document.getElementById('terminalFormUrl').value.trim(),
+        printerFormUrl: document.getElementById('printerFormUrl').value.trim(),
+        qrPageUrl: document.getElementById('qrPageUrl').value.trim()
     };
     
-    showSettingsLoading('共通フォームURL設定を保存中...');
+    // 保存中の表示
+    const saveBtn = document.getElementById('saveFormUrlBtn');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
     
-    google.script.run
-      .withSuccessHandler(function(result) {
-        hideSettingsLoading();
-        showSettingsSuccess('共通フォームURL設定が正常に保存されました');
+    google.script.run.withSuccessHandler(function(result) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
         
-        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('共通フォームURL設定保存完了', { result });
+        if (result.success) {
+            showNotification('フォームURL設定を保存しました。', 'success');
+        } else {
+            showNotification('保存に失敗しました: ' + result.error, 'danger');
         }
-      })
-      .withFailureHandler(function(error) {
-        hideSettingsLoading();
-        showSettingsError('共通フォームURL設定の保存に失敗しました: ' + error.message);
-        
-        if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-          showDebugInfo('共通フォームURL設定保存エラー', { error });
+    }).withFailureHandler(function(error) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+        handleError(error);
+    }).saveFormUrlSettings(settings);
+}
+
+// フォームURLのリセット
+function resetFormUrls() {
+    showConfirmModal(
+        'フォームURL設定を初期値にリセットしてもよろしいですか？',
+        function() {
+            document.getElementById('terminalFormUrl').value = '';
+            document.getElementById('printerFormUrl').value = '';
+            document.getElementById('qrPageUrl').value = '';
+            showNotification('フォームURL設定をリセットしました。', 'info');
         }
-      })
-      .saveCommonFormsSettings(settings);
-  }
+    );
+}
 
-  // ========================================
-  // 3段階確認ダイアログ
-  // ========================================
-  function showTripleConfirmation() {
-    // 第1段階確認
-    const step1 = confirm(
-      '⚠️ 重要な設定変更 ⚠️\n\n' +
-      '共通フォームURLの設定を変更します。\n' +
-      'この設定はシステム全体に影響します。\n\n' +
-      '続行してもよろしいですか？'
-    );
+// ログ通知設定の保存
+function saveLogNotificationSettings() {
+    const settings = {
+        errorNotificationEmail: document.getElementById('errorNotificationEmail').value.trim(),
+        alertNotificationEmail: document.getElementById('alertNotificationEmail').value.trim()
+    };
     
-    if (!step1) {
-      showSettingsError('設定の保存をキャンセルしました');
-      return false;
+    // メールアドレスの検証
+    if (!validateEmails(settings.errorNotificationEmail) || 
+        !validateEmails(settings.alertNotificationEmail)) {
+        return;
     }
     
-    // 第2段階確認
-    const step2 = confirm(
-      '🔧 管理者権限の確認 🔧\n\n' +
-      'あなたはシステム管理者ですか？\n' +
-      '管理者以外の方による設定変更は\n' +
-      'システム障害の原因となる可能性があります。\n\n' +
-      '本当に変更を続行しますか？'
-    );
-    
-    if (!step2) {
-      showSettingsError('設定の保存をキャンセルしました');
-      return false;
-    }
-    
-    // 第3段階確認（最終確認）
-    const step3 = confirm(
-      '⚡ 最終確認 ⚡\n\n' +
-      '設定を保存すると、すぐにシステム全体に反映されます。\n' +
-      '変更前の設定には戻せません。\n\n' +
-      '✅ 設定内容を十分確認済み\n' +
-      '✅ 管理者の承認を得ている\n' +
-      '✅ 動作確認の準備ができている\n\n' +
-      '最終的に保存を実行してもよろしいですか？'
-    );
-    
-    if (!step3) {
-      showSettingsError('設定の保存をキャンセルしました');
-      return false;
-    }
-    
-    // 全ての確認をクリアした場合
-    showSettingsSuccess('3段階確認が完了しました。設定を保存します...');
-    return true;
-  }
+    google.script.run.withSuccessHandler(function(result) {
+        if (result.success) {
+            showNotification('ログ通知設定を保存しました。', 'success');
+        } else {
+            showNotification('保存に失敗しました: ' + result.error, 'danger');
+        }
+    }).withFailureHandler(handleError)
+    .saveLogNotificationSettings(settings);
+}
 
-  // ========================================
-  // 共通フォームURL設定のバリデーション
-  // ========================================
-  function validateCommonFormsSettings(terminalUrl, printerUrl, qrRedirectUrl) {
-    // 少なくとも一つのURLが設定されている必要がある
-    if (!terminalUrl && !printerUrl) {
-      showSettingsError('少なくとも一つの共通フォームURLを設定してください');
-      return false;
-    }
+// メールアドレスの検証
+function validateEmails(emailString) {
+    if (!emailString) return true; // 空の場合は許可
     
-    // URLの形式チェック
-    const formUrlPattern = /^https:\/\/docs\.google\.com\/forms\/d\/[a-zA-Z0-9_-]+/;
-    // 個人向けと企業向けの両方のGAS URLパターンに対応
-    const gasUrlPattern = /^https:\/\/script\.google\.com\/(a\/macros\/[a-zA-Z0-9.-]+\/s\/|macros\/s\/)[a-zA-Z0-9_-]+\/exec/;
+    const emails = emailString.split(',').map(e => e.trim());
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
-    if (terminalUrl && !formUrlPattern.test(terminalUrl)) {
-      showSettingsError('端末用共通フォームURLの形式が正しくありません');
-      return false;
-    }
-    
-    if (printerUrl && !formUrlPattern.test(printerUrl)) {
-      showSettingsError('プリンタ・その他用共通フォームURLの形式が正しくありません');
-      return false;
-    }
-    
-    if (qrRedirectUrl && !gasUrlPattern.test(qrRedirectUrl)) {
-      showSettingsError('QRコード中間ページURLの形式が正しくありません');
-      return false;
+    for (const email of emails) {
+        if (!emailRegex.test(email)) {
+            showNotification(`無効なメールアドレス: ${email}`, 'danger');
+            return false;
+        }
     }
     
     return true;
-  }
+}
 
-  // ========================================
-  // Google FormsのURL検証
-  // ========================================
-  function validateFormUrl(inputId) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
+// テストメール送信
+function testEmail(type) {
+    const emailField = type === 'error' ? 'errorNotificationEmail' : 'alertNotificationEmail';
+    const emails = document.getElementById(emailField).value.trim();
     
-    const formUrl = input.value.trim();
-    
-    if (!formUrl) {
-      showSettingsError('フォームURLを入力してください');
-      return;
+    if (!emails) {
+        showNotification('メールアドレスを入力してください。', 'warning');
+        return;
     }
     
-    // URLの形式チェック
-    const urlPattern = /^https:\/\/docs\.google\.com\/forms\/d\/[a-zA-Z0-9_-]+/;
-    if (!urlPattern.test(formUrl)) {
-      showSettingsError('Google FormsのURLの形式が正しくありません');
-      return;
+    if (!validateEmails(emails)) {
+        return;
     }
     
-    showSettingsLoading('フォームURLを検証中...');
+    // 送信中の表示
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 送信中...';
     
-    google.script.run
-      .withSuccessHandler(function(result) {
-        hideSettingsLoading();
+    google.script.run.withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
         
-        if (result.valid) {
-          showSettingsSuccess(`フォーム「${result.title}」への接続が確認できました`);
-          input.classList.add('valid');
-          input.classList.remove('invalid');
+        if (result.success) {
+            showNotification('テストメールを送信しました。', 'success');
+            
+            // 結果を表示
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-email-result text-success';
+            resultDiv.innerHTML = '<i class="fas fa-check-circle"></i> 送信完了';
+            btn.parentElement.appendChild(resultDiv);
+            
+            setTimeout(() => resultDiv.remove(), 5000);
         } else {
-          showSettingsError('フォームにアクセスできません: ' + result.error);
-          input.classList.add('invalid');
-          input.classList.remove('valid');
+            showNotification('送信に失敗しました: ' + result.error, 'danger');
         }
-      })
-      .withFailureHandler(function(error) {
-        hideSettingsLoading();
-        showSettingsError('フォームURLの検証に失敗しました: ' + error.message);
-        input.classList.add('invalid');
-        input.classList.remove('valid');
-      })
-      .validateGoogleFormUrl(formUrl);
-  }
-  
-  // ========================================
-  // QRコード中間ページURLの検証
-  // ========================================
-  function validateQrUrl(inputId) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    
-    const qrUrl = input.value.trim();
-    
-    if (!qrUrl) {
-      showSettingsError('QRコード中間ページURLを入力してください');
-      return;
-    }
-    
-    // URLの形式チェック（個人向けと企業向けの両方に対応）
-    const urlPattern = /^https:\/\/script\.google\.com\/(a\/macros\/[a-zA-Z0-9.-]+\/s\/|macros\/s\/)[a-zA-Z0-9_-]+\/exec/;
-    if (!urlPattern.test(qrUrl)) {
-      showSettingsError('GAS Web AppのURLの形式が正しくありません');
-      return;
-    }
-    
-    // URLにアクセスして検証
-    showSettingsLoading('QRコード中間ページURLを検証中...');
-    
-    // テスト用パラメータを追加
-    const testUrl = qrUrl + '?id=TEST_desktop_Model_Serial_001';
-    
-    fetch(testUrl)
-      .then(response => {
-        hideSettingsLoading();
-        if (response.ok) {
-          showSettingsSuccess('QRコード中間ページへの接続が確認できました');
-          input.classList.add('valid');
-          input.classList.remove('invalid');
+    }).withFailureHandler(function(error) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        handleError(error);
+    }).sendTestEmail(type, emails);
+}
+
+// グローバル通知設定の保存
+function saveGlobalNotificationSetting(enabled) {
+    google.script.run.withSuccessHandler(function(result) {
+        if (result.success) {
+            showNotification(
+                `グローバル通知設定を${enabled ? '有効' : '無効'}にしました。`,
+                'success'
+            );
+            // 拠点別通知設定を再読み込み
+            loadLocationNotifications();
         } else {
-          showSettingsError('QRコード中間ページにアクセスできません: HTTPステータス ' + response.status);
-          input.classList.add('invalid');
-          input.classList.remove('valid');
+            showNotification('設定の保存に失敗しました。', 'danger');
+            // チェックボックスを元に戻す
+            document.getElementById('globalNotificationEnabled').checked = !enabled;
         }
-      })
-      .catch(error => {
-        hideSettingsLoading();
-        showSettingsError('QRコード中間ページURLの検証に失敗しました: ' + error.message);
-        input.classList.add('invalid');
-        input.classList.remove('valid');
-      });
-  }
+    }).withFailureHandler(handleError)
+    .saveGlobalNotificationSetting(enabled);
+}
 
-  // ========================================
-  // 共通フォームURL設定のリセット
-  // ========================================
-  function resetCommonFormsSettings() {
-    if (!confirm('共通フォームURL設定をリセットしてもよろしいですか？\n\n未保存の変更は失われます。')) {
-      return;
+// 拠点別通知設定の読み込み
+function loadLocationNotifications() {
+    const tbody = document.getElementById('locationNotificationList');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="3" class="text-center">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">読み込み中...</span>
+                </div>
+            </td>
+        </tr>
+    `;
+    
+    google.script.run.withSuccessHandler(function(locations) {
+        tbody.innerHTML = '';
+        
+        if (locations.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-center text-muted">
+                        拠点データがありません
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        locations.forEach(location => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${location.code} - ${location.name}</td>
+                <td>
+                    ${location.email || '<span class="text-muted">未設定</span>'}
+                </td>
+                <td>
+                    ${location.notificationEnabled ? 
+                        '<i class="fas fa-check-circle notification-enabled"></i> 有効' : 
+                        '<i class="fas fa-times-circle notification-disabled"></i> 無効'}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }).withFailureHandler(handleError)
+    .getLocationList();
+}
+
+// システム設定の保存
+function saveSystemSettings() {
+    const debugMode = document.getElementById('debugModeSwitch').checked;
+    
+    google.script.run.withSuccessHandler(function(result) {
+        if (result.success) {
+            showNotification('システム設定を保存しました。', 'success');
+            // 最終更新日時を更新
+            document.getElementById('lastSystemUpdate').textContent = 
+                new Date().toLocaleString('ja-JP');
+        } else {
+            showNotification('保存に失敗しました。', 'danger');
+        }
+    }).withFailureHandler(handleError)
+    .saveSystemSettings({ debugMode });
+}
+
+// 確認モーダルの表示
+function showConfirmModal(message, onConfirm, onCancel) {
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    document.getElementById('confirmMessage').textContent = message;
+    
+    const confirmBtn = document.getElementById('confirmButton');
+    
+    // 既存のイベントリスナーを削除
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    
+    // 新しいイベントリスナーを追加
+    newConfirmBtn.addEventListener('click', function() {
+        modal.hide();
+        if (onConfirm) onConfirm();
+    });
+    
+    // モーダルが閉じられた時のイベント
+    document.getElementById('confirmModal').addEventListener('hidden.bs.modal', function(e) {
+        if (onCancel) onCancel();
+    }, { once: true });
+    
+    modal.show();
+}
+
+// エラーハンドリング
+function handleError(error) {
+    console.error('設定エラー:', error);
+    showNotification('エラーが発生しました: ' + error.message, 'danger');
+}
+
+// 通知表示
+function showNotification(message, type = 'info', duration = 5000) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '70px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.style.minWidth = '300px';
+    
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    if (duration > 0) {
+        setTimeout(() => {
+            alertDiv.remove();
+        }, duration);
     }
-    
-    // フォームをクリア
-    const form = document.getElementById('commonFormsSettingsForm');
-    if (form) {
-      form.reset();
-      
-      // バリデーションクラスを削除
-      const terminalInput = document.getElementById('terminalCommonFormUrl');
-      const printerInput = document.getElementById('printerCommonFormUrl');
-      const qrInput = document.getElementById('qrRedirectUrl');
-      
-      if (terminalInput) {
-        terminalInput.classList.remove('valid', 'invalid');
-      }
-      
-      if (printerInput) {
-        printerInput.classList.remove('valid', 'invalid');
-      }
-      
-      if (qrInput) {
-        qrInput.classList.remove('valid', 'invalid');
-      }
-    }
-    
-    showSettingsSuccess('共通フォームURL設定をリセットしました');
-  }
-
-  // ========================================
-  // UI通知関数
-  // ========================================
-  function showSettingsPopupMessage(message, type = 'info') {
-    const popup = document.getElementById('settingsPopupMessage');
-    if (!popup) {
-      console.log(type + ': ' + message);
-      return;
-    }
-    
-    popup.textContent = message;
-    popup.className = 'popup-message show';
-    
-    // メッセージタイプに応じてクラスを追加
-    if (type === 'success') {
-      popup.classList.add('success');
-    } else if (type === 'error') {
-      popup.classList.add('error');
-    } else if (type === 'info') {
-      popup.classList.add('info');
-    }
-    
-    popup.style.display = 'block';
-    
-    setTimeout(() => {
-      popup.classList.remove('show');
-      setTimeout(() => {
-        popup.style.display = 'none';
-        popup.className = 'popup-message';
-      }, 600);
-    }, 3000);
-  }
-
-  function showSettingsLoading(message) {
-    showSettingsPopupMessage(message, 'info');
-  }
-
-  function hideSettingsLoading() {
-    // ローディング表示を非表示（3秒後に自動で消える）
-    console.log('Settings loading completed');
-  }
-
-  function showSettingsSuccess(message) {
-    showSettingsPopupMessage(message, 'success');
-  }
-
-  function showSettingsError(message) {
-    showSettingsPopupMessage(message, 'error');
-  }
-
-  // ========================================
-  // ユーティリティ関数
-  // ========================================
-  function showDebugInfo(message, data) {
-    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-      console.log('[Settings Debug]', message, data);
-    }
-  }
-
-  // ========================================
-  // DOM読み込み完了時の初期化
-  // ========================================
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, registering settings functions...');
-    
-    // 関数をwindowオブジェクトに登録してグローバルに利用可能にする
-    window.showSettingsTab = showSettingsTab;
-    window.saveCommonFormsSettings = saveCommonFormsSettings;
-    window.resetCommonFormsSettings = resetCommonFormsSettings;
-    window.validateFormUrl = validateFormUrl;
-    
-    console.log('Settings functions registered globally');
-    
-    // DOM要素の存在確認
-    const commonFormsTab = document.getElementById('common-forms-tab');
-    const commonFormsSettings = document.getElementById('common-forms-settings');
-    
-    console.log('共通フォームタブ要素:', commonFormsTab);
-    console.log('共通フォーム設定セクション:', commonFormsSettings);
-    
-    if (!commonFormsTab) {
-      console.error('共通フォームタブ要素が見つかりません');
-    }
-    if (!commonFormsSettings) {
-      console.error('共通フォーム設定セクション要素が見つかりません');
-    }
-  });
-  
-  // ========================================
-  // グローバル関数の登録（即座に実行）
-  // ========================================
-  // 関数をwindowオブジェクトに登録してグローバルに利用可能にする
-  window.showSettingsTab = showSettingsTab;
-  window.saveCommonFormsSettings = saveCommonFormsSettings;
-  window.resetCommonFormsSettings = resetCommonFormsSettings;
-  window.validateFormUrl = validateFormUrl;
-  
-  console.log('Settings functions registered globally (immediate)');
+}
 </script>
