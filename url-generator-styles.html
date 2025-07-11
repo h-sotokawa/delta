@@ -330,6 +330,124 @@
   }
 
   /* ========================================
+     QRコードセクション
+     ======================================== */
+  .qr-code-section {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 25px;
+    margin-top: 20px;
+    text-align: center;
+  }
+  
+  .qr-code-header {
+    margin-bottom: 20px;
+  }
+  
+  .qr-code-header h3 {
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  
+  .qr-description {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+  
+  .qr-code-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .qr-code-image {
+    background: #f9fafb;
+    border: 2px dashed #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .qr-code-image img {
+    max-width: 200px;
+    height: auto;
+  }
+  
+  .qr-code-info {
+    text-align: left;
+    width: 100%;
+    max-width: 500px;
+  }
+  
+  .qr-code-info p {
+    margin: 8px 0;
+    font-size: 0.875rem;
+    color: #374151;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  
+  .qr-code-info strong {
+    flex-shrink: 0;
+    color: #1f2937;
+  }
+  
+  .qr-url-text {
+    word-break: break-all;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #4b5563;
+  }
+  
+  /* QRコード印刷用スタイル */
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    
+    .qr-print-container,
+    .qr-print-container * {
+      visibility: visible;
+    }
+    
+    .qr-print-container {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .qr-print-header {
+      margin-bottom: 20px;
+    }
+    
+    .qr-print-header h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    
+    .qr-print-info {
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    
+    .qr-print-info p {
+      margin: 5px 0;
+    }
+  }
+
+  /* ========================================
      結果表示セクション
      ======================================== */
   .result-section {

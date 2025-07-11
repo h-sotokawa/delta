@@ -101,21 +101,26 @@
     const masterTypeText = document.getElementById('masterTypeText');
     const urlStatusText = document.getElementById('urlStatusText');
     const categoryHelp = document.getElementById('categoryHelp');
+    const assetNumberGroup = document.getElementById('assetNumberGroup');
+    const assetNumberInput = document.getElementById('assetNumber');
     
     if (!categorySelect.value) {
       categoryInfo.style.display = 'none';
       categoryHelp.textContent = '選択したカテゴリに応じた共通フォームURLが使用されます';
+      assetNumberGroup.style.display = 'none';
       return;
     }
     
     const category = categorySelect.value;
     let formType, masterType, hasUrl;
+    let isTerminal = false;
     
     // カテゴリをマスタタイプにマッピング（英語カテゴリベース）
     if (category === 'desktop' || category === 'laptop' || category === 'server') {
       formType = '端末用共通フォーム';
       masterType = '端末マスタ';
       hasUrl = window.commonFormSettings?.terminal || false;
+      isTerminal = true;
     } else if (category === 'printer') {
       formType = 'プリンタ・その他用共通フォーム';
       masterType = 'プリンタマスタ';
@@ -125,6 +130,16 @@
       formType = 'プリンタ・その他用共通フォーム';
       masterType = 'その他マスタ';
       hasUrl = window.commonFormSettings?.printer || false;
+    }
+    
+    // 資産管理番号フィールドの表示制御
+    if (isTerminal) {
+      assetNumberGroup.style.display = 'block';
+      assetNumberInput.setAttribute('required', 'required');
+    } else {
+      assetNumberGroup.style.display = 'none';
+      assetNumberInput.removeAttribute('required');
+      assetNumberInput.value = ''; // 非表示時は値をクリア
     }
     
     formTypeText.textContent = formType;
@@ -563,12 +578,19 @@
       }
     }
     
+    // 資産管理番号の取得（端末の場合のみ）
+    const assetNumberInput = document.getElementById('assetNumber');
+    const assetNumber = assetNumberInput && assetNumberInput.hasAttribute('required') 
+      ? assetNumberInput.value.trim() 
+      : '';
+    
     const deviceInfo = {
       modelName: model,
       manufacturer: manufacturer,
       category: deviceCategory,
       serialNumber: serialNumber,
-      sequenceNumber: sequenceNumber
+      sequenceNumber: sequenceNumber,
+      assetNumber: assetNumber  // 資産管理番号を追加
     };
     
     const requestData = {
@@ -732,6 +754,23 @@
       return false;
     }
     
+    // 資産管理番号のバリデーション（端末の場合のみ）
+    const assetNumberInput = document.getElementById('assetNumber');
+    if (assetNumberInput && assetNumberInput.hasAttribute('required')) {
+      const assetNumber = assetNumberInput.value.trim();
+      if (!assetNumber) {
+        showErrorMessage('資産管理番号を入力してください');
+        return false;
+      }
+      
+      // パターンのバリデーション
+      const assetPattern = /^[A-Za-z0-9_-]+$/;
+      if (!assetPattern.test(assetNumber)) {
+        showErrorMessage('資産管理番号は英数字、ハイフン、アンダースコアのみ使用可能です');
+        return false;
+      }
+    }
+    
     if (!sequenceNumber) {
       showErrorMessage('連番を入力してください');
       return false;
@@ -791,11 +830,17 @@
   function showGenerationResult(result) {
     const resultSection = document.getElementById('resultSection');
     const resultContent = document.getElementById('resultContent');
+    const qrSection = document.getElementById('qrCodeSection');
+    const printBtn = document.getElementById('printQrBtn');
     
     if (!resultSection || !resultContent) return;
     
     // 結果データをグローバルに保存
     window.generatedResult = result;
+    
+    // QRコードセクションを非表示（新しい結果のため）
+    if (qrSection) qrSection.style.display = 'none';
+    if (printBtn) printBtn.style.display = 'none';
     
     resultContent.innerHTML = `
       <div class="result-item">
@@ -943,6 +988,10 @@
   window.loadLocations = loadLocations;
   window.loadModels = loadModels;
   window.updateLocationNumber = updateLocationNumber;
+  window.generateQRCode = generateQRCode;
+  window.printQRCode = printQRCode;
+  window.toggleDebugPanel = toggleDebugPanel;
+  window.checkMasterDataExists = checkMasterDataExists;
   
   // 静的な拠点データを追加するフォールバック関数
   function addStaticLocations() {
@@ -976,6 +1025,39 @@
     
     console.log('静的拠点データを追加しました。オプション数:', locationSelect.options.length);
     showErrorMessage('拠点データの読み込みに失敗したため、既定の拠点リストを使用しています');
+  }
+  
+  // デバッグパネルの表示/非表示切り替え
+  function toggleDebugPanel() {
+    const debugButtons = document.getElementById('debugButtons');
+    const debugToggleIcon = document.getElementById('debugToggleIcon');
+    
+    if (debugButtons.style.display === 'none') {
+      debugButtons.style.display = 'block';
+      debugToggleIcon.className = 'fas fa-chevron-down';
+    } else {
+      debugButtons.style.display = 'none';
+      debugToggleIcon.className = 'fas fa-chevron-up';
+    }
+  }
+  
+  // マスタデータの存在確認
+  function checkMasterDataExists() {
+    const debugOutput = document.getElementById('debugOutput');
+    const debugContent = document.getElementById('debugContent');
+    
+    debugOutput.style.display = 'block';
+    debugContent.textContent = 'マスタデータを確認中...\n';
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        debugContent.textContent = '=== マスタデータ確認結果 ===\n';
+        debugContent.textContent += JSON.stringify(result, null, 2);
+      })
+      .withFailureHandler(function(error) {
+        debugContent.textContent = 'エラー: ' + error;
+      })
+      .checkSystemHealth();
   }
   
   // デバッグ用関数
@@ -1348,6 +1430,161 @@
       visible: newRect.width > 0 && newRect.height > 0
     });
   };
+  
+  // ========================================
+  // QRコード関連機能
+  // ========================================
+  
+  /**
+   * QRコードを生成して表示
+   */
+  function generateQRCode() {
+    if (!window.generatedResult || !window.generatedResult.locationNumber) {
+      showErrorMessage('QRコードを生成できません。先にURLを生成してください。');
+      return;
+    }
+    
+    const result = window.generatedResult;
+    const locationNumber = result.locationNumber;
+    const deviceCategory = result.deviceCategory;
+    
+    showLoadingMessage('QRコードを生成中...');
+    
+    // QRコード用URLを生成
+    google.script.run
+      .withSuccessHandler(function(qrResult) {
+        hideLoadingMessage();
+        
+        if (qrResult.success) {
+          displayQRCode(qrResult, locationNumber);
+          showSuccessMessage('QRコードを生成しました');
+        } else {
+          showErrorMessage('QRコード生成に失敗しました: ' + qrResult.error);
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoadingMessage();
+        showErrorMessage('QRコード生成中にエラーが発生しました: ' + error);
+      })
+      .generateCommonFormUrl(locationNumber, deviceCategory, true);
+  }
+  
+  /**
+   * QRコードを表示
+   */
+  function displayQRCode(qrResult, locationNumber) {
+    const qrSection = document.getElementById('qrCodeSection');
+    const qrImage = document.getElementById('qrCodeImage');
+    const qrLocationNumber = document.getElementById('qrLocationNumber');
+    const qrUrl = document.getElementById('qrUrl');
+    const printBtn = document.getElementById('printQrBtn');
+    
+    // QRコード画像のURLを作成（Google Charts APIを使用）
+    const qrCodeUrl = 'https://chart.googleapis.com/chart?' + 
+      'chs=200x200&' +  // サイズ
+      'cht=qr&' +        // QRコード
+      'chl=' + encodeURIComponent(qrResult.url) + '&' +  // データ
+      'choe=UTF-8';      // エンコーディング
+    
+    // QRコード画像を表示
+    qrImage.innerHTML = `<img src="${qrCodeUrl}" alt="QRコード" />`;
+    
+    // 情報を表示
+    qrLocationNumber.textContent = locationNumber;
+    qrUrl.textContent = qrResult.url;
+    
+    // QRコードセクションと印刷ボタンを表示
+    qrSection.style.display = 'block';
+    printBtn.style.display = 'inline-block';
+    
+    // QRコードデータを保存
+    window.qrCodeData = {
+      url: qrResult.url,
+      imageUrl: qrCodeUrl,
+      locationNumber: locationNumber
+    };
+  }
+  
+  /**
+   * QRコードを印刷
+   */
+  function printQRCode() {
+    if (!window.qrCodeData) {
+      showErrorMessage('QRコードが生成されていません');
+      return;
+    }
+    
+    const printWindow = window.open('', 'QRコード印刷', 'width=600,height=600');
+    const qrData = window.qrCodeData;
+    
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>QRコード - ${qrData.locationNumber}</title>
+        <style>
+          body {
+            font-family: 'メイリオ', Meiryo, 'ヒラギノ角ゴ Pro W3', sans-serif;
+            text-align: center;
+            padding: 20px;
+          }
+          h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+          }
+          .qr-container {
+            margin: 20px auto;
+          }
+          .info {
+            margin-top: 20px;
+            font-size: 14px;
+          }
+          .info p {
+            margin: 5px 0;
+          }
+          .url {
+            font-size: 12px;
+            color: #666;
+            word-break: break-all;
+            margin-top: 10px;
+          }
+          @media print {
+            body {
+              margin: 0;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="qr-print-container">
+          <h1>代替機管理システム</h1>
+          <div class="qr-container">
+            <img src="${qrData.imageUrl}" alt="QRコード" />
+          </div>
+          <div class="info">
+            <p><strong>拠点管理番号:</strong></p>
+            <p>${qrData.locationNumber}</p>
+            <p class="url"><strong>URL:</strong> ${qrData.url}</p>
+          </div>
+          <p style="margin-top: 30px; font-size: 12px; color: #999;">
+            印刷日時: ${new Date().toLocaleString('ja-JP')}
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // 画像が読み込まれた後に印刷
+    printWindow.onload = function() {
+      setTimeout(function() {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    };
+  }
   
   console.log('URL生成機能が登録されました');
   

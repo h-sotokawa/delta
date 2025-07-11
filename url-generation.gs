@@ -233,6 +233,9 @@ function saveUrlToTerminalMaster(
           case "製造番号":
             newRowData[index] = deviceInfo.serialNumber || "";
             break;
+          case "資産管理番号":
+            newRowData[index] = deviceInfo.assetNumber || "";
+            break;
           case "作成日":
             newRowData[index] = today;
             break;
@@ -376,6 +379,9 @@ function saveUrlToPrinterMaster(
             break;
           case "製造番号":
             newRowData[index] = deviceInfo.serialNumber || "";
+            break;
+          case "資産管理番号":
+            newRowData[index] = deviceInfo.assetNumber || "";
             break;
           case "作成日":
             newRowData[index] = today;

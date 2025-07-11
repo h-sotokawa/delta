@@ -12,33 +12,32 @@
       <p>拠点管理番号とデバイスカテゴリを指定して、個別URLを生成します</p>
     </div>
 
-    <!-- デバッグボタン（一時的） -->
-    <div style="margin-bottom: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
-      <button type="button" class="btn btn-secondary" onclick="testLoadLocations()" style="margin-right: 10px;">
-        <i class="fas fa-sync"></i> 拠点データ再読み込み
-      </button>
-      <button type="button" class="btn btn-secondary" onclick="testLocationMasterBackend()">
-        <i class="fas fa-bug"></i> 拠点マスタテスト（バックエンド）
-      </button>
-      <button type="button" class="btn btn-secondary" onclick="testDirectAddOption()" style="margin-left: 10px;">
-        <i class="fas fa-plus"></i> 直接オプション追加テスト
-      </button>
-      <button type="button" class="btn btn-secondary" onclick="checkSelectVisibility()" style="margin-left: 10px;">
-        <i class="fas fa-eye"></i> 表示状態チェック
-      </button>
-      <button type="button" class="btn btn-secondary" onclick="recreateLocationSelect()" style="margin-left: 10px;">
-        <i class="fas fa-redo"></i> SELECT再作成
-      </button>
-      <button type="button" class="btn btn-warning" onclick="convertCategoriesToEnglish()" style="margin-left: 10px;">
-        <i class="fas fa-language"></i> カテゴリを英語に変換
-      </button>
-      <button type="button" class="btn btn-info" onclick="checkMasterDataExists()" style="margin-left: 10px;">
-        <i class="fas fa-search"></i> マスタデータ確認
-      </button>
-      <div id="debugOutput" style="margin-top: 10px; padding: 10px; background: white; border-radius: 5px; display: none; max-height: 200px; overflow-y: auto;">
-        <pre id="debugContent" style="margin: 0; font-size: 12px;"></pre>
-      </div>
-    </div>
+    <!-- デバッグモード用ボタン（debugModeがtrueの場合のみ表示） -->
+    <script>
+      if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+        document.write(`
+          <div id="debugPanel" style="margin-bottom: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <strong style="color: #666;"><i class="fas fa-bug"></i> デバッグパネル</strong>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="toggleDebugPanel()">
+                <i class="fas fa-chevron-up" id="debugToggleIcon"></i>
+              </button>
+            </div>
+            <div id="debugButtons" style="display: none;">
+              <button type="button" class="btn btn-secondary" onclick="testLoadLocations()" style="margin-right: 10px;">
+                <i class="fas fa-sync"></i> 拠点データ再読み込み
+              </button>
+              <button type="button" class="btn btn-info" onclick="checkMasterDataExists()" style="margin-left: 10px;">
+                <i class="fas fa-search"></i> マスタデータ確認
+              </button>
+              <div id="debugOutput" style="margin-top: 10px; padding: 10px; background: white; border-radius: 5px; display: none; max-height: 200px; overflow-y: auto;">
+                <pre id="debugContent" style="margin: 0; font-size: 12px;"></pre>
+              </div>
+            </div>
+          </div>
+        `);
+      }
+    </script>
 
     <!-- 警告メッセージ -->
     <div class="generation-warning">
@@ -129,6 +128,19 @@
             <small class="help-text">同一製造番号の機器がある場合の連番</small>
           </div>
 
+          <!-- 資産管理番号入力（端末の場合のみ表示） -->
+          <div class="form-group" id="assetNumberGroup" style="display: none;">
+            <label for="assetNumber">
+              <i class="fas fa-id-card"></i>
+              資産管理番号 <span class="required">*</span>
+            </label>
+            <input type="text" id="assetNumber" name="assetNumber"
+              placeholder="例: IT-2024-0001" 
+              pattern="[A-Za-z0-9_-]+"
+              title="英数字、ハイフン、アンダースコアのみ使用可能">
+            <small class="help-text">会社の資産管理番号を入力してください</small>
+          </div>
+
           <!-- 自動生成された拠点管理番号 -->
           <div class="form-group full-width">
             <label for="locationNumber">
@@ -179,6 +191,23 @@
     <div id="resultContent" class="result-content">
       <!-- 動的に結果が表示されます -->
     </div>
+    
+    <!-- QRコード表示セクション -->
+    <div id="qrCodeSection" class="qr-code-section" style="display: none;">
+      <div class="qr-code-header">
+        <h3><i class="fas fa-qrcode"></i> QRコード</h3>
+        <p class="qr-description">QRコードをスキャンしてフォームにアクセスできます</p>
+      </div>
+      <div class="qr-code-container">
+        <div id="qrCodeImage" class="qr-code-image">
+          <!-- QRコード画像がここに表示されます -->
+        </div>
+        <div class="qr-code-info">
+          <p><strong>拠点管理番号:</strong> <span id="qrLocationNumber"></span></p>
+          <p><strong>QR URL:</strong> <span id="qrUrl" class="qr-url-text"></span></p>
+        </div>
+      </div>
+    </div>
 
     <div class="result-actions">
       <button type="button" class="btn btn-info" onclick="copyUrlToClipboard()">
@@ -188,6 +217,14 @@
       <button type="button" class="btn btn-success" onclick="openGeneratedUrl()" id="openUrlBtn">
         <i class="fas fa-external-link-alt"></i>
         URLを開く
+      </button>
+      <button type="button" class="btn btn-primary" onclick="generateQRCode()" id="generateQrBtn">
+        <i class="fas fa-qrcode"></i>
+        QRコード生成
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="printQRCode()" id="printQrBtn" style="display: none;">
+        <i class="fas fa-print"></i>
+        QRコード印刷
       </button>
     </div>
   </div>
