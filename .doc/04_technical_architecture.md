@@ -31,9 +31,9 @@
 
 ```
 src/
-├── Index.html                 # メインエントリーポイント
+├── index.html                 # メインエントリーポイント
 ├── dashboard.html             # ダッシュボード画面
-├── spreadsheet.html           # スプレッドシートビューアー
+├── spreadsheet-viewer.html    # スプレッドシートビューアー
 ├── url-generator.html         # URL生成画面
 ├── model-master.html          # 機種マスタ管理
 ├── location-master.html       # 拠点マスタ管理
@@ -59,13 +59,15 @@ styles/
 ```
 functions/
 ├── main.html                      # メイン制御・ページ遷移
-├── spreadsheet-functions.html     # スプレッドシート機能
+├── spreadsheet-viewer-functions.html # スプレッドシート機能
 ├── url-generator-functions.html   # URL生成機能
 ├── model-master-functions.html    # 機種マスタ機能
 ├── location-master-functions.html # 拠点マスタ機能
 ├── settings-functions.html        # 設定機能
 └── drag-drop-functions.html       # ドラッグ&ドロップ機能
 ```
+
+**重要**: Google Apps ScriptのWeb Appでは、フロントエンドのJavaScriptコードも`.html`ファイル内に`<script>`タグで記述する必要があります。`.js`ファイルはサポートされていません。
 
 ### 2.2 バックエンドコンポーネント
 
@@ -119,10 +121,10 @@ url-generation.gs             # URL生成専用ロジック
 
 ```
 システム設定
-├── SPREADSHEET_ID_MAIN  # メインスプレッドシートID
-├── TERMINAL_COMMON_FORM_URL    # 端末用フォームURL
-├── PRINTER_COMMON_FORM_URL     # プリンタ用フォームURL
-├── QR_REDIRECT_URL            # QR中間ページURL
+├── SPREADSHEET_ID              # メインスプレッドシートID
+├── TERMINAL_FORM_URL           # 端末用フォームURL
+├── PRINTER_FORM_URL            # プリンタ用フォームURL
+├── QR_PAGE_URL                 # QR中間ページURL
 ├── DEBUG_MODE                  # デバッグモード（true/false）
 │
 ├── ログ通知設定（debugMode=trueの場合のみ）
@@ -133,6 +135,15 @@ url-generation.gs             # URL生成専用ロジック
     └── STATUS_CHANGE_NOTIFICATION_ENABLED  # 全体の有効/無効
         # 拠点別の通知ON/OFFは拠点マスタで管理
 ```
+
+**SPREADSHEET_IDの設定方法**:
+1. Google Apps Scriptエディタでプロジェクトを開く
+2. 「プロジェクトの設定」アイコンをクリック
+3. 「スクリプト プロパティ」タブを選択
+4. 「プロパティを追加」をクリック
+5. プロパティ名: `SPREADSHEET_ID`
+6. 値: GoogleスプレッドシートのID（URLの`/d/`と`/edit`の間の文字列）
+7. 「保存」をクリック
 
 ### 3.2 データフロー設計
 

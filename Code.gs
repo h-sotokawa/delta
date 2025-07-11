@@ -102,7 +102,7 @@ function getSpreadsheetViewerHtml() {
   try {
     const html = HtmlService.createHtmlOutputFromFile('spreadsheet-viewer').getContent();
     const js = HtmlService.createHtmlOutputFromFile('spreadsheet-viewer-functions').getContent();
-    return html + '<script>' + js + '</script>';
+    return html + js;
   } catch (error) {
     logError('getSpreadsheetViewerHtml', error);
     return '<div class="alert alert-danger">スプレッドシートビューアーの読み込みに失敗しました。</div>';
