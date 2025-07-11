@@ -4,6 +4,34 @@
  */
 
 // ========================================
+// ヘルパー関数（他のファイルで定義されていない場合の代替）
+// ========================================
+
+/**
+ * 現在の日付を取得（他で定義されていない場合の代替）
+ */
+function getCurrentDateForDataType() {
+  return Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd');
+}
+
+/**
+ * 日付をフォーマット（他で定義されていない場合の代替）
+ */
+function formatDateForDataType(dateValue) {
+  if (!dateValue) return '';
+  
+  if (typeof dateValue === 'string') {
+    return dateValue;
+  }
+  
+  if (dateValue instanceof Date) {
+    return Utilities.formatDate(dateValue, 'Asia/Tokyo', 'yyyy/MM/dd');
+  }
+  
+  return dateValue.toString();
+}
+
+// ========================================
 // データタイプマスタ操作
 // ========================================
 
@@ -69,9 +97,9 @@ function initializeDataTypeMasterSheet(sheet) {
     // 日付列の書式を設定
     sheet.getRange(2, 9, sheet.getMaxRows() - 1, 2).setNumberFormat('@');
     
-    logError(null, 'データタイプマスタシートを初期化しました');
+    console.log('データタイプマスタシートを初期化しました');
   } catch (error) {
-    logError(error, 'initializeDataTypeMasterSheet');
+    console.error('データタイプマスタシート初期化エラー:', error);
     throw error;
   }
 }
@@ -81,7 +109,7 @@ function initializeDataTypeMasterSheet(sheet) {
  * @returns {Array<Array>} 初期データ
  */
 function getInitialDataTypes() {
-  const now = getCurrentDate();
+  const now = getCurrentDateForDataType();
   
   return [
     [
@@ -187,8 +215,8 @@ function getDataTypeMaster(activeOnly = true) {
         dataSourceConfig: tryParseJSON(dataSourceConfig),
         displayColumnConfig: tryParseJSON(displayColumnConfig),
         status,
-        createdAt: formatDate(createdAt),
-        updatedAt: formatDate(updatedAt)
+        createdAt: formatDateForDataType(createdAt),
+        updatedAt: formatDateForDataType(updatedAt)
       });
     });
     
@@ -200,8 +228,13 @@ function getDataTypeMaster(activeOnly = true) {
       dataTypes
     };
   } catch (error) {
-    logError(error, 'getDataTypeMaster');
-    return createErrorResponse(error, 'データタイプマスタの取得に失敗しました');
+    console.error('getDataTypeMaster エラー:', error);
+    // createErrorResponse関数が定義されていない可能性があるため、直接エラーレスポンスを返す
+    return {
+      success: false,
+      error: error.message || 'データタイプマスタの取得に失敗しました',
+      dataTypes: []
+    };
   }
 }
 
@@ -212,7 +245,10 @@ function getDataTypeMaster(activeOnly = true) {
  */
 function addDataType(dataTypeData) {
   try {
-    validateRequiredFields(dataTypeData, ['dataTypeId', 'dataTypeName']);
+    // 必須フィールドのチェック
+    if (!dataTypeData.dataTypeId || !dataTypeData.dataTypeName) {
+      throw new Error('データタイプIDとデータタイプ名は必須です');
+    }
     
     const sheet = getDataTypeMasterSheet();
     const lastRow = sheet.getLastRow();
@@ -221,7 +257,7 @@ function addDataType(dataTypeData) {
     if (lastRow >= 2) {
       const existingIds = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
       if (existingIds.includes(dataTypeData.dataTypeId)) {
-        throw new AppError(
+        throw new Error(
           'このデータタイプIDは既に存在します',
           ErrorTypes.VALIDATION,
           { dataTypeId: dataTypeData.dataTypeId }
@@ -237,7 +273,7 @@ function addDataType(dataTypeData) {
       );
     }
     
-    const now = getCurrentDate();
+    const now = getCurrentDateForDataType();
     const newRow = [
       dataTypeData.dataTypeId,
       dataTypeData.dataTypeName,
@@ -253,7 +289,7 @@ function addDataType(dataTypeData) {
     
     sheet.appendRow(newRow);
     
-    logError(null, 'データタイプを追加しました', { dataTypeId: dataTypeData.dataTypeId });
+    console.log(null, 'データタイプを追加しました', { dataTypeId: dataTypeData.dataTypeId });
     
     return {
       success: true,
@@ -261,8 +297,8 @@ function addDataType(dataTypeData) {
       dataTypeId: dataTypeData.dataTypeId
     };
   } catch (error) {
-    logError(error, 'addDataType', dataTypeData);
-    return createErrorResponse(error, 'データタイプの追加に失敗しました');
+    console.error('addDataType エラー:', error);
+    return { success: false, error: error.message || 'データタイプの追加に失敗しました' };
   }
 }
 
@@ -278,14 +314,14 @@ function updateDataType(dataTypeId, dataTypeData) {
     const lastRow = sheet.getLastRow();
     
     if (lastRow < 2) {
-      throw new AppError('データタイプが見つかりません', ErrorTypes.DATA_ACCESS);
+      throw new Error('データタイプが見つかりません', ErrorTypes.DATA_ACCESS);
     }
     
     const dataTypeIds = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
     const rowIndex = dataTypeIds.indexOf(dataTypeId);
     
     if (rowIndex === -1) {
-      throw new AppError(
+      throw new Error(
         'データタイプが見つかりません',
         ErrorTypes.DATA_ACCESS,
         { dataTypeId }
@@ -293,7 +329,7 @@ function updateDataType(dataTypeId, dataTypeData) {
     }
     
     const actualRow = rowIndex + 2;
-    const now = getCurrentDate();
+    const now = getCurrentDateForDataType();
     
     // 更新可能なフィールドのみ更新
     if (dataTypeData.dataTypeName !== undefined) {
@@ -321,7 +357,7 @@ function updateDataType(dataTypeId, dataTypeData) {
     // 更新日を更新
     sheet.getRange(actualRow, 10).setValue(now);
     
-    logError(null, 'データタイプを更新しました', { dataTypeId });
+    console.log(null, 'データタイプを更新しました', { dataTypeId });
     
     return {
       success: true,
@@ -329,8 +365,8 @@ function updateDataType(dataTypeId, dataTypeData) {
       dataTypeId
     };
   } catch (error) {
-    logError(error, 'updateDataType', { dataTypeId, dataTypeData });
-    return createErrorResponse(error, 'データタイプの更新に失敗しました');
+    console.log(error, 'updateDataType', { dataTypeId, dataTypeData });
+    return { success: false, error: error.message || 'データタイプの更新に失敗しました' };
   }
 }
 
@@ -344,8 +380,8 @@ function deleteDataType(dataTypeId) {
     // 論理削除（ステータスを inactive に変更）
     return updateDataType(dataTypeId, { status: 'inactive' });
   } catch (error) {
-    logError(error, 'deleteDataType', { dataTypeId });
-    return createErrorResponse(error, 'データタイプの削除に失敗しました');
+    console.log(error, 'deleteDataType', { dataTypeId });
+    return { success: false, error: error.message || 'データタイプの削除に失敗しました' };
   }
 }
 
@@ -360,7 +396,7 @@ function tryParseJSON(jsonString) {
   try {
     return JSON.parse(jsonString);
   } catch (error) {
-    debugLog('JSON パースエラー', { jsonString, error: error.toString() });
+    console.log('JSON パースエラー:', { jsonString, error: error.toString() });
     return {};
   }
 }
@@ -380,7 +416,7 @@ function getDataByType(dataTypeId, location) {
     
     const dataType = dataTypeResult.dataTypes.find(dt => dt.dataTypeId === dataTypeId);
     if (!dataType) {
-      throw new AppError(
+      throw new Error(
         'データタイプが見つかりません',
         ErrorTypes.DATA_ACCESS,
         { dataTypeId }
@@ -395,8 +431,8 @@ function getDataByType(dataTypeId, location) {
     // getSpreadsheetData関数を拡張して、データタイプに応じた処理を行う
     return getSpreadsheetDataWithType(location, dataType);
   } catch (error) {
-    logError(error, 'getDataByType', { dataTypeId, location });
-    return createErrorResponse(error, 'データの取得に失敗しました');
+    console.log(error, 'getDataByType', { dataTypeId, location });
+    return { success: false, error: error.message || 'データの取得に失敗しました' };
   }
 }
 
