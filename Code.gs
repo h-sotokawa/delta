@@ -8,6 +8,31 @@ const CONFIG = {
   STATUS_CHANGE_NOTIFICATION_ENABLED: PropertiesService.getScriptProperties().getProperty('STATUS_CHANGE_NOTIFICATION_ENABLED') === 'true'
 };
 
+// 初期設定（デプロイ時に一度実行）
+function initializeProperties() {
+  const props = PropertiesService.getScriptProperties();
+  
+  // デバッグモードの初期値設定
+  if (props.getProperty('DEBUG_MODE') === null) {
+    props.setProperty('DEBUG_MODE', 'false');
+  }
+  
+  // 通知設定の初期値
+  if (props.getProperty('STATUS_CHANGE_NOTIFICATION_ENABLED') === null) {
+    props.setProperty('STATUS_CHANGE_NOTIFICATION_ENABLED', 'true');
+  }
+  
+  // スプレッドシートIDが未設定の場合の警告
+  if (!props.getProperty('SPREADSHEET_ID')) {
+    console.warn('SPREADSHEET_ID is not set. Please set it in Script Properties.');
+  }
+  
+  return {
+    success: true,
+    properties: props.getProperties()
+  };
+}
+
 // シート名の定義
 const SHEET_NAMES = {
   LOCATION_MASTER: '拠点マスタ',
@@ -27,7 +52,8 @@ function doGet(e) {
   const page = e.parameter.page || 'index';
   
   try {
-    return HtmlService.createHtmlOutputFromFile('index')
+    const template = HtmlService.createTemplateFromFile('index');
+    return template.evaluate()
       .setTitle('代替機管理システム')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -35,6 +61,11 @@ function doGet(e) {
     logError('doGet', error);
     return HtmlService.createHtmlOutput('エラーが発生しました。');
   }
+}
+
+// HTMLインクルード関数
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 // ユーザー情報の取得
@@ -541,7 +572,12 @@ function getSystemSettings() {
   try {
     const props = PropertiesService.getScriptProperties();
     
-    return {
+    // 初期化チェック
+    if (props.getProperty('DEBUG_MODE') === null) {
+      initializeProperties();
+    }
+    
+    const settings = {
       debugMode: props.getProperty('DEBUG_MODE') === 'true',
       terminalFormUrl: props.getProperty('TERMINAL_FORM_URL') || '',
       printerFormUrl: props.getProperty('PRINTER_FORM_URL') || '',
@@ -549,9 +585,12 @@ function getSystemSettings() {
       errorNotificationEmail: props.getProperty('ERROR_NOTIFICATION_EMAIL') || '',
       alertNotificationEmail: props.getProperty('ALERT_NOTIFICATION_EMAIL') || '',
       statusChangeNotificationEnabled: props.getProperty('STATUS_CHANGE_NOTIFICATION_ENABLED') === 'true',
-      spreadsheetId: CONFIG.SPREADSHEET_ID,
+      spreadsheetId: CONFIG.SPREADSHEET_ID || 'Not Set',
       lastUpdate: props.getProperty('LAST_SYSTEM_UPDATE') || null
     };
+    
+    console.log('getSystemSettings result:', settings);
+    return settings;
   } catch (error) {
     logError('getSystemSettings', error);
     return {};

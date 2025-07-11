@@ -464,7 +464,16 @@ function showConfirmModal(message, onConfirm, onCancel) {
 // エラーハンドリング
 function handleError(error) {
     console.error('設定エラー:', error);
-    showNotification('エラーが発生しました: ' + error.message, 'danger');
+    
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('error', 'Settings error', {
+            error: error.message || error,
+            stack: error.stack
+        });
+    }
+    
+    showNotification('エラーが発生しました: ' + (error.message || error), 'danger');
 }
 
 // 通知表示
