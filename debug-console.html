@@ -1,0 +1,563 @@
+<style>
+/* デバッグコンソールのスタイル */
+#debugConsole {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 400px;
+    max-width: 90vw;
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    transition: all 0.3s ease;
+}
+
+#debugConsole.minimized {
+    width: 200px;
+    height: 40px;
+}
+
+#debugConsole.minimized .debug-body {
+    display: none;
+}
+
+.debug-header {
+    background-color: #2d2d2d;
+    padding: 8px 12px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+    user-select: none;
+}
+
+.debug-header h6 {
+    margin: 0;
+    color: #fff;
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.debug-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.debug-controls button {
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 16px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.debug-controls button:hover {
+    color: #fff;
+}
+
+.debug-body {
+    background-color: #1e1e1e;
+    max-height: 400px;
+    overflow-y: auto;
+    border-radius: 0 0 8px 8px;
+}
+
+.debug-filters {
+    padding: 8px 12px;
+    background-color: #252525;
+    border-bottom: 1px solid #444;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.debug-filter {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #aaa;
+    font-size: 11px;
+}
+
+.debug-filter input[type="checkbox"] {
+    margin: 0;
+}
+
+.debug-logs {
+    padding: 8px 0;
+    min-height: 100px;
+}
+
+.debug-log-entry {
+    padding: 4px 12px;
+    border-bottom: 1px solid #2a2a2a;
+    font-size: 12px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.debug-log-entry:hover {
+    background-color: #252525;
+}
+
+.debug-log-entry.error {
+    color: #ff6b6b;
+    background-color: rgba(255, 107, 107, 0.1);
+}
+
+.debug-log-entry.warn {
+    color: #feca57;
+    background-color: rgba(254, 202, 87, 0.1);
+}
+
+.debug-log-entry.info {
+    color: #48dbfb;
+    background-color: rgba(72, 219, 251, 0.1);
+}
+
+.debug-log-entry.debug {
+    color: #a0a0a0;
+    background-color: rgba(160, 160, 160, 0.05);
+}
+
+.debug-log-entry.success {
+    color: #1dd1a1;
+    background-color: rgba(29, 209, 161, 0.1);
+}
+
+.log-timestamp {
+    color: #666;
+    margin-right: 8px;
+}
+
+.log-level {
+    font-weight: bold;
+    margin-right: 8px;
+    text-transform: uppercase;
+    font-size: 10px;
+}
+
+.log-message {
+    color: inherit;
+}
+
+.log-details {
+    margin-top: 4px;
+    padding-left: 16px;
+    color: #888;
+    font-size: 11px;
+}
+
+.debug-actions {
+    padding: 8px 12px;
+    background-color: #252525;
+    border-top: 1px solid #444;
+    display: flex;
+    gap: 8px;
+}
+
+.debug-actions button {
+    padding: 4px 12px;
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.debug-actions button:hover {
+    background-color: #4a4a4a;
+    border-color: #666;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    #debugConsole {
+        width: calc(100vw - 40px);
+        bottom: 10px;
+        right: 10px;
+    }
+}
+
+/* ドラッグ中のスタイル */
+#debugConsole.dragging {
+    opacity: 0.8;
+    cursor: move;
+}
+
+/* ログカウンター */
+.log-counter {
+    background-color: #ff6b6b;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+    margin-left: 8px;
+    display: none;
+}
+
+.log-counter.has-errors {
+    display: inline-block;
+}
+</style>
+
+<div id="debugConsole" style="display: none;">
+    <div class="debug-header" id="debugHeader">
+        <h6>
+            <i class="fas fa-bug"></i> Debug Console
+            <span class="log-counter" id="errorCounter">0</span>
+        </h6>
+        <div class="debug-controls">
+            <button onclick="clearDebugLogs()" title="Clear logs">
+                <i class="fas fa-trash"></i>
+            </button>
+            <button onclick="exportDebugLogs()" title="Export logs">
+                <i class="fas fa-download"></i>
+            </button>
+            <button onclick="toggleDebugConsole()" title="Minimize">
+                <i class="fas fa-minus"></i>
+            </button>
+            <button onclick="closeDebugConsole()" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div class="debug-body">
+        <div class="debug-filters">
+            <label class="debug-filter">
+                <input type="checkbox" id="filterError" checked onchange="filterDebugLogs()">
+                <span style="color: #ff6b6b;">ERROR</span>
+            </label>
+            <label class="debug-filter">
+                <input type="checkbox" id="filterWarn" checked onchange="filterDebugLogs()">
+                <span style="color: #feca57;">WARN</span>
+            </label>
+            <label class="debug-filter">
+                <input type="checkbox" id="filterInfo" checked onchange="filterDebugLogs()">
+                <span style="color: #48dbfb;">INFO</span>
+            </label>
+            <label class="debug-filter">
+                <input type="checkbox" id="filterDebug" checked onchange="filterDebugLogs()">
+                <span style="color: #a0a0a0;">DEBUG</span>
+            </label>
+            <label class="debug-filter">
+                <input type="checkbox" id="filterSuccess" checked onchange="filterDebugLogs()">
+                <span style="color: #1dd1a1;">SUCCESS</span>
+            </label>
+        </div>
+        
+        <div class="debug-logs" id="debugLogs"></div>
+        
+        <div class="debug-actions">
+            <button onclick="clearDebugLogs()">
+                <i class="fas fa-trash"></i> クリア
+            </button>
+            <button onclick="exportDebugLogs()">
+                <i class="fas fa-download"></i> エクスポート
+            </button>
+            <button onclick="scrollToBottom()">
+                <i class="fas fa-arrow-down"></i> 最新へ
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// デバッグコンソールの機能実装
+let debugLogs = [];
+let debugConsoleInitialized = false;
+let isDebugMode = false;
+let errorCount = 0;
+
+// デバッグモードの初期化
+function initializeDebugConsole(debugMode) {
+    isDebugMode = debugMode;
+    
+    if (isDebugMode && !debugConsoleInitialized) {
+        document.getElementById('debugConsole').style.display = 'block';
+        debugConsoleInitialized = true;
+        
+        // ドラッグ機能の初期化
+        initializeDraggable();
+        
+        // 初期ログ
+        debugLog('info', 'Debug Console initialized', { debugMode: true });
+        
+        // グローバルエラーハンドラーの設定
+        window.addEventListener('error', function(event) {
+            debugLog('error', 'JavaScript Error: ' + event.message, {
+                filename: event.filename,
+                line: event.lineno,
+                column: event.colno,
+                stack: event.error?.stack
+            });
+        });
+        
+        // Promise rejectionハンドラー
+        window.addEventListener('unhandledrejection', function(event) {
+            debugLog('error', 'Unhandled Promise Rejection: ' + event.reason, {
+                promise: event.promise
+            });
+        });
+    }
+}
+
+// ログ出力関数
+function debugLog(level, message, details = null) {
+    if (!isDebugMode) return;
+    
+    const timestamp = new Date().toLocaleTimeString('ja-JP');
+    const logEntry = {
+        timestamp,
+        level,
+        message,
+        details
+    };
+    
+    debugLogs.push(logEntry);
+    
+    // エラーカウントの更新
+    if (level === 'error') {
+        errorCount++;
+        updateErrorCounter();
+    }
+    
+    // DOM に追加
+    addLogToDOM(logEntry);
+    
+    // コンソールにも出力
+    const consoleMethod = level === 'error' ? 'error' : 
+                         level === 'warn' ? 'warn' : 
+                         level === 'debug' ? 'debug' : 'log';
+    
+    if (details) {
+        console[consoleMethod](`[${timestamp}] [${level.toUpperCase()}] ${message}`, details);
+    } else {
+        console[consoleMethod](`[${timestamp}] [${level.toUpperCase()}] ${message}`);
+    }
+}
+
+// DOMにログを追加
+function addLogToDOM(logEntry) {
+    const logsContainer = document.getElementById('debugLogs');
+    if (!logsContainer) return;
+    
+    const logElement = document.createElement('div');
+    logElement.className = `debug-log-entry ${logEntry.level}`;
+    logElement.dataset.level = logEntry.level;
+    
+    let html = `
+        <span class="log-timestamp">${logEntry.timestamp}</span>
+        <span class="log-level">[${logEntry.level.toUpperCase()}]</span>
+        <span class="log-message">${escapeHtml(logEntry.message)}</span>
+    `;
+    
+    if (logEntry.details) {
+        html += `<div class="log-details">${escapeHtml(JSON.stringify(logEntry.details, null, 2))}</div>`;
+    }
+    
+    logElement.innerHTML = html;
+    logsContainer.appendChild(logElement);
+    
+    // 自動スクロール
+    logsContainer.scrollTop = logsContainer.scrollHeight;
+}
+
+// HTMLエスケープ
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ログフィルタリング
+function filterDebugLogs() {
+    const filters = {
+        error: document.getElementById('filterError').checked,
+        warn: document.getElementById('filterWarn').checked,
+        info: document.getElementById('filterInfo').checked,
+        debug: document.getElementById('filterDebug').checked,
+        success: document.getElementById('filterSuccess').checked
+    };
+    
+    const logEntries = document.querySelectorAll('.debug-log-entry');
+    logEntries.forEach(entry => {
+        const level = entry.dataset.level;
+        entry.style.display = filters[level] ? 'block' : 'none';
+    });
+}
+
+// ログクリア
+function clearDebugLogs() {
+    debugLogs = [];
+    errorCount = 0;
+    updateErrorCounter();
+    document.getElementById('debugLogs').innerHTML = '';
+    debugLog('info', 'Debug logs cleared');
+}
+
+// ログエクスポート
+function exportDebugLogs() {
+    const logsText = debugLogs.map(log => {
+        let text = `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`;
+        if (log.details) {
+            text += '\n' + JSON.stringify(log.details, null, 2);
+        }
+        return text;
+    }).join('\n\n');
+    
+    const blob = new Blob([logsText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `debug-logs-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    debugLog('info', 'Debug logs exported');
+}
+
+// 最新へスクロール
+function scrollToBottom() {
+    const logsContainer = document.getElementById('debugLogs');
+    logsContainer.scrollTop = logsContainer.scrollHeight;
+}
+
+// コンソールの最小化切り替え
+function toggleDebugConsole() {
+    const console = document.getElementById('debugConsole');
+    console.classList.toggle('minimized');
+}
+
+// コンソールを閉じる
+function closeDebugConsole() {
+    document.getElementById('debugConsole').style.display = 'none';
+    debugLog('info', 'Debug console closed (press F12 to reopen)');
+}
+
+// エラーカウンターの更新
+function updateErrorCounter() {
+    const counter = document.getElementById('errorCounter');
+    counter.textContent = errorCount;
+    counter.classList.toggle('has-errors', errorCount > 0);
+}
+
+// ドラッグ機能の実装
+function initializeDraggable() {
+    const debugConsole = document.getElementById('debugConsole');
+    const debugHeader = document.getElementById('debugHeader');
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    debugHeader.addEventListener('mousedown', dragStart);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
+
+    function dragStart(e) {
+        if (e.target.closest('.debug-controls')) return;
+        
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+        
+        if (e.target === debugHeader || e.target.parentElement === debugHeader) {
+            isDragging = true;
+            debugConsole.classList.add('dragging');
+        }
+    }
+
+    function drag(e) {
+        if (isDragging) {
+            e.preventDefault();
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
+            xOffset = currentX;
+            yOffset = currentY;
+
+            debugConsole.style.transform = `translate(${currentX}px, ${currentY}px)`;
+        }
+    }
+
+    function dragEnd(e) {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+        debugConsole.classList.remove('dragging');
+    }
+}
+
+// キーボードショートカット
+document.addEventListener('keydown', function(e) {
+    // F12 でデバッグコンソールの表示切り替え
+    if (e.key === 'F12' && isDebugMode) {
+        e.preventDefault();
+        const console = document.getElementById('debugConsole');
+        console.style.display = console.style.display === 'none' ? 'block' : 'none';
+    }
+});
+
+// グローバル関数として公開
+window.debugLog = debugLog;
+window.initializeDebugConsole = initializeDebugConsole;
+
+// API呼び出しのインターセプト（デバッグ用）
+if (typeof google !== 'undefined' && google.script && google.script.run) {
+    const originalRun = google.script.run;
+    const wrappedRun = new Proxy(originalRun, {
+        get(target, prop) {
+            if (typeof target[prop] === 'function') {
+                return function(...args) {
+                    debugLog('info', `API Call: ${prop}`, { args });
+                    
+                    const result = target[prop](...args);
+                    
+                    // Success/Failure ハンドラーをラップ
+                    const wrappedResult = {
+                        withSuccessHandler(handler) {
+                            return result.withSuccessHandler(function(response) {
+                                debugLog('success', `API Response: ${prop}`, { response });
+                                return handler(response);
+                            });
+                        },
+                        withFailureHandler(handler) {
+                            return result.withFailureHandler(function(error) {
+                                debugLog('error', `API Error: ${prop}`, { error: error.message || error });
+                                return handler(error);
+                            });
+                        }
+                    };
+                    
+                    // 他のメソッドをプロキシ
+                    return new Proxy(result, {
+                        get(target, prop) {
+                            if (wrappedResult[prop]) {
+                                return wrappedResult[prop];
+                            }
+                            return target[prop];
+                        }
+                    });
+                };
+            }
+            return target[prop];
+        }
+    });
+    
+    // オリジナルを置き換え
+    google.script.run = wrappedRun;
+}
+</script>

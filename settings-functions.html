@@ -1,6 +1,11 @@
 <script>
 // 設定画面の初期化
 function initializeSettings() {
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('info', 'Initializing settings page');
+    }
+    
     // 現在の設定を読み込む
     loadCurrentSettings();
     
@@ -38,7 +43,21 @@ function setupSettingsEventListeners() {
 
 // 現在の設定を読み込む
 function loadCurrentSettings() {
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('info', 'Loading current settings');
+    }
+    
     google.script.run.withSuccessHandler(function(settings) {
+        // デバッグログ
+        if (window.debugLog) {
+            window.debugLog('success', 'Settings loaded', {
+                debugMode: settings.debugMode,
+                hasFormUrls: !!(settings.terminalFormUrl || settings.printerFormUrl),
+                hasNotificationEmails: !!(settings.errorNotificationEmail || settings.alertNotificationEmail)
+            });
+        }
+        
         // デバッグモードの状態
         const debugMode = settings.debugMode || false;
         document.getElementById('debugModeSwitch').checked = debugMode;
@@ -67,6 +86,13 @@ function loadCurrentSettings() {
 
 // デバッグモードの変更処理
 function handleDebugModeChange(enabled) {
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('info', 'Debug mode change requested', {
+            newState: enabled
+        });
+    }
+    
     showConfirmModal(
         `デバッグモードを${enabled ? '有効' : '無効'}にしてもよろしいですか？`,
         function() {
@@ -75,13 +101,32 @@ function handleDebugModeChange(enabled) {
         function() {
             // キャンセルされた場合は元に戻す
             document.getElementById('debugModeSwitch').checked = !enabled;
+            // デバッグログ
+            if (window.debugLog) {
+                window.debugLog('info', 'Debug mode change cancelled');
+            }
         }
     );
 }
 
 // デバッグモードの更新
 function updateDebugMode(enabled) {
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('info', 'Updating debug mode', {
+            enabled: enabled
+        });
+    }
+    
     google.script.run.withSuccessHandler(function(result) {
+        // デバッグログ
+        if (window.debugLog) {
+            window.debugLog(result.success ? 'success' : 'error', 'Debug mode update result', {
+                success: result.success,
+                enabled: enabled
+            });
+        }
+        
         if (result.success) {
             updateDebugModeUI(enabled);
             showNotification(

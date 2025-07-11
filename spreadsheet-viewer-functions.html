@@ -90,7 +90,22 @@ function showSummaryView() {
 function loadSummaryData() {
     const locationId = document.getElementById('locationSelect').value;
     
-    google.script.run.withSuccessHandler(displaySummaryData)
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('info', 'Loading summary data', {
+            locationId: locationId || 'all'
+        });
+    }
+    
+    google.script.run.withSuccessHandler(function(data) {
+        // デバッグログ
+        if (window.debugLog) {
+            window.debugLog('success', 'Summary data loaded', {
+                dataLength: data ? data.length : 0
+            });
+        }
+        displaySummaryData(data);
+    })
         .withFailureHandler(handleError)
         .getSummaryData(locationId);
 }
@@ -291,6 +306,11 @@ function refreshData() {
     const locationId = document.getElementById('locationSelect').value;
     const dataTypeId = document.getElementById('dataTypeSelect').value;
     
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('info', 'Refreshing data', { locationId, dataTypeId });
+    }
+    
     // 選択を保存
     if (locationId) {
         localStorage.setItem('selectedLocation', locationId);
@@ -306,6 +326,15 @@ function refreshData() {
         currentPage = 1;
         sortColumn = -1;
         sortDirection = 'asc';
+        
+        // デバッグログ
+        if (window.debugLog) {
+            window.debugLog('success', 'Data loaded successfully', {
+                dataCount: result.data ? result.data.length : 0,
+                headers: result.headers,
+                dataType: dataTypeId
+            });
+        }
         
         displayData(result);
         updateLastUpdateTime();
@@ -514,6 +543,14 @@ function formatDateTime(dateString) {
 function showRowDetails(rowIndex) {
     const row = currentData[rowIndex];
     if (!row) return;
+    
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('info', 'Showing row details', {
+            rowIndex: rowIndex,
+            headers: currentHeaders ? currentHeaders.length : 0
+        });
+    }
     
     // 詳細モーダルを作成（後で実装）
     console.log('Show details for row:', rowIndex, row);
@@ -760,6 +797,15 @@ function goToPage(page) {
     const totalPages = Math.ceil(currentData.length / itemsPerPage);
     if (page < 1 || page > totalPages) return;
     
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('info', 'Navigating to page', {
+            fromPage: currentPage,
+            toPage: page,
+            totalPages: totalPages
+        });
+    }
+    
     currentPage = page;
     displayCurrentPage();
     
@@ -813,6 +859,13 @@ function editSelectedStatus() {
     const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
     if (selectedCheckboxes.length === 0) return;
     
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('info', 'Starting status edit', {
+            selectedCount: selectedCheckboxes.length
+        });
+    }
+    
     // 選択された行のデータを取得
     const selectedRows = Array.from(selectedCheckboxes).map(checkbox => {
         const rowIndex = parseInt(checkbox.dataset.rowIndex);
@@ -824,6 +877,14 @@ function editSelectedStatus() {
     
     // 編集可能な行を判定
     const editableRows = checkEditableRows(selectedRows);
+    
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('info', 'Editable rows determined', {
+            totalSelected: selectedRows.length,
+            editableCount: editableRows.length
+        });
+    }
     
     // モーダルの内容を設定
     setupStatusEditModal(editableRows, selectedRows);
@@ -942,6 +1003,15 @@ function saveStatusChanges() {
     
     if (editableRows.length === 0) return;
     
+    // デバッグログ
+    if (window.debugLog) {
+        window.debugLog('info', 'Saving status changes', {
+            newStatus: newStatus,
+            changeReason: changeReason,
+            rowCount: editableRows.length
+        });
+    }
+    
     // 保存中の表示
     const modal = bootstrap.Modal.getInstance(document.getElementById('statusEditModal'));
     const saveBtn = document.querySelector('#statusEditModal .btn-primary');
@@ -963,6 +1033,15 @@ function saveStatusChanges() {
     google.script.run.withSuccessHandler(function(result) {
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
+        
+        // デバッグログ
+        if (window.debugLog) {
+            window.debugLog(result.success ? 'success' : 'error', 'Status update completed', {
+                success: result.success,
+                updatedCount: result.updatedCount,
+                error: result.error
+            });
+        }
         
         if (result.success) {
             showNotification(
@@ -991,6 +1070,15 @@ function handleError(error) {
     }
     
     showNotification(message, 'danger');
+    
+    // デバッグログにも出力
+    if (window.debugLog) {
+        window.debugLog('error', message, {
+            error: error.toString(),
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+        });
+    }
     
     // エラーログを送信（オプション）
     if (typeof google !== 'undefined' && google.script && google.script.run) {

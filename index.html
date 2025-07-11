@@ -162,6 +162,7 @@
     </style>
 </head>
 <body>
+    <?!= include('debug-console'); ?>
     <!-- ヘッダーナビゲーション -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
@@ -231,6 +232,23 @@
 
         // 初期化
         document.addEventListener('DOMContentLoaded', function() {
+            // デバッグモードの確認とデバッグコンソールの初期化
+            google.script.run.withSuccessHandler(function(settings) {
+                if (window.initializeDebugConsole) {
+                    window.initializeDebugConsole(settings.debugMode);
+                }
+                
+                // デバッグログ
+                if (window.debugLog && settings.debugMode) {
+                    window.debugLog('info', 'System initialized', { 
+                        debugMode: settings.debugMode,
+                        spreadsheetId: settings.spreadsheetId 
+                    });
+                }
+            }).withFailureHandler(function(error) {
+                console.error('Failed to get system settings:', error);
+            }).getSystemSettings();
+            
             // ユーザー情報の取得
             google.script.run.withSuccessHandler(displayUserInfo)
                 .withFailureHandler(handleError)
