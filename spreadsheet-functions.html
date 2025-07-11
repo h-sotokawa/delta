@@ -4,6 +4,45 @@
   // スプレッドシート関連関数
   // ========================================
   
+  // showDebugInfo関数が存在しない場合の代替実装
+  if (typeof showDebugInfo !== 'function') {
+    window.showDebugInfo = function(message, data) {
+      if (typeof DEBUG_MODE === 'undefined' || !DEBUG_MODE) return;
+      
+      const debugInfo = document.getElementById('debugInfo');
+      const timestamp = new Date().toISOString();
+      const debugMessage = `[${timestamp}] ${message}\n${JSON.stringify(data, null, 2)}\n\n`;
+      
+      if (debugInfo) {
+        debugInfo.textContent = (debugInfo.textContent || '') + debugMessage;
+        // スクロールを最下部に
+        debugInfo.scrollTop = debugInfo.scrollHeight;
+      } else {
+        console.log(`[DEBUG] ${message}`, data);
+      }
+    };
+  }
+  
+  // showServerLogs関数が存在しない場合の代替実装
+  if (typeof showServerLogs !== 'function') {
+    window.showServerLogs = function(logs) {
+      if (typeof DEBUG_MODE === 'undefined' || !DEBUG_MODE) return;
+      if (!logs || !Array.isArray(logs)) return;
+      
+      const debugInfo = document.getElementById('debugInfo');
+      logs.forEach(log => {
+        const debugMessage = `[SERVER ${log.timestamp}] ${log.message}\n${JSON.stringify(log.data, null, 2)}\n\n`;
+        
+        if (debugInfo) {
+          debugInfo.textContent = (debugInfo.textContent || '') + debugMessage;
+          debugInfo.scrollTop = debugInfo.scrollHeight;
+        } else {
+          console.log(`[SERVER DEBUG] ${log.message}`, log.data);
+        }
+      });
+    };
+  }
+  
   // 拠点マスタデータ（動的読み込み）
   let spreadsheetLocationMasterData = [];
   
@@ -82,8 +121,17 @@
               if (dataType.description) {
                 option.title = dataType.description;
               }
+              // デフォルトでNORMALを選択
+              if (dataType.dataTypeId === 'NORMAL') {
+                option.selected = true;
+              }
               dataTypeSelect.appendChild(option);
             });
+            
+            // デフォルトでNORMALが選択されている場合、UIを更新
+            if (dataTypeSelect.value === 'NORMAL') {
+              handleDataTypeChange();
+            }
           }
         }
       })
@@ -1654,11 +1702,130 @@
     }
   }
 
+  // データからサンプルステータス値を取得
+  function getSampleStatusValue(data, columnIndex) {
+    // 最初の非空データを返す
+    for (let i = 1; i < data.length && i < 10; i++) { // 最初の10行をチェック
+      if (data[i][columnIndex] && data[i][columnIndex].toString().trim() !== '') {
+        return data[i][columnIndex].toString().trim();
+      }
+    }
+    return null;
+  }
+  
+  // 列を表示すべきか判定
+  function shouldShowColumn(columnHeader, statusPrefix, nestedStatusPrefix) {
+    if (!columnHeader) return true;
+    
+    const headerStr = columnHeader.toString();
+    
+    // 基本列は常に表示
+    const baseColumns = [
+      '拠点管理番号',
+      '機器種別',
+      '機種名',
+      '製造番号',
+      'タイムスタンプ',
+      '0-1.担当者',
+      '0-4.ステータス',
+      '更新日時',
+      '更新日',
+      '作成日'
+    ];
+    
+    // 基本列は常に表示
+    for (const baseCol of baseColumns) {
+      if (headerStr.includes(baseCol)) {
+        return true;
+      }
+    }
+    
+    // 数字-数字.パターンの列をチェック
+    const match = headerStr.match(/^(\d+)-(\d+)\./); 
+    if (match) {
+      const prefix = match[1];
+      const subPrefix = match[2];
+      
+      // ステータスの接頭辞と一致するかチェック
+      if (prefix !== statusPrefix) {
+        return false;
+      }
+      
+      // 3.社内にて保管中の場合のネスト処理
+      if (statusPrefix === '3' && nestedStatusPrefix && subPrefix !== '0') {
+        // 3-0.社内ステータスは常に表示
+        // 3-X-パターンはネストステータスが一致する場合のみ表示
+        return subPrefix === nestedStatusPrefix;
+      }
+      
+      return true;
+    }
+    
+    // その他の列は表示
+    return true;
+  }
+
   function createTable(data, queryType, prependContent = '', displayMode = 'main') {
     const tableContainer = document.getElementById('tableContainer');
     
     // 拠点管理番号の列インデックスを取得
     const locationCodeColumnIndex = findLocationCodeColumnIndex(data[0]);
+    
+    // ステータス駆動型列フィルタリングのための処理
+    let statusPrefixFilter = null;
+    let nestedStatusFilter = null;
+    
+    // 通常データ（NORMAL）の場合のみステータス駆動型フィルタリングを適用
+    const dataTypeId = document.getElementById('dataType') ? document.getElementById('dataType').value : '';
+    if (dataTypeId === 'NORMAL' && displayMode === 'main') {
+      // 0-4.ステータス列を探す
+      const statusColumnIndex = data[0].findIndex(header => header && header.includes('0-4.ステータス'));
+      
+      if (statusColumnIndex !== -1 && data.length > 1) {
+        // データの中からステータス値を取得（代表的な値を使用）
+        const sampleStatusValue = getSampleStatusValue(data, statusColumnIndex);
+        
+        if (sampleStatusValue) {
+          // ステータスの接頭辞数字を抽出
+          const match = sampleStatusValue.match(/^(\d+)\./); 
+          if (match) {
+            statusPrefixFilter = match[1];
+            
+            if (DEBUG_MODE) {
+              showDebugInfo('ステータス駆動型フィルタリング適用', {
+                statusColumnIndex,
+                sampleStatusValue,
+                statusPrefixFilter,
+                dataTypeId
+              });
+            }
+            
+            // 3.社内にて保管中の場合、ネストしたステータスを確認
+            if (statusPrefixFilter === '3') {
+              const nestedStatusColumnIndex = data[0].findIndex(header => header && header.includes('3-0.社内ステータス'));
+              
+              if (nestedStatusColumnIndex !== -1) {
+                const sampleNestedStatusValue = getSampleStatusValue(data, nestedStatusColumnIndex);
+                if (sampleNestedStatusValue) {
+                  const nestedMatch = sampleNestedStatusValue.match(/^(\d+)\./); 
+                  if (nestedMatch) {
+                    nestedStatusFilter = nestedMatch[1];
+                    
+                    if (DEBUG_MODE) {
+                      showDebugInfo('ネストステータスフィルタリング適用', {
+                        nestedStatusColumnIndex,
+                        sampleNestedStatusValue,
+                        nestedStatusFilter
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
     
     // 空の列をチェックする関数
     function isColumnEmpty(columnIndex) {
@@ -1809,6 +1976,11 @@
         return;
       }
       
+      // ステータス駆動型フィルタリング
+      if (statusPrefixFilter && !shouldShowColumn(cell, statusPrefixFilter, nestedStatusFilter)) {
+        return;
+      }
+      
       table += `<th>${cell}</th>`;
     });
     table += '</tr>';
@@ -1852,6 +2024,11 @@
           
           // 空の列は表示しない（代替機フォーム回答シートモードでは全て表示）
           if (isColumnEmpty(index)) {
+            return;
+          }
+          
+          // ステータス駆動型フィルタリング
+          if (statusPrefixFilter && !shouldShowColumn(data[0][index], statusPrefixFilter, nestedStatusFilter)) {
             return;
           }
           
@@ -1938,7 +2115,13 @@
       updateFloatScrollbarAfterTableLoad();
     }, 100); // DOM更新後に実行
     
-    showDebugInfo('テーブル作成完了', { displayMode });
+    showDebugInfo('テーブル作成完了', { 
+      displayMode,
+      statusPrefixFilter,
+      nestedStatusFilter,
+      dataTypeId,
+      filteredColumns: statusPrefixFilter ? 'ステータス駆動型フィルタリング適用' : 'フィルタリングなし'
+    });
   }
 
   // データステータスパネルを作成（一覧画面用）
@@ -3110,6 +3293,16 @@
     const tableContainer = document.getElementById('tableContainer');
     const loadingDiv = document.getElementById('loading');
     
+    // デバッグ情報を追加
+    if (DEBUG_MODE) {
+      showDebugInfo('loadDataBasedOnDataType実行', {
+        dataTypeId: dataTypeId,
+        locationValue: locationSelect ? locationSelect.value : 'locationSelect not found',
+        auditSheet: auditSheet,
+        queryType: queryType
+      });
+    }
+    
     errorDiv.textContent = '';
     tableContainer.innerHTML = '';
     
@@ -3119,12 +3312,20 @@
     
     if (dataTypeId === 'NORMAL') {
       // 通常データ：拠点選択が必要
-      const location = locationSelect.value;
+      const location = locationSelect ? locationSelect.value : '';
       if (!location) {
         errorDiv.textContent = '拠点を選択してください';
+        if (DEBUG_MODE) {
+          showDebugInfo('拠点未選択エラー', {
+            locationSelectExists: !!locationSelect,
+            locationSelectValue: location
+          });
+        }
         return;
       }
-      loadSpreadsheet(location, queryType);
+      const deviceTypeSelect = document.getElementById('deviceType');
+      const selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
+      loadSpreadsheet(location, queryType, selectedDeviceType);
       
     } else if (dataTypeId === 'AUDIT') {
       // 監査データ：監査シート選択が必要
@@ -3281,20 +3482,22 @@
   // 拠点変更ハンドラーを更新（通常データ選択時のみ動作）
   const originalHandleLocationChange = handleLocationChange;
   handleLocationChange = function() {
-    const sheetType = document.getElementById('sheetType').value;
+    const dataTypeId = document.getElementById('dataType').value;
     
-    if (sheetType === 'normal') {
-      // 通常データの場合のみ既存のロジックを実行
+    if (dataTypeId === 'NORMAL' || !dataTypeId || (dataTypeId && dataTypeId !== 'AUDIT' && dataTypeId !== 'SUMMARY')) {
+      // 通常データまたはカスタムデータタイプの場合のみ既存のロジックを実行
       originalHandleLocationChange();
       
       // 拠点が選択されたらデータを読み込み
       const location = document.getElementById('location').value;
-      if (location) {
+      if (location && dataTypeId) {
         loadDataBasedOnDataType();
       }
     } else {
-      // 通常データ以外の場合は何もしない
-      showDebugInfo('拠点変更（通常データ以外のため無視）', { sheetType });
+      // 監査データやサマリーデータの場合は何もしない
+      if (DEBUG_MODE) {
+        showDebugInfo('拠点変更（通常データ以外のため無視）', { dataTypeId });
+      }
     }
   };
 
