@@ -170,14 +170,14 @@
                       document.querySelector('.location-selector').style.display = 'block';
                       document.querySelector('.query-selector').style.display = 'block';
                     }
-                  }, 500); // spreadsheet-functions.htmlが読み込まれるまで待つ
+                  }, 1000); // spreadsheet-functions.htmlが読み込まれるまで十分待つ
                 }
                   
                   // データを読み込む
                   if (typeof window.loadDataBasedOnDataType === 'function') {
                     setTimeout(() => {
                       window.loadDataBasedOnDataType();
-                    }, 100);
+                    }, 1500); // handleDataTypeChangeの後に実行
                   }
                 }
               }
