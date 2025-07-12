@@ -466,7 +466,6 @@
     }
     
     // 拠点コードを取得
-    const locationSelect = document.getElementById('location');
     const selectedOption = locationSelect.options[locationSelect.selectedIndex];
     const locationCode = selectedOption ? selectedOption.getAttribute('data-code') || location : location;
     
@@ -1067,9 +1066,10 @@
   }
 
   // ========================================
-  // グローバル関数登録
+  // グローバル関数登録（即座に実行）
   // ========================================
   window.onUrlGeneratorPageShow = onUrlGeneratorPageShow;
+  console.log('onUrlGeneratorPageShow関数をwindowオブジェクトに登録しました:', typeof window.onUrlGeneratorPageShow);
   window.updateCategoryInfo = updateCategoryInfo;
   window.generateAndSaveUrl = generateAndSaveUrl;
   window.resetForm = resetForm;

@@ -3314,9 +3314,15 @@
       // 通常データ：拠点選択が必要
       const location = locationSelect ? locationSelect.value : '';
       if (!location) {
-        errorDiv.textContent = '拠点を選択してください';
+        // 初期表示時は案内メッセージを表示（エラーとしてではなく）
+        tableContainer.innerHTML = `
+          <div class="info-message">
+            <i class="fas fa-info-circle"></i>
+            <p>拠点を選択してデータを表示してください</p>
+          </div>
+        `;
         if (DEBUG_MODE) {
-          showDebugInfo('拠点未選択エラー', {
+          showDebugInfo('拠点未選択（初期状態）', {
             locationSelectExists: !!locationSelect,
             locationSelectValue: location
           });

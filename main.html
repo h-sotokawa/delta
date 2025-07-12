@@ -92,17 +92,32 @@
       }
       setTimeout(() => {
         console.log('showPage: URL生成機能初期化を試行');
-        if (typeof onUrlGeneratorPageShow === 'function') {
+        console.log('window.onUrlGeneratorPageShow:', typeof window.onUrlGeneratorPageShow);
+        if (typeof window.onUrlGeneratorPageShow === 'function') {
           console.log('showPage: onUrlGeneratorPageShow関数が見つかりました。実行します。');
+          if (DEBUG_MODE) {
+            showDebugInfo('showPage遅延実行: URL生成機能初期化', {});
+          }
+          window.onUrlGeneratorPageShow();
+        } else if (typeof onUrlGeneratorPageShow === 'function') {
+          console.log('showPage: グローバルonUrlGeneratorPageShow関数が見つかりました。実行します。');
           if (DEBUG_MODE) {
             showDebugInfo('showPage遅延実行: URL生成機能初期化', {});
           }
           onUrlGeneratorPageShow();
         } else {
           console.error('showPage: onUrlGeneratorPageShow関数が見つかりません');
+          console.log('利用可能な関数:', Object.keys(window).filter(k => k.includes('onUrl')));
           if (DEBUG_MODE) {
             showDebugInfo('showPage: onUrlGeneratorPageShow関数が見つからない', {});
           }
+          // 再試行
+          setTimeout(() => {
+            if (typeof window.onUrlGeneratorPageShow === 'function') {
+              console.log('showPage: 再試行でonUrlGeneratorPageShow関数が見つかりました。実行します。');
+              window.onUrlGeneratorPageShow();
+            }
+          }, 500);
         }
       }, 100);
     }
