@@ -2672,8 +2672,8 @@
   let isFloatScrolling = false;
   let isTableScrolling = false;
 
-  // フロート横スクロールバーの初期化
-  function initializeFloatScrollbar() {
+  // フロート横スクロールバーの初期化（グローバルスコープで定義）
+  window.initializeFloatScrollbar = function() {
     if (floatScrollbarInitialized) {
       if (DEBUG_MODE) {
         showDebugInfo('フロートスクロールバー初期化スキップ', { reason: '既に初期化済み' });

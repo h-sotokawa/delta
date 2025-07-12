@@ -71,14 +71,36 @@
         showDebugInfo('showPage: スプレッドシートページ表示', { pageId });
       }
       setTimeout(() => {
-        if (typeof initializeFloatScrollbar === 'function') {
-          if (DEBUG_MODE) {
-            showDebugInfo('showPage遅延実行: フロートスクロールバー初期化', {});
+        try {
+          // グローバルスコープから関数を探す
+          if (typeof window.initializeFloatScrollbar === 'function') {
+            if (DEBUG_MODE) {
+              showDebugInfo('showPage遅延実行: フロートスクロールバー初期化', {});
+            }
+            window.initializeFloatScrollbar();
+          } else if (typeof initializeFloatScrollbar === 'function') {
+            if (DEBUG_MODE) {
+              showDebugInfo('showPage遅延実行: フロートスクロールバー初期化（ローカル）', {});
+            }
+            initializeFloatScrollbar();
+          } else {
+            // 関数が見つからない場合はエラーではなく警告として扱う
+            if (DEBUG_MODE) {
+              console.warn('initializeFloatScrollbar関数が見つかりません。フロートスクロールバー機能は無効です。');
+              showDebugInfo('showPage: initializeFloatScrollbar関数が見つからない', {
+                windowFunc: typeof window.initializeFloatScrollbar,
+                localFunc: typeof initializeFloatScrollbar
+              });
+            }
           }
-          initializeFloatScrollbar();
-        } else {
+        } catch (error) {
+          // エラーが発生してもページ表示は継続
+          console.error('フロートスクロールバー初期化エラー:', error);
           if (DEBUG_MODE) {
-            showDebugInfo('showPage: initializeFloatScrollbar関数が見つからない', {});
+            showDebugInfo('showPage: フロートスクロールバー初期化エラー', {
+              error: error.message,
+              stack: error.stack
+            });
           }
         }
       }, 100);
