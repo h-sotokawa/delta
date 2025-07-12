@@ -74,6 +74,8 @@
   
   // 拠点一覧を取得してプルダウンメニューに設定（グローバルスコープで定義）
   window.initializeLocations = function() {
+    console.log('initializeLocations function called');
+    
     // 拠点マスタを読み込み
     loadLocationMasterForSpreadsheet();
     
@@ -96,7 +98,16 @@
       })
       .withFailureHandler(function(error) {
         const errorDiv = document.getElementById('error');
-        errorDiv.textContent = '拠点一覧の取得に失敗しました: ' + error;
+        const errorMessage = '拠点一覧の取得に失敗しました: ' + error;
+        if (errorDiv) {
+          errorDiv.textContent = errorMessage;
+        }
+        console.error(errorMessage, error);
+        // ローディング表示を非表示
+        const loadingDiv = document.getElementById('loading');
+        if (loadingDiv) {
+          loadingDiv.style.display = 'none';
+        }
       })
       .getLocations();
   }
@@ -3644,5 +3655,10 @@
       }
     }
   };
+  
+  // デバッグ: スクリプトが読み込まれたことを確認
+  console.log('spreadsheet-functions.html loaded');
+  console.log('initializeLocations available:', typeof window.initializeLocations);
+  console.log('initializeFloatScrollbar available:', typeof window.initializeFloatScrollbar);
 
 </script> 

@@ -72,23 +72,33 @@
       }
       
       // スプレッドシートページの初期化（拠点とデータタイプの読み込み）
-      setTimeout(() => {
+      // 関数が読み込まれるまで待機してから実行
+      let retryCount = 0;
+      const maxRetries = 20; // 最大2秒待機
+      
+      const tryInitialize = () => {
         try {
           // 拠点とデータタイプマスタを初期化
           if (typeof window.initializeLocations === 'function') {
             if (DEBUG_MODE) {
-              showDebugInfo('showPage: 拠点とデータタイプ初期化（window）', {});
+              showDebugInfo('showPage: 拠点とデータタイプ初期化（window）', { retryCount });
             }
             window.initializeLocations();
           } else if (typeof initializeLocations === 'function') {
             if (DEBUG_MODE) {
-              showDebugInfo('showPage: 拠点とデータタイプ初期化（ローカル）', {});
+              showDebugInfo('showPage: 拠点とデータタイプ初期化（ローカル）', { retryCount });
             }
             initializeLocations();
+          } else if (retryCount < maxRetries) {
+            // 関数がまだ読み込まれていない場合は再試行
+            retryCount++;
+            setTimeout(tryInitialize, 100);
+            return;
           } else {
-            console.error('initializeLocations関数が見つかりません', {
+            console.error('initializeLocations関数が見つかりません（タイムアウト）', {
               windowFunc: typeof window.initializeLocations,
-              localFunc: typeof initializeLocations
+              localFunc: typeof initializeLocations,
+              retryCount: retryCount
             });
           }
           
@@ -123,7 +133,10 @@
             });
           }
         }
-      }, 100);
+      };
+      
+      // 初期化を開始
+      setTimeout(tryInitialize, 100);
     }
 
     // URL生成ページの場合、URL生成機能を初期化

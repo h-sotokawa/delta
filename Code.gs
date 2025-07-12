@@ -203,20 +203,7 @@ function getSpreadsheetIdFromProperty(location) {
   return PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
 }
 
-// フロントエンド用の拠点一覧を取得
-function getLocations() {
-  try {
-    return {
-      success: true,
-      locations: getLocationNamesMapping()
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.toString()
-    };
-  }
-}
+// フロントエンド用の拠点一覧を取得（削除 - 重複定義のため）
 
 // 高速化された日付フォーマット関数
 function formatDateFast(date) {
