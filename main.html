@@ -19,15 +19,15 @@
       showDebugInfo('デバッグモード: オープニングスキップ', {});
       // ダッシュボードページを明示的に表示
       showPage('dashboard');
-      initializeLocations();
+      // initializeLocations(); // スプレッドシートページで実行される
     } else {
       // 本番モードの場合はオープニング画面を表示してデータ一括読み込みを開始
       showOpeningScreenAndPreload();
 
       // スプレッドシートページの初期化（オープニング後に実行）
-      setTimeout(() => {
-        initializeLocations();
-      }, 1000);
+      // setTimeout(() => {
+      //   initializeLocations();
+      // }, 1000);
     }
 
     // デバッグモードがオフの場合はデバッグセクションを非表示

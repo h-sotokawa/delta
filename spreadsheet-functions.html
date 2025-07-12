@@ -1932,7 +1932,6 @@
     let nestedStatusFilter = null;
     
     // 通常データ（NORMAL）の場合のみステータス駆動型フィルタリングを適用
-    const dataTypeId = document.getElementById('dataType') ? document.getElementById('dataType').value : '';
     if (dataTypeId === 'NORMAL' && displayMode === 'main') {
       // 0-4.ステータス列を探す
       const statusColumnIndex = data[0].findIndex(header => header && header.includes('0-4.ステータス'));
@@ -3643,6 +3642,8 @@
   }
   
   // 拠点変更ハンドラーを更新（通常データ選択時のみ動作）
+  // この部分は削除（handleLocationChangeは既に上で定義されている）
+  /*
   const originalHandleLocationChange = handleLocationChange;
   handleLocationChange = function() {
     const dataTypeId = document.getElementById('dataType').value;
@@ -3658,11 +3659,12 @@
       }
     } else {
       // 監査データやサマリーデータの場合は何もしない
-      if (DEBUG_MODE) {
+      if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
         showDebugInfo('拠点変更（通常データ以外のため無視）', { dataTypeId });
       }
     }
   };
+  */
   
   // デバッグ: スクリプトが読み込まれたことを確認
   console.log('spreadsheet-functions.html loaded');

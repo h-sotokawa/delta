@@ -154,19 +154,24 @@
                 
                 // デフォルトでNORMALが選択されている場合、UIを更新
                 if (dataTypeSelect.value === 'NORMAL') {
-                  if (typeof window.handleDataTypeChange === 'function') {
-                    window.handleDataTypeChange();
-                  } else {
-                    console.log('handleDataTypeChange not found, manually updating UI');
-                    // 手動でUIを更新
-                    const normalDataType = response.dataTypes.find(dt => dt.dataTypeId === 'NORMAL');
-                    if (normalDataType && typeof window.updateUIForDataType === 'function') {
-                      window.updateUIForDataType(normalDataType);
+                  // handleDataTypeChangeの呼び出しを遅延実行
+                  setTimeout(() => {
+                    if (typeof window.handleDataTypeChange === 'function') {
+                      console.log('Calling handleDataTypeChange');
+                      window.handleDataTypeChange();
+                    } else {
+                      console.log('handleDataTypeChange not found, manually updating UI');
+                      // 手動でUIを更新
+                      const normalDataType = response.dataTypes.find(dt => dt.dataTypeId === 'NORMAL');
+                      if (normalDataType && typeof window.updateUIForDataType === 'function') {
+                        window.updateUIForDataType(normalDataType);
+                      }
+                      // location selectorを表示
+                      document.querySelector('.location-selector').style.display = 'block';
+                      document.querySelector('.query-selector').style.display = 'block';
                     }
-                    // location selectorを表示
-                    document.querySelector('.location-selector').style.display = 'block';
-                    document.querySelector('.query-selector').style.display = 'block';
-                  }
+                  }, 500); // spreadsheet-functions.htmlが読み込まれるまで待つ
+                }
                   
                   // データを読み込む
                   if (typeof window.loadDataBasedOnDataType === 'function') {
