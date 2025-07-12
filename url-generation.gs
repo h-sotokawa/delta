@@ -903,157 +903,25 @@ function generateQRCodeImage(url) {
       });
     }
 
-    // 1. 最初にQuickChart.ioを試す（最も安定している）
-    try {
-      const quickChartUrl = 'https://quickchart.io/qr?' + 
-        'text=' + encodeURIComponent(url) + '&' +
-        'size=200';
-        
-      addLog("QuickChart.io APIを試行中", { 
-        url: quickChartUrl,
-        encodedUrlLength: encodeURIComponent(url).length
-      });
-      
-      const response = UrlFetchApp.fetch(quickChartUrl, {
-        method: 'GET',
-        muteHttpExceptions: true,
-        validateHttpsCertificates: true,
-        followRedirects: true,
-        headers: {
-          'Accept': 'image/png'
-        }
-      });
-
-      const responseCode = response.getResponseCode();
-      const contentType = response.getContentType();
-      
-      addLog("QuickChart.io レスポンス", { 
-        statusCode: responseCode,
-        contentType: contentType,
-        headers: response.getAllHeaders()
-      });
-
-      if (responseCode === 200) {
-        const blob = response.getBlob();
-        const bytes = blob.getBytes();
-        
-        if (bytes.length > 0) {
-          const base64Data = Utilities.base64Encode(bytes);
-          const mimeType = contentType || 'image/png';
-
-          endPerformanceTimer(startTime, "QRコード画像生成（QuickChart）");
-          addLog("QRコード画像生成成功（QuickChart）", { 
-            url: url, 
-            imageSize: bytes.length,
-            mimeType: mimeType
-          });
-
-          return {
-            success: true,
-            imageData: 'data:' + mimeType + ';base64,' + base64Data,
-            provider: 'QuickChart.io',
-            url: url
-          };
-        } else {
-          addLog("QuickChart API 空のレスポンス");
-        }
-      } else {
-        const errorText = response.getContentText();
-        addLog("QuickChart API レスポンスエラー", { 
-          statusCode: responseCode,
-          statusText: errorText.substring(0, 500),
-          url: quickChartUrl
-        });
-      }
-    } catch (quickChartError) {
-      addLog("QuickChart API エラー", { 
-        error: quickChartError.toString(),
-        message: quickChartError.message,
-        stack: quickChartError.stack
-      });
-    }
-
-    // 2. フォールバック: GoQR.me API
-    try {
-      const goQrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' + 
-        'size=200x200&' +
-        'data=' + encodeURIComponent(url);
-        
-      addLog("GoQR.me APIを試行中", { 
-        url: goQrUrl,
-        encodedUrlLength: encodeURIComponent(url).length
-      });
-      
-      const response = UrlFetchApp.fetch(goQrUrl, {
-        method: 'GET',
-        muteHttpExceptions: true,
-        validateHttpsCertificates: true,
-        followRedirects: true,
-        headers: {
-          'Accept': 'image/png'
-        }
-      });
-
-      const responseCode = response.getResponseCode();
-      const contentType = response.getContentType();
-      
-      addLog("GoQR.me レスポンス", { 
-        statusCode: responseCode,
-        contentType: contentType,
-        headers: response.getAllHeaders()
-      });
-
-      if (responseCode === 200) {
-        const blob = response.getBlob();
-        const bytes = blob.getBytes();
-        
-        if (bytes.length > 0) {
-          const base64Data = Utilities.base64Encode(bytes);
-          const mimeType = contentType || 'image/png';
-
-          endPerformanceTimer(startTime, "QRコード画像生成（GoQR.me）");
-          addLog("QRコード画像生成成功（GoQR.me）", { 
-            url: url, 
-            imageSize: bytes.length,
-            mimeType: mimeType
-          });
-
-          return {
-            success: true,
-            imageData: 'data:' + mimeType + ';base64,' + base64Data,
-            provider: 'GoQR.me',
-            url: url
-          };
-        } else {
-          addLog("GoQR.me API 空のレスポンス");
-        }
-      } else {
-        const errorText = response.getContentText();
-        addLog("GoQR.me API レスポンスエラー", { 
-          statusCode: responseCode,
-          statusText: errorText.substring(0, 500),
-          url: goQrUrl
-        });
-      }
-    } catch (goQrError) {
-      addLog("GoQR.me API エラー", { 
-        error: goQrError.toString(),
-        message: goQrError.message,
-        stack: goQrError.stack
-      });
-    }
-
-    // 3. 最終手段: Google Apps Script内でQRコードを生成する方法を試みる
-    // ただし、外部APIが全て失敗した場合のフォールバックとして、URLのみを返す
-    addLog("全ての外部APIが失敗しました。URLのみを返します。", { url });
+    // ハイブリッドアプローチ: 直接画像URLを返す
+    // ブラウザ側で<img>タグとして表示可能
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=200x200&format=png`;
     
-    // URLだけでも返すことで、ユーザーが手動でQRコードを生成できるようにする
+    addLog("QRコード画像URL生成", { 
+      url: qrApiUrl,
+      method: 'direct-url'
+    });
+    
+    endPerformanceTimer(startTime, "QRコード画像URL生成");
+    
+    // 直接URLを返すことで、ブラウザ側でCORS制約なく表示可能
     return {
       success: true,
+      imageUrl: qrApiUrl,
+      imageData: null, // Base64変換はせず、URLを直接使用
+      provider: 'QR Server (Direct URL)',
       url: url,
-      imageData: null,
-      provider: 'None - Manual generation required',
-      imageError: "外部APIへの接続に失敗しました。手動でQRコードを生成してください。"
+      method: 'direct-url'
     };
 
   } catch (error) {
@@ -1119,7 +987,8 @@ function generateQRCodeWithImage(locationNumber, deviceCategory) {
       deviceCategory: deviceCategory,
       isQrUrl: urlResult.isQrUrl,
       imageData: imageResult.imageData,
-      imageProvider: imageResult.provider
+      imageUrl: imageResult.imageUrl,
+      provider: imageResult.provider || imageResult.imageProvider
     };
 
   } catch (error) {

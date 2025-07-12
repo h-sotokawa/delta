@@ -1755,7 +1755,8 @@
       qrLocationNumber: qrLocationNumber ? 'あり' : 'なし',
       qrUrl: qrUrl ? 'あり' : 'なし',
       printBtn: printBtn ? 'あり' : 'なし',
-      hasImageData: !!qrResult.imageData
+      hasImageData: !!qrResult.imageData,
+      hasImageUrl: !!qrResult.imageUrl
     });
     
     // URLの確認
@@ -1768,26 +1769,27 @@
     console.log('QRコード表示:', {
       url: qrResult.url,
       locationNumber: locationNumber,
-      imageProvider: qrResult.imageProvider,
-      hasImageData: !!qrResult.imageData
+      imageProvider: qrResult.provider || qrResult.imageProvider,
+      hasImageData: !!qrResult.imageData,
+      hasImageUrl: !!qrResult.imageUrl
     });
     
     // QRコード画像を表示
     if (qrImage) {
-      if (qrResult.imageData) {
-        // サーバーサイドで生成されたBase64画像データを使用
+      if (qrResult.imageUrl || qrResult.imageData) {
+        // 画像URLまたはBase64データを使用
         const img = document.createElement('img');
-        img.src = qrResult.imageData;
+        img.src = qrResult.imageUrl || qrResult.imageData;
         img.alt = 'QRコード';
         img.style.maxWidth = '100%';
         img.style.height = 'auto';
         
         img.onload = function() {
-          console.log('QRコード画像の読み込みに成功しました（プロバイダー: ' + qrResult.imageProvider + '）');
+          console.log('QRコード画像の読み込みに成功しました（プロバイダー: ' + (qrResult.provider || qrResult.imageProvider) + '）');
         };
         
         img.onerror = function() {
-          console.error('Base64画像データの読み込みに失敗しました');
+          console.error('画像の読み込みに失敗しました');
           // エラー時のフォールバック表示
           qrImage.innerHTML = `
             <div style="padding: 20px; background: #f3f4f6; border-radius: 8px;">
@@ -1801,7 +1803,7 @@
         // 既存の内容をクリアして画像を追加
         qrImage.innerHTML = '';
         qrImage.appendChild(img);
-        console.log('QRコード画像を設定しました（Base64データ）');
+        console.log('QRコード画像を設定しました（' + (qrResult.imageUrl ? 'URL' : 'Base64') + '）');
         
       } else if (qrResult.imageError) {
         // サーバーサイドでの画像生成に失敗した場合
@@ -1849,6 +1851,7 @@
     window.qrCodeData = {
       url: qrResult.url,
       imageData: qrResult.imageData || null,
+      imageUrl: qrResult.imageUrl || null,
       locationNumber: locationNumber
     };
   }
@@ -1867,8 +1870,9 @@
     
     // QRコード画像のHTMLを生成
     let qrImageHtml = '';
-    if (qrData.imageData) {
-      qrImageHtml = `<img src="${qrData.imageData}" alt="QRコード" style="width: 200px; height: 200px;">`;
+    if (qrData.imageUrl || qrData.imageData) {
+      const imageSrc = qrData.imageUrl || qrData.imageData;
+      qrImageHtml = `<img src="${imageSrc}" alt="QRコード" style="width: 200px; height: 200px;">`;
     } else {
       qrImageHtml = `
         <div style="width: 200px; height: 200px; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; background: #f3f4f6;">
