@@ -444,7 +444,8 @@
   function updateLocationNumber() {
     console.log('updateLocationNumber関数が呼び出されました');
     
-    const locationSelect = document.getElementById('location');
+    // URL生成ページ内の正しい要素を取得
+    const locationSelect = document.querySelector('select#location[onchange="updateLocationNumber()"]') || document.getElementById('location');
     
     // 拠点選択の詳細なデバッグ情報
     if (locationSelect) {
@@ -522,7 +523,7 @@
     console.log('URL生成処理開始');
     
     // 拠点データが読み込まれているか確認
-    const locationSelect = document.getElementById('location');
+    const locationSelect = document.querySelector('select#location[onchange="updateLocationNumber()"]') || document.getElementById('location');
     if (locationSelect && locationSelect.options.length <= 1) {
       console.warn('拠点データが読み込まれていません。手動で追加します。');
       addStaticLocations();
@@ -601,7 +602,7 @@
     if (!form) return;
     
     // 拠点の確認を最初に行う
-    const locationSelect = document.getElementById('location');
+    const locationSelect = document.querySelector('select#location[onchange="updateLocationNumber()"]') || document.getElementById('location');
     const location = locationSelect ? locationSelect.value : '';
     
     if (!location) {
@@ -638,7 +639,7 @@
       console.log('拠点管理番号が空のため、再生成を試みます');
       
       // 拠点の値を再確認
-      const locationSelect = document.getElementById('location');
+      const locationSelect = document.querySelector('select#location[onchange="updateLocationNumber()"]') || document.getElementById('location');
       if (locationSelect && locationSelect.selectedIndex > 0) {
         // 選択されている場合は値を明示的に設定
         const selectedOption = locationSelect.options[locationSelect.selectedIndex];
@@ -790,7 +791,7 @@
     console.log('validateGenerationForm開始:', { locationNumber, deviceCategory });
     
     // 全フィールドのバリデーション
-    const locationSelect = document.getElementById('location');
+    const locationSelect = document.querySelector('select#location[onchange="updateLocationNumber()"]') || document.getElementById('location');
     
     // 拠点選択の値を取得
     let location = '';
@@ -1158,7 +1159,7 @@
   // デバッグ関数
   // ========================================
   function debugLocationSelection() {
-    const locationSelect = document.getElementById('location');
+    const locationSelect = document.querySelector('select#location[onchange="updateLocationNumber()"]') || document.getElementById('location');
     if (!locationSelect) {
       alert('拠点選択要素が見つかりません');
       return;

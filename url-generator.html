@@ -73,7 +73,7 @@
               <i class="fas fa-map-marker-alt"></i>
               拠点 <span class="required">*</span>
             </label>
-            <select id="location" name="location" required onchange="updateLocationNumber()">
+            <select id="location" name="location" required onchange="updateLocationNumber(); console.log('拠点変更:', this.value, this.selectedIndex)">
               <option value="">拠点を選択してください</option>
             </select>
             <small class="help-text">代替機を管理する拠点を選択してください</small>
