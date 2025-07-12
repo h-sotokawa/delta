@@ -205,48 +205,11 @@
       }
       
       // 拠点が選択されたらデータを読み込む
-      if (false) { // バックグラウンド読み込み機能は一時的に無効化
-        // データ読み込み済み：即座に表示
-        currentLocation = selectedLocation;
-        querySelector.style.display = 'block';
-        
-        if (refreshButton) {
-          refreshButton.disabled = false;
-        }
-        
-        // 該当拠点の最終更新時刻を表示
-        displayLocationUpdateTime(selectedLocation);
-        
-        const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
-        loadSpreadsheet(selectedLocation, queryType, selectedDeviceType);
-        return;
-        
-      } else if (loadStatus === 'error') {
-        // 読み込みエラー（スプレッドシートID未設定など）
-        currentLocation = '';
-        querySelector.style.display = 'none';
-        
-        if (refreshButton) {
-          refreshButton.disabled = true;
-        }
-        
-        const locationName = getLocationNameByIdSpreadsheet(selectedLocation);
-        
-        errorDiv.textContent = `${locationName}のスプレッドシートIDが設定されていません。システム管理者にお問い合わせください。`;
-        tableContainer.innerHTML = `
-          <div class="error-message">
-            <i class="fas fa-exclamation-triangle"></i>
-            <h3>設定エラー</h3>
-            <p>${locationName}のスプレッドシートIDが設定されていません。</p>
-            <p class="error-detail">この拠点のデータを表示するには、システム管理者にスプレッドシートIDの設定を依頼してください。</p>
-          </div>
-        `;
-        
-        locationSelect.value = '';
-        return;
-        
+      // バックグラウンド読み込み機能は一時的に無効化、直接else節に進む
+      if (false) {
+        // このブロックはスキップされる
       } else {
-        // 読み込み中または未開始：読み込み表示してからデータ取得
+        // 正常な読み込み処理：読み込み表示してからデータ取得
         currentLocation = selectedLocation;
         querySelector.style.display = 'block';
         
@@ -271,6 +234,7 @@
         const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
         
         // データ取得を実行
+        console.log('Calling loadSpreadsheet from handleLocationChange');
         loadSpreadsheet(selectedLocation, queryType, selectedDeviceType);
         return;
       }
@@ -293,7 +257,7 @@
   }
 
   // 直接データ取得（バックグラウンド読み込み完了を待たない）
-  function loadSpreadsheetDirectly(location, queryType, deviceType = 'terminal') {
+  window.loadSpreadsheetDirectly = function loadSpreadsheetDirectly(location, queryType, deviceType = 'terminal') {
     if (DEBUG_MODE) {
       showDebugInfo('直接データ取得開始', { location, queryType, deviceType });
     }
