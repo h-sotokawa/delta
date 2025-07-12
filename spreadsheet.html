@@ -130,6 +130,12 @@
             .withSuccessHandler(function(response) {
               console.log('Data type response:', response);
               if (response.success && response.dataTypes) {
+                // グローバル変数にも保存
+                if (typeof window.dataTypeMasterData === 'undefined') {
+                  window.dataTypeMasterData = [];
+                }
+                window.dataTypeMasterData = response.dataTypes;
+                
                 dataTypeSelect.innerHTML = '<option value="">データタイプを選択してください</option>';
                 response.dataTypes.forEach(dataType => {
                   const option = document.createElement('option');
@@ -148,8 +154,18 @@
                 
                 // デフォルトでNORMALが選択されている場合、UIを更新
                 if (dataTypeSelect.value === 'NORMAL') {
-                  if (typeof handleDataTypeChange === 'function') {
-                    handleDataTypeChange();
+                  if (typeof window.handleDataTypeChange === 'function') {
+                    window.handleDataTypeChange();
+                  } else {
+                    console.log('handleDataTypeChange not found, manually updating UI');
+                    // 手動でUIを更新
+                    const normalDataType = response.dataTypes.find(dt => dt.dataTypeId === 'NORMAL');
+                    if (normalDataType && typeof window.updateUIForDataType === 'function') {
+                      window.updateUIForDataType(normalDataType);
+                    }
+                    // location selectorを表示
+                    document.querySelector('.location-selector').style.display = 'block';
+                    document.querySelector('.query-selector').style.display = 'block';
                   }
                 }
               }

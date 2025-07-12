@@ -880,7 +880,7 @@
   }
 
   // 拠点の最終更新時刻を取得する関数
-  function getLocationUpdateTime(location) {
+  window.getLocationUpdateTime = function getLocationUpdateTime(location) {
     return locationUpdateTimes[location] || null;
   }
 
@@ -906,7 +906,7 @@
   }
 
   // 監査シート変更時に該当シートの最終更新時刻を表示する関数
-  function displayAuditSheetUpdateTime(auditSheet) {
+  window.displayAuditSheetUpdateTime = function displayAuditSheetUpdateTime(auditSheet) {
     const updateTime = getLocationUpdateTime(auditSheet);
     const element = document.getElementById('lastUpdateTimeAudit');
     const textElement = document.getElementById('lastUpdateTimeAuditText');
@@ -3380,7 +3380,7 @@
   }
   
   // データタイプに応じてUIを更新
-  function updateUIForDataType(dataType) {
+  window.updateUIForDataType = function updateUIForDataType(dataType) {
     const dataTypeId = dataType.dataTypeId;
     
     // 各セクションの表示/非表示を制御
@@ -3438,7 +3438,7 @@
   }
   
   // データタイプに基づいてデータを読み込み
-  function loadDataBasedOnDataType() {
+  window.loadDataBasedOnDataType = function loadDataBasedOnDataType() {
     const dataTypeId = document.getElementById('dataType').value;
     const locationSelect = document.getElementById('location');
     const auditSheet = document.getElementById('auditSheet').value;
