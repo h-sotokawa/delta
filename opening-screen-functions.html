@@ -201,7 +201,7 @@
   }
 
   // スプレッドシートビューアーでプリロードデータを使用するように更新
-  function loadSpreadsheetWithPreload(location, queryType) {
+  window.loadSpreadsheetWithPreload = function loadSpreadsheetWithPreload(location, queryType, deviceType = 'terminal') {
     // プリロードされたデータがある場合はそれを使用
     if (isDataPreloaded(location)) {
       const preloadedResponse = getPreloadedData(location);
@@ -265,7 +265,7 @@
     }
     
     if (typeof loadSpreadsheet === 'function') {
-      loadSpreadsheet(location, queryType);
+      loadSpreadsheet(location, queryType, deviceType);
     } else {
       console.error('loadSpreadsheet function is not available');
     }

@@ -346,12 +346,8 @@
   window.loadSpreadsheet = function loadSpreadsheet(location, queryType, deviceType = 'terminal') {
     console.log('loadSpreadsheet called with:', { location, queryType, deviceType });
     
-    // プリロードされたデータがある場合はそれを使用
-    if (typeof loadSpreadsheetWithPreload === 'function') {
-      console.log('Using loadSpreadsheetWithPreload');
-      loadSpreadsheetWithPreload(location, queryType, deviceType);
-      return;
-    }
+    // 無限ループを防ぐため、loadSpreadsheetWithPreloadは使用しない
+    // 直接データ取得処理に進む
     
     // 以下は既存のロジック（プリロード機能がない場合のフォールバック）
     if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
