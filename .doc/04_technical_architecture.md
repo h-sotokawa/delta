@@ -623,3 +623,142 @@ Code Commit → Code Review → Testing → Staging → Production
 - **API 設計**: RESTful API 準拠
 - **Webhook**: 外部システム連携
 - **エクスポート**: 標準形式でのデータ出力
+
+## 9. フロントエンドアーキテクチャの注意事項
+
+### 9.1 DOM要素の一意性確保
+
+#### 9.1.1 問題の背景
+- SPAアプリケーションでは、複数のページが同時にDOM上に存在する
+- 同じIDを持つ要素が複数存在すると、`document.getElementById()`は最初に見つかった要素を返す
+- これにより、意図しない要素が選択され、予期しない動作を引き起こす
+
+#### 9.1.2 実装ガイドライン
+
+##### ID命名規則
+```html
+<!-- ❌ 避けるべき実装 -->
+<select id="location">  <!-- スプレッドシートページ -->
+<select id="location">  <!-- URL生成ページ -->
+
+<!-- ✅ 推奨実装 -->
+<select id="spreadsheet-location">  <!-- スプレッドシートページ -->
+<select id="url-generator-location">  <!-- URL生成ページ -->
+```
+
+##### 要素取得の最適化
+```javascript
+// ❌ 避けるべき実装
+const locationSelect = document.getElementById('location');
+
+// ✅ 推奨実装1: 属性セレクターを使用
+const locationSelect = document.querySelector('select#location[onchange*="updateLocationNumber"]');
+
+// ✅ 推奨実装2: ページコンテキストを考慮
+const urlGeneratorPage = document.getElementById('url-generator');
+const locationSelect = urlGeneratorPage.querySelector('#location');
+
+// ✅ 推奨実装3: 一意のIDを使用
+const locationSelect = document.getElementById('url-generator-location');
+```
+
+#### 9.1.3 既存コードの修正方針
+
+##### 段階的な修正アプローチ
+1. **即時対応**: セレクターを使用した回避策
+   ```javascript
+   // onchange属性やdata属性を利用した一意性の確保
+   document.querySelector('select#location[onchange*="特定の関数名"]');
+   ```
+
+2. **中期対応**: ID命名規則の統一
+   - ページプレフィックスの追加: `{page}-{element}`
+   - 例: `spreadsheet-location`, `url-generator-location`
+
+3. **長期対応**: コンポーネント化
+   - 各ページを独立したコンポーネントとして設計
+   - スコープ付きIDまたはクラス名の使用
+
+##### デバッグ支援機能
+```javascript
+// 同じIDを持つ要素の検出
+function detectDuplicateIds() {
+  const allElements = document.querySelectorAll('[id]');
+  const idMap = {};
+  
+  allElements.forEach(el => {
+    const id = el.id;
+    if (!idMap[id]) {
+      idMap[id] = [];
+    }
+    idMap[id].push(el);
+  });
+  
+  Object.entries(idMap).forEach(([id, elements]) => {
+    if (elements.length > 1) {
+      console.warn(`重複ID検出: "${id}" (${elements.length}個)`, elements);
+    }
+  });
+}
+```
+
+#### 9.1.4 ベストプラクティス
+
+1. **要素の存在確認**
+   ```javascript
+   const element = document.querySelector('適切なセレクター');
+   if (!element) {
+     console.error('要素が見つかりません');
+     return;
+   }
+   ```
+
+2. **コンテキストを意識した要素取得**
+   ```javascript
+   // 特定のページ内でのみ要素を検索
+   const pageContainer = document.getElementById('specific-page');
+   const targetElement = pageContainer?.querySelector('.target-class');
+   ```
+
+3. **イベントリスナーの適切な管理**
+   ```javascript
+   // ページ遷移時に古いリスナーを削除
+   element.removeEventListener('change', oldHandler);
+   element.addEventListener('change', newHandler);
+   ```
+
+### 9.2 ページ間の状態管理
+
+#### 9.2.1 グローバル変数の適切な使用
+- ページ固有の状態は、ページプレフィックスを付けて管理
+- 共通状態は専用のオブジェクトで管理
+
+```javascript
+// ページ固有の状態
+window.urlGeneratorState = {
+  selectedLocation: '',
+  generatedUrl: ''
+};
+
+// 共通状態
+window.appState = {
+  currentUser: '',
+  debugMode: false
+};
+```
+
+#### 9.2.2 イベントの伝播制御
+- ページ間でのイベント干渉を防ぐ
+- 必要に応じてevent.stopPropagation()を使用
+
+### 9.3 パフォーマンス最適化
+
+#### 9.3.1 セレクターの最適化
+- 可能な限り具体的なセレクターを使用
+- querySelectorAllの使用を最小限に抑える
+- キャッシュ可能な要素参照はキャッシュする
+
+#### 9.3.2 DOM操作の最適化
+- バッチ更新の実装
+- DocumentFragmentの活用
+- 不要な再描画の回避
