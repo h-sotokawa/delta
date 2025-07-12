@@ -935,7 +935,7 @@ function generateQRCodeImage(url) {
         addLog("GoQR.me API レスポンスエラー", { 
           statusCode: response.getResponseCode(),
           statusText: response.getContentText().substring(0, 200),
-          url: goQrUrl
+          url: quickChartSimpleUrl
         });
       }
     } catch (goQrError) {
@@ -996,13 +996,13 @@ function generateQRCodeImage(url) {
       });
     }
 
-    // 3. 最終フォールバック: 同じQR Server APIだが異なるパラメータ
-    const goQrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' + 
-      'data=' + encodeURIComponent(url) + '&' +
-      'size=200x200';      // 最小限のパラメータで再試行
+    // 3. 最終フォールバック: QuickChart.io API
+    const quickChartSimpleUrl = 'https://quickchart.io/qr?' + 
+      'text=' + encodeURIComponent(url) + '&' +
+      'size=200';      // 最小限のパラメータで再試行
 
     try {
-      const response = UrlFetchApp.fetch(goQrUrl, {
+      const response = UrlFetchApp.fetch(quickChartSimpleUrl, {
         muteHttpExceptions: true,
         validateHttpsCertificates: true,
         headers: {
@@ -1025,21 +1025,21 @@ function generateQRCodeImage(url) {
         return {
           success: true,
           imageData: 'data:' + contentType + ';base64,' + base64Data,
-          provider: 'QR Server (Alternative)',
+          provider: 'QuickChart',
           url: url
         };
       } else {
-        addLog("QR Server Alt API レスポンスエラー", { 
+        addLog("QuickChart Simple API レスポンスエラー", { 
           statusCode: response.getResponseCode(),
-          statusText: response.getContentText(),
-          url: goQrUrl
+          statusText: response.getContentText().substring(0, 200),
+          url: quickChartSimpleUrl
         });
       }
-    } catch (goQrError) {
-      addLog("QR Server Alt API エラー", { 
-        error: goQrError.toString(),
-        message: goQrError.message,
-        url: goQrUrl
+    } catch (quickChartSimpleError) {
+      addLog("QuickChart Simple API エラー", { 
+        error: quickChartSimpleError.toString(),
+        message: quickChartSimpleError.message,
+        url: quickChartSimpleUrl
       });
     }
 
