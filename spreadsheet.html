@@ -108,4 +108,94 @@
       <pre id="debugInfo"></pre>
     </div>
   </div>
-</div> 
+</div>
+
+<!-- スプレッドシートページ専用の初期化スクリプト -->
+<script>
+  // ページが表示された時に初期化を実行
+  (function() {
+    console.log('Spreadsheet page initialization script loaded');
+    
+    // グローバル関数として初期化関数を定義
+    window.initSpreadsheetPage = function() {
+      console.log('initSpreadsheetPage called');
+      
+      // データタイプドロップダウンを直接初期化
+      const dataTypeSelect = document.getElementById('dataType');
+      if (dataTypeSelect) {
+        // データタイプマスタを直接読み込む
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          console.log('Loading data types directly via Google Apps Script');
+          google.script.run
+            .withSuccessHandler(function(response) {
+              console.log('Data type response:', response);
+              if (response.success && response.dataTypes) {
+                dataTypeSelect.innerHTML = '<option value="">データタイプを選択してください</option>';
+                response.dataTypes.forEach(dataType => {
+                  const option = document.createElement('option');
+                  option.value = dataType.dataTypeId;
+                  option.textContent = dataType.dataTypeName;
+                  if (dataType.description) {
+                    option.title = dataType.description;
+                  }
+                  // デフォルトでNORMALを選択
+                  if (dataType.dataTypeId === 'NORMAL') {
+                    option.selected = true;
+                  }
+                  dataTypeSelect.appendChild(option);
+                });
+                console.log('Data types loaded:', response.dataTypes.length);
+                
+                // デフォルトでNORMALが選択されている場合、UIを更新
+                if (dataTypeSelect.value === 'NORMAL') {
+                  if (typeof handleDataTypeChange === 'function') {
+                    handleDataTypeChange();
+                  }
+                }
+              }
+            })
+            .withFailureHandler(function(error) {
+              console.error('Failed to load data types:', error);
+              dataTypeSelect.innerHTML = '<option value="">データタイプの読み込みに失敗しました</option>';
+            })
+            .getDataTypeMaster(true);
+            
+          // 拠点データも読み込む
+          const locationSelect = document.getElementById('location');
+          if (locationSelect) {
+            console.log('Loading locations directly via Google Apps Script');
+            google.script.run
+              .withSuccessHandler(function(response) {
+                console.log('Locations response:', response);
+                if (response.success && response.locations) {
+                  // 既存のオプションをクリア（最初の「拠点を選択してください」は残す）
+                  while (locationSelect.options.length > 1) {
+                    locationSelect.remove(1);
+                  }
+                  Object.entries(response.locations).forEach(([key, name]) => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = name;
+                    locationSelect.appendChild(option);
+                  });
+                  console.log('Locations loaded:', Object.keys(response.locations).length);
+                }
+              })
+              .withFailureHandler(function(error) {
+                console.error('Failed to load locations:', error);
+              })
+              .getLocations();
+          }
+        }
+      }
+      
+      // フロートスクロールバーも初期化
+      if (typeof window.initializeFloatScrollbar === 'function') {
+        setTimeout(() => {
+          console.log('Initializing float scrollbar');
+          window.initializeFloatScrollbar();
+        }, 200);
+      }
+    };
+  })();
+</script> 

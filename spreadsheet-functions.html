@@ -59,7 +59,7 @@
   }
   
   // 拠点マスタデータを読み込み
-  function loadLocationMasterForSpreadsheet() {
+  window.loadLocationMasterForSpreadsheet = function loadLocationMasterForSpreadsheet() {
     google.script.run
       .withSuccessHandler(function(locations) {
         spreadsheetLocationMasterData = locations || [];
@@ -86,12 +86,18 @@
       .withSuccessHandler(function(response) {
         if (response.success) {
           const locationSelect = document.getElementById('location');
-          Object.entries(response.locations).forEach(([key, name]) => {
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = name;
-            locationSelect.appendChild(option);
-          });
+          if (locationSelect) {
+            // 既存のオプションをクリア（最初の「拠点を選択してください」は残す）
+            while (locationSelect.options.length > 1) {
+              locationSelect.remove(1);
+            }
+            Object.entries(response.locations).forEach(([key, name]) => {
+              const option = document.createElement('option');
+              option.value = key;
+              option.textContent = name;
+              locationSelect.appendChild(option);
+            });
+          }
         }
         // 初期表示時はローディング非表示
         document.getElementById('loading').style.display = 'none';
@@ -113,7 +119,7 @@
   }
   
   // データタイプマスタを読み込み
-  function loadDataTypeMaster() {
+  window.loadDataTypeMaster = function loadDataTypeMaster() {
     google.script.run
       .withSuccessHandler(function(response) {
         if (response.success) {
@@ -157,10 +163,10 @@
         }
       })
       .getDataTypeMaster(true); // アクティブなデータタイプのみ取得
-  }
+  };
 
   // デバイスタイプ変更時の処理
-  function handleDeviceTypeChange() {
+  window.handleDeviceTypeChange = function handleDeviceTypeChange() {
     const locationSelect = document.getElementById('location');
     if (locationSelect && locationSelect.value) {
       // 拠点が既に選択されている場合は再読み込み
@@ -169,7 +175,7 @@
   }
 
   // 拠点が変更されたときの処理
-  function handleLocationChange() {
+  window.handleLocationChange = function handleLocationChange() {
     const locationSelect = document.getElementById('location');
     const selectedLocation = locationSelect.value;
     const deviceTypeSelect = document.getElementById('deviceType');
@@ -361,7 +367,7 @@
   }
 
   // クエリタイプが変更されたときの処理
-  function handleQueryChange() {
+  window.handleQueryChange = function handleQueryChange() {
     if (currentLocation) {
       const queryType = document.querySelector('input[name="queryType"]:checked').value;
       const deviceTypeSelect = document.getElementById('deviceType');
@@ -969,7 +975,7 @@
   }
 
   // 監査データを更新
-  function refreshAuditData() {
+  window.refreshAuditData = function refreshAuditData() {
     const auditSheet = document.getElementById('auditSheet').value;
     if (!auditSheet) {
       showPopupMessage('監査シートが選択されていません');
@@ -1071,7 +1077,7 @@
   }
 
   // サマリーデータを更新
-  function refreshSummaryData() {
+  window.refreshSummaryData = function refreshSummaryData() {
     const refreshButton = document.getElementById('refreshSummaryButton');
     
     // ボタンのローディング状態を設定
@@ -1152,7 +1158,7 @@
   }
 
   // 現在選択されている拠点のデータを更新
-  function refreshCurrentLocation() {
+  window.refreshCurrentLocation = function refreshCurrentLocation() {
     if (!currentLocation) {
       showPopupMessage('拠点が選択されていません');
       return;
@@ -3331,7 +3337,7 @@
   }
   
   // データタイプ変更イベントハンドラー
-  function handleDataTypeChange() {
+  window.handleDataTypeChange = function handleDataTypeChange() {
     const dataTypeId = document.getElementById('dataType').value;
     
     showDebugInfo('データタイプ変更', { dataTypeId });
@@ -3406,7 +3412,7 @@
   }
   
   // 監査シート変更イベントハンドラー
-  function handleAuditSheetChange() {
+  window.handleAuditSheetChange = function handleAuditSheetChange() {
     const auditSheet = document.getElementById('auditSheet').value;
     const refreshAuditButton = document.getElementById('refreshAuditButton');
     

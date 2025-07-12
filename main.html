@@ -71,72 +71,68 @@
         showDebugInfo('showPage: スプレッドシートページ表示', { pageId });
       }
       
-      // スプレッドシートページの初期化（拠点とデータタイプの読み込み）
-      // 関数が読み込まれるまで待機してから実行
-      let retryCount = 0;
-      const maxRetries = 20; // 最大2秒待機
-      
-      const tryInitialize = () => {
-        try {
-          // 拠点とデータタイプマスタを初期化
-          if (typeof window.initializeLocations === 'function') {
-            if (DEBUG_MODE) {
-              showDebugInfo('showPage: 拠点とデータタイプ初期化（window）', { retryCount });
-            }
-            window.initializeLocations();
-          } else if (typeof initializeLocations === 'function') {
-            if (DEBUG_MODE) {
-              showDebugInfo('showPage: 拠点とデータタイプ初期化（ローカル）', { retryCount });
-            }
-            initializeLocations();
-          } else if (retryCount < maxRetries) {
-            // 関数がまだ読み込まれていない場合は再試行
-            retryCount++;
-            setTimeout(tryInitialize, 100);
-            return;
-          } else {
-            console.error('initializeLocations関数が見つかりません（タイムアウト）', {
-              windowFunc: typeof window.initializeLocations,
-              localFunc: typeof initializeLocations,
-              retryCount: retryCount
-            });
-          }
+      // 新しい初期化関数を使用
+      setTimeout(() => {
+        if (typeof window.initSpreadsheetPage === 'function') {
+          console.log('Calling initSpreadsheetPage');
+          window.initSpreadsheetPage();
+        } else {
+          console.error('initSpreadsheetPage function not found');
           
-          // フロートスクロールバーを初期化
-          if (typeof window.initializeFloatScrollbar === 'function') {
-            if (DEBUG_MODE) {
-              showDebugInfo('showPage遅延実行: フロートスクロールバー初期化', {});
-            }
-            window.initializeFloatScrollbar();
-          } else if (typeof initializeFloatScrollbar === 'function') {
-            if (DEBUG_MODE) {
-              showDebugInfo('showPage遅延実行: フロートスクロールバー初期化（ローカル）', {});
-            }
-            initializeFloatScrollbar();
-          } else {
-            // 関数が見つからない場合はエラーではなく警告として扱う
-            if (DEBUG_MODE) {
-              console.warn('initializeFloatScrollbar関数が見つかりません。フロートスクロールバー機能は無効です。');
-              showDebugInfo('showPage: initializeFloatScrollbar関数が見つからない', {
-                windowFunc: typeof window.initializeFloatScrollbar,
-                localFunc: typeof initializeFloatScrollbar
-              });
-            }
-          }
-        } catch (error) {
-          // エラーが発生してもページ表示は継続
-          console.error('スプレッドシートページ初期化エラー:', error);
-          if (DEBUG_MODE) {
-            showDebugInfo('showPage: スプレッドシートページ初期化エラー', {
-              error: error.message,
-              stack: error.stack
-            });
+          // フォールバック: 直接データを読み込む
+          console.log('Fallback: Loading data directly');
+          
+          // データタイプマスタを直接読み込む
+          if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response.success && response.dataTypes) {
+                  const dataTypeSelect = document.getElementById('dataType');
+                  if (dataTypeSelect) {
+                    dataTypeSelect.innerHTML = '<option value="">データタイプを選択してください</option>';
+                    response.dataTypes.forEach(dataType => {
+                      const option = document.createElement('option');
+                      option.value = dataType.dataTypeId;
+                      option.textContent = dataType.dataTypeName;
+                      dataTypeSelect.appendChild(option);
+                    });
+                    console.log('Data types loaded:', response.dataTypes.length);
+                  }
+                }
+              })
+              .withFailureHandler(function(error) {
+                console.error('Failed to load data types:', error);
+                const dataTypeSelect = document.getElementById('dataType');
+                if (dataTypeSelect) {
+                  dataTypeSelect.innerHTML = '<option value="">データタイプの読み込みに失敗しました</option>';
+                }
+              })
+              .getDataTypeMaster(true);
+              
+            // 拠点マスタも読み込む
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response.success && response.locations) {
+                  const locationSelect = document.getElementById('location');
+                  if (locationSelect) {
+                    locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
+                    Object.entries(response.locations).forEach(([key, name]) => {
+                      const option = document.createElement('option');
+                      option.value = key;
+                      option.textContent = name;
+                      locationSelect.appendChild(option);
+                    });
+                    console.log('Locations loaded:', Object.keys(response.locations).length);
+                  }
+                }
+              })
+              .withFailureHandler(function(error) {
+                console.error('Failed to load locations:', error);
+              })
+              .getLocations();
           }
         }
-      };
-      
-      // 初期化を開始
-      setTimeout(tryInitialize, 100);
+      }, 300);
     }
 
     // URL生成ページの場合、URL生成機能を初期化
