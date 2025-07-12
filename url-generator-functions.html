@@ -573,15 +573,23 @@
           // 拠点管理番号を更新
           updateLocationNumber();
         }
-      } else if (!currentLocation && selectedIndex === 0) {
-        // 何も選択されていない場合、最初の有効なオプションを探す
-        for (let i = 1; i < locationSelect.options.length; i++) {
-          const option = locationSelect.options[i];
-          if (option.value) {
-            console.log('最初の有効なオプションを見つけました:', option.value);
-            break;
-          }
-        }
+      } else if (!currentLocation) {
+        // 何も選択されていない場合
+        console.log('拠点が選択されていません。ユーザーに選択を促します。');
+        showErrorMessage('拠点を選択してください');
+        
+        // 拠点選択フィールドにフォーカス
+        locationSelect.focus();
+        
+        // 選択ドロップダウンを開く試み（ブラウザによっては動作しない）
+        const event = new MouseEvent('mousedown', {
+          view: window,
+          bubbles: true,
+          cancelable: true
+        });
+        locationSelect.dispatchEvent(event);
+        
+        return; // ここで処理を中断
       }
     }
     
@@ -591,6 +599,23 @@
   function generateAndSaveUrlInternal() {
     const form = document.getElementById('urlGenerationForm');
     if (!form) return;
+    
+    // 拠点の確認を最初に行う
+    const locationSelect = document.getElementById('location');
+    const location = locationSelect ? locationSelect.value : '';
+    
+    if (!location) {
+      console.error('拠点が選択されていません');
+      showErrorMessage('拠点を選択してください');
+      if (locationSelect) {
+        locationSelect.focus();
+        locationSelect.style.border = '2px solid #dc3545';
+        setTimeout(() => {
+          locationSelect.style.border = '';
+        }, 3000);
+      }
+      return;
+    }
     
     // フォームデータを収集
     const locationNumber = document.getElementById('locationNumber').value.trim();
@@ -602,7 +627,7 @@
     console.log('生成前の値確認:', {
       locationNumber: locationNumber,
       deviceCategory: deviceCategory,
-      location: document.getElementById('location').value,
+      location: location,
       model: model,
       serialNumber: serialNumber,
       sequenceNumber: sequenceNumber
@@ -650,6 +675,16 @@
           // より具体的なエラーメッセージ
           if (!debugInfo.location) {
             showErrorMessage('拠点が選択されていません。拠点を選択してください。');
+            const locationSelect = document.getElementById('location');
+            if (locationSelect) {
+              locationSelect.focus();
+              locationSelect.style.border = '2px solid #dc3545';
+              locationSelect.style.backgroundColor = '#fff3cd';
+              setTimeout(() => {
+                locationSelect.style.border = '';
+                locationSelect.style.backgroundColor = '';
+              }, 3000);
+            }
           } else if (!debugInfo.model) {
             showErrorMessage('モデルが選択されていません。モデルを選択してください。');
           } else if (!debugInfo.serialNumber) {
@@ -854,6 +889,13 @@
           return false; // 修復処理中のため一旦false返却
         } else {
           showErrorMessage('拠点を選択してください');
+          // 拠点選択フィールドにフォーカス
+          locationSelect.focus();
+          // 選択フィールドを視覚的に強調
+          locationSelect.style.border = '2px solid #dc3545';
+          setTimeout(() => {
+            locationSelect.style.border = '';
+          }, 3000);
         }
       } else {
         showErrorMessage('拠点を選択してください（拠点データが読み込まれていません）');
