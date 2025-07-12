@@ -1749,6 +1749,14 @@
     const qrUrl = document.getElementById('qrUrl');
     const printBtn = document.getElementById('printQrBtn');
     
+    console.log('QRコード表示要素の確認:', {
+      qrSection: qrSection ? 'あり' : 'なし',
+      qrImage: qrImage ? 'あり' : 'なし',
+      qrLocationNumber: qrLocationNumber ? 'あり' : 'なし',
+      qrUrl: qrUrl ? 'あり' : 'なし',
+      printBtn: printBtn ? 'あり' : 'なし'
+    });
+    
     // URLの確認
     if (!qrResult.url) {
       console.error('QRコード用URLが空です:', qrResult);
@@ -1768,16 +1776,53 @@
       'chl=' + encodeURIComponent(qrResult.url) + '&' +  // データ
       'choe=UTF-8';      // エンコーディング
     
+    console.log('QRコード画像URL:', qrCodeUrl);
+    
     // QRコード画像を表示
-    qrImage.innerHTML = `<img src="${qrCodeUrl}" alt="QRコード" />`;
+    if (qrImage) {
+      // 画像要素を作成
+      const img = document.createElement('img');
+      img.src = qrCodeUrl;
+      img.alt = 'QRコード';
+      img.style.maxWidth = '100%';
+      img.style.height = 'auto';
+      
+      // エラーハンドリング
+      img.onerror = function() {
+        console.error('QRコード画像の読み込みに失敗しました');
+        qrImage.innerHTML = '<p style="color: red;">QRコード画像を読み込めませんでした</p>';
+      };
+      
+      // 成功時
+      img.onload = function() {
+        console.log('QRコード画像の読み込みに成功しました');
+      };
+      
+      // 既存の内容をクリアして画像を追加
+      qrImage.innerHTML = '';
+      qrImage.appendChild(img);
+      console.log('QRコード画像を設定しました');
+    } else {
+      console.error('qrImage要素が見つかりません');
+    }
     
     // 情報を表示
     qrLocationNumber.textContent = locationNumber;
     qrUrl.textContent = qrResult.url;
     
     // QRコードセクションと印刷ボタンを表示
-    qrSection.style.display = 'block';
-    printBtn.style.display = 'inline-block';
+    if (qrSection) {
+      qrSection.style.display = 'block';
+      console.log('QRコードセクションを表示しました');
+      // スクロールして表示
+      qrSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      console.error('qrSection要素が見つかりません');
+    }
+    
+    if (printBtn) {
+      printBtn.style.display = 'inline-block';
+    }
     
     // QRコードデータを保存
     window.qrCodeData = {
