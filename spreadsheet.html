@@ -154,30 +154,26 @@
                 
                 // デフォルトでNORMALが選択されている場合、UIを更新
                 if (dataTypeSelect.value === 'NORMAL') {
-                  // handleDataTypeChangeの呼び出しを遅延実行
+                  // 直接UIを更新（データタイプマスタを待たずに）
+                  console.log('Default NORMAL selected, updating UI directly');
+                  // location selectorを表示
+                  document.querySelector('.location-selector').style.display = 'block';
+                  document.querySelector('.query-selector').style.display = 'block';
+                  
+                  // handleDataTypeChangeがあれば呼び出す
                   setTimeout(() => {
                     if (typeof window.handleDataTypeChange === 'function') {
                       console.log('Calling handleDataTypeChange');
                       window.handleDataTypeChange();
-                    } else {
-                      console.log('handleDataTypeChange not found, manually updating UI');
-                      // 手動でUIを更新
-                      const normalDataType = response.dataTypes.find(dt => dt.dataTypeId === 'NORMAL');
-                      if (normalDataType && typeof window.updateUIForDataType === 'function') {
-                        window.updateUIForDataType(normalDataType);
-                      }
-                      // location selectorを表示
-                      document.querySelector('.location-selector').style.display = 'block';
-                      document.querySelector('.query-selector').style.display = 'block';
                     }
-                  }, 1000); // spreadsheet-functions.htmlが読み込まれるまで十分待つ
+                  }, 100);
                 }
                   
                   // データを読み込む
                   if (typeof window.loadDataBasedOnDataType === 'function') {
                     setTimeout(() => {
                       window.loadDataBasedOnDataType();
-                    }, 1500); // handleDataTypeChangeの後に実行
+                    }, 200); // handleDataTypeChangeの後に実行
                   }
                 }
               }

@@ -3361,7 +3361,24 @@
     }
     
     // 選択されたデータタイプの情報を取得
-    const masterData = window.dataTypeMasterData || dataTypeMasterData || [];
+    // まずwindow.dataTypeMasterDataを確認
+    let masterData = window.dataTypeMasterData || dataTypeMasterData || [];
+    
+    // データが空の場合、ドロップダウンから直接取得を試みる
+    if (masterData.length === 0) {
+      console.log('データタイプマスタが空のため、簡易的な処理を実行');
+      // データタイプIDから簡易的なオブジェクトを作成
+      const selectedDataType = {
+        dataTypeId: dataTypeId,
+        dataTypeName: dataTypeId === 'NORMAL' ? '通常データ' : 
+                      dataTypeId === 'AUDIT' ? '監査データ' : 
+                      dataTypeId === 'SUMMARY' ? 'サマリーデータ' : dataTypeId
+      };
+      updateUIForDataType(selectedDataType);
+      loadDataBasedOnDataType();
+      return;
+    }
+    
     const selectedDataType = masterData.find(dt => dt.dataTypeId === dataTypeId);
     if (!selectedDataType) {
       console.error('選択されたデータタイプが見つかりません:', dataTypeId, 'Available:', masterData);
