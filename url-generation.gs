@@ -164,7 +164,8 @@ function addLocationNumberParameter(baseUrl, locationNumber) {
 function saveUrlToTerminalMaster(
   locationNumber,
   generatedUrl,
-  deviceInfo = null
+  deviceInfo = null,
+  qrUrl = null
 ) {
   const startTime = startPerformanceTimer();
   addLog("端末マスタURL保存開始", { locationNumber, generatedUrl, deviceInfo });
@@ -253,6 +254,9 @@ function saveUrlToTerminalMaster(
           case "共通フォームURL":
             newRowData[index] = generatedUrl;
             break;
+          case "QRコードURL":
+            newRowData[index] = qrUrl || "";
+            break;
           default:
             newRowData[index] = "";
         }
@@ -266,8 +270,13 @@ function saveUrlToTerminalMaster(
         `拠点管理番号 ${locationNumber} が端末マスタに見つからず、デバイス情報も提供されていません`
       );
     } else {
-      // 既存行の場合はURLのみ更新
+      // 既存行の場合はURLを更新
       sheet.getRange(targetRow, urlColIndex + 1).setValue(generatedUrl);
+      
+      // QRコードURLも更新
+      if (qrUrl && qrUrlColIndex !== -1) {
+        sheet.getRange(targetRow, qrUrlColIndex + 1).setValue(qrUrl);
+      }
 
       // 更新日も更新
       const updateDateColIndex = headerRow.indexOf("更新日");
@@ -314,7 +323,8 @@ function saveUrlToTerminalMaster(
 function saveUrlToPrinterMaster(
   locationNumber,
   generatedUrl,
-  deviceInfo = null
+  deviceInfo = null,
+  qrUrl = null
 ) {
   const startTime = startPerformanceTimer();
   addLog("プリンタマスタURL保存開始", {
@@ -347,6 +357,13 @@ function saveUrlToPrinterMaster(
     if (urlColIndex === -1) {
       urlColIndex = headerRow.length;
       sheet.getRange(1, urlColIndex + 1).setValue("共通フォームURL");
+    }
+    
+    // QRコードURL列を検索または作成
+    let qrUrlColIndex = headerRow.indexOf("QRコードURL");
+    if (qrUrlColIndex === -1) {
+      qrUrlColIndex = headerRow.length;
+      sheet.getRange(1, qrUrlColIndex + 1).setValue("QRコードURL");
     }
 
     // 該当行を検索
@@ -400,6 +417,9 @@ function saveUrlToPrinterMaster(
           case "共通フォームURL":
             newRowData[index] = generatedUrl;
             break;
+          case "QRコードURL":
+            newRowData[index] = qrUrl || "";
+            break;
           default:
             newRowData[index] = "";
         }
@@ -413,8 +433,13 @@ function saveUrlToPrinterMaster(
         `拠点管理番号 ${locationNumber} がプリンタマスタに見つからず、デバイス情報も提供されていません`
       );
     } else {
-      // 既存行の場合はURLのみ更新
+      // 既存行の場合はURLを更新
       sheet.getRange(targetRow, urlColIndex + 1).setValue(generatedUrl);
+      
+      // QRコードURLも更新
+      if (qrUrl && qrUrlColIndex !== -1) {
+        sheet.getRange(targetRow, qrUrlColIndex + 1).setValue(qrUrl);
+      }
 
       // 更新日も更新
       const updateDateColIndex = headerRow.indexOf("更新日");
@@ -601,6 +626,12 @@ function generateAndSaveCommonFormUrl(requestData) {
     // 通常のフォームURLの場合
     let saveResult;
     let masterType;
+    
+    // QRコード用URLを生成（全カテゴリ共通）
+    const settings = getCommonFormsSettings();
+    const qrUrl = settings.qrRedirectUrl ? 
+      `${settings.qrRedirectUrl}?id=${encodeURIComponent(locationNumber)}` : 
+      null;
 
     // カテゴリに応じて保存先を決定（英語・日本語両方に対応）
     if (
@@ -617,14 +648,16 @@ function generateAndSaveCommonFormUrl(requestData) {
       saveResult = saveUrlToTerminalMaster(
         locationNumber,
         urlResult.url,
-        deviceInfo
+        deviceInfo,
+        qrUrl
       );
       masterType = "端末マスタ";
     } else if (deviceCategory === "printer" || deviceCategory === "プリンタ") {
       saveResult = saveUrlToPrinterMaster(
         locationNumber,
         urlResult.url,
-        deviceInfo
+        deviceInfo,
+        qrUrl
       );
       masterType = "プリンタマスタ";
     } else {
@@ -651,13 +684,6 @@ function generateAndSaveCommonFormUrl(requestData) {
       savedRow: saveResult.savedRow,
       isNewEntry: saveResult.isNewEntry || false,
     });
-
-    // QRコード用URLも生成（QR_REDIRECT_URLが設定されている場合）
-    let qrUrl = null;
-    const settings = getCommonFormsSettings();
-    if (settings.qrRedirectUrl) {
-      qrUrl = `${settings.qrRedirectUrl}?id=${encodeURIComponent(locationNumber)}`;
-    }
 
     return {
       success: true,
