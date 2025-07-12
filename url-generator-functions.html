@@ -1710,7 +1710,7 @@
     
     showLoadingMessage('QRコードを生成中...');
     
-    // QRコード用URLを生成
+    // サーバーサイドでQRコード画像を生成
     google.script.run
       .withSuccessHandler(function(qrResult) {
         hideLoadingMessage();
@@ -1736,7 +1736,7 @@
         hideLoadingMessage();
         showErrorMessage('QRコード生成中にエラーが発生しました: ' + error);
       })
-      .generateCommonFormUrl(locationNumber, deviceCategory, true);
+      .generateQRCodeWithImage(locationNumber, deviceCategory);
   }
   
   /**
@@ -1754,7 +1754,8 @@
       qrImage: qrImage ? 'あり' : 'なし',
       qrLocationNumber: qrLocationNumber ? 'あり' : 'なし',
       qrUrl: qrUrl ? 'あり' : 'なし',
-      printBtn: printBtn ? 'あり' : 'なし'
+      printBtn: printBtn ? 'あり' : 'なし',
+      hasImageData: !!qrResult.imageData
     });
     
     // URLの確認
@@ -1766,42 +1767,62 @@
     
     console.log('QRコード表示:', {
       url: qrResult.url,
-      locationNumber: locationNumber
+      locationNumber: locationNumber,
+      imageProvider: qrResult.imageProvider,
+      hasImageData: !!qrResult.imageData
     });
-    
-    // QRコード画像のURLを作成（Google Charts APIを使用）
-    const qrCodeUrl = 'https://chart.googleapis.com/chart?' + 
-      'chs=200x200&' +  // サイズ
-      'cht=qr&' +        // QRコード
-      'chl=' + encodeURIComponent(qrResult.url) + '&' +  // データ
-      'choe=UTF-8';      // エンコーディング
-    
-    console.log('QRコード画像URL:', qrCodeUrl);
     
     // QRコード画像を表示
     if (qrImage) {
-      // 画像要素を作成
-      const img = document.createElement('img');
-      img.src = qrCodeUrl;
-      img.alt = 'QRコード';
-      img.style.maxWidth = '100%';
-      img.style.height = 'auto';
-      
-      // エラーハンドリング
-      img.onerror = function() {
-        console.error('QRコード画像の読み込みに失敗しました');
-        qrImage.innerHTML = '<p style="color: red;">QRコード画像を読み込めませんでした</p>';
-      };
-      
-      // 成功時
-      img.onload = function() {
-        console.log('QRコード画像の読み込みに成功しました');
-      };
-      
-      // 既存の内容をクリアして画像を追加
-      qrImage.innerHTML = '';
-      qrImage.appendChild(img);
-      console.log('QRコード画像を設定しました');
+      if (qrResult.imageData) {
+        // サーバーサイドで生成されたBase64画像データを使用
+        const img = document.createElement('img');
+        img.src = qrResult.imageData;
+        img.alt = 'QRコード';
+        img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+        
+        img.onload = function() {
+          console.log('QRコード画像の読み込みに成功しました（プロバイダー: ' + qrResult.imageProvider + '）');
+        };
+        
+        img.onerror = function() {
+          console.error('Base64画像データの読み込みに失敗しました');
+          // エラー時のフォールバック表示
+          qrImage.innerHTML = `
+            <div style="padding: 20px; background: #f3f4f6; border-radius: 8px;">
+              <p style="color: #dc2626; margin-bottom: 10px;">QRコード画像の表示に失敗しました</p>
+              <p style="font-size: 12px; color: #6b7280; word-break: break-all;">URL: ${qrResult.url}</p>
+              <p style="font-size: 11px; color: #9ca3af; margin-top: 10px;">手動でQRコードを生成してください</p>
+            </div>
+          `;
+        };
+        
+        // 既存の内容をクリアして画像を追加
+        qrImage.innerHTML = '';
+        qrImage.appendChild(img);
+        console.log('QRコード画像を設定しました（Base64データ）');
+        
+      } else if (qrResult.imageError) {
+        // サーバーサイドでの画像生成に失敗した場合
+        console.error('サーバーサイドでのQRコード画像生成エラー:', qrResult.imageError);
+        qrImage.innerHTML = `
+          <div style="padding: 20px; background: #f3f4f6; border-radius: 8px;">
+            <p style="color: #dc2626; margin-bottom: 10px;">QRコード画像を生成できませんでした</p>
+            <p style="font-size: 12px; color: #6b7280; word-break: break-all;">URL: ${qrResult.url}</p>
+            <p style="font-size: 11px; color: #9ca3af; margin-top: 10px;">手動でQRコードを生成してください</p>
+          </div>
+        `;
+      } else {
+        // 画像データがない場合（後方互換性のため）
+        qrImage.innerHTML = `
+          <div style="padding: 20px; background: #f3f4f6; border-radius: 8px;">
+            <p style="color: #1e40af; margin-bottom: 10px;">QRコードURL生成完了</p>
+            <p style="font-size: 12px; color: #6b7280; word-break: break-all;">URL: ${qrResult.url}</p>
+            <p style="font-size: 11px; color: #9ca3af; margin-top: 10px;">QRコード画像は別途生成してください</p>
+          </div>
+        `;
+      }
     } else {
       console.error('qrImage要素が見つかりません');
     }
@@ -1827,7 +1848,7 @@
     // QRコードデータを保存
     window.qrCodeData = {
       url: qrResult.url,
-      imageUrl: qrCodeUrl,
+      imageData: qrResult.imageData || null,
       locationNumber: locationNumber
     };
   }
@@ -1843,6 +1864,18 @@
     
     const printWindow = window.open('', 'QRコード印刷', 'width=600,height=600');
     const qrData = window.qrCodeData;
+    
+    // QRコード画像のHTMLを生成
+    let qrImageHtml = '';
+    if (qrData.imageData) {
+      qrImageHtml = `<img src="${qrData.imageData}" alt="QRコード" style="width: 200px; height: 200px;">`;
+    } else {
+      qrImageHtml = `
+        <div style="width: 200px; height: 200px; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; background: #f3f4f6;">
+          <p style="text-align: center; color: #666;">QRコード画像が<br>利用できません</p>
+        </div>
+      `;
+    }
     
     const printContent = `
       <!DOCTYPE html>
@@ -1886,7 +1919,7 @@
         <div class="qr-print-container">
           <h1>代替機管理システム</h1>
           <div class="qr-container">
-            <img src="${qrData.imageUrl}" alt="QRコード" />
+            ${qrImageHtml}
           </div>
           <div class="info">
             <p><strong>拠点管理番号:</strong></p>

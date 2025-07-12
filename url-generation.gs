@@ -877,3 +877,179 @@ function getMainSpreadsheetId() {
 
   return spreadsheetId;
 }
+
+/**
+ * QRコード画像データを生成（サーバーサイド処理）
+ * @param {string} url - QRコードに埋め込むURL
+ * @return {Object} 画像データを含む結果オブジェクト
+ */
+function generateQRCodeImage(url) {
+  const startTime = startPerformanceTimer();
+  addLog("QRコード画像生成開始", { url });
+
+  try {
+    if (!url) {
+      throw new Error("URLが指定されていません");
+    }
+
+    // QuickChart.io APIを使用してQRコード画像を取得
+    const quickChartUrl = 'https://quickchart.io/qr?' + 
+      'text=' + encodeURIComponent(url) + '&' +
+      'size=200&' +  // サイズ
+      'margin=1';    // マージン
+
+    try {
+      // UrlFetchAppを使用してサーバーサイドで画像を取得
+      const response = UrlFetchApp.fetch(quickChartUrl, {
+        muteHttpExceptions: true,
+        validateHttpsCertificates: true
+      });
+
+      if (response.getResponseCode() === 200) {
+        // 画像データをBase64エンコード
+        const blob = response.getBlob();
+        const base64Data = Utilities.base64Encode(blob.getBytes());
+        const contentType = blob.getContentType();
+
+        endPerformanceTimer(startTime, "QRコード画像生成（QuickChart）");
+        addLog("QRコード画像生成成功（QuickChart）", { 
+          url, 
+          imageSize: blob.getBytes().length 
+        });
+
+        return {
+          success: true,
+          imageData: 'data:' + contentType + ';base64,' + base64Data,
+          provider: 'QuickChart',
+          url: url
+        };
+      }
+    } catch (quickChartError) {
+      addLog("QuickChart API エラー", { 
+        error: quickChartError.toString() 
+      });
+    }
+
+    // フォールバック: Google Charts APIを試す
+    const googleChartsUrl = 'https://chart.googleapis.com/chart?' + 
+      'chs=200x200&' +  // サイズ
+      'cht=qr&' +        // QRコード
+      'chl=' + encodeURIComponent(url) + '&' +  // データ
+      'choe=UTF-8';      // エンコーディング
+
+    try {
+      const response = UrlFetchApp.fetch(googleChartsUrl, {
+        muteHttpExceptions: true,
+        validateHttpsCertificates: true
+      });
+
+      if (response.getResponseCode() === 200) {
+        // 画像データをBase64エンコード
+        const blob = response.getBlob();
+        const base64Data = Utilities.base64Encode(blob.getBytes());
+        const contentType = blob.getContentType();
+
+        endPerformanceTimer(startTime, "QRコード画像生成（Google Charts）");
+        addLog("QRコード画像生成成功（Google Charts）", { 
+          url, 
+          imageSize: blob.getBytes().length 
+        });
+
+        return {
+          success: true,
+          imageData: 'data:' + contentType + ';base64,' + base64Data,
+          provider: 'Google Charts',
+          url: url
+        };
+      }
+    } catch (googleChartsError) {
+      addLog("Google Charts API エラー", { 
+        error: googleChartsError.toString() 
+      });
+    }
+
+    // 両方のAPIが失敗した場合
+    throw new Error("QRコード画像の生成に失敗しました。両方のAPIがエラーを返しました。");
+
+  } catch (error) {
+    endPerformanceTimer(startTime, "QRコード画像生成エラー");
+    addLog("QRコード画像生成エラー", {
+      url,
+      error: error.toString()
+    });
+
+    return {
+      success: false,
+      error: error.toString(),
+      url: url
+    };
+  }
+}
+
+/**
+ * QRコード用URLを生成し、画像データも含めて返す
+ * @param {string} locationNumber - 拠点管理番号
+ * @param {string} deviceCategory - デバイスカテゴリ
+ * @return {Object} URL生成結果と画像データ
+ */
+function generateQRCodeWithImage(locationNumber, deviceCategory) {
+  const startTime = startPerformanceTimer();
+  addLog("QRコード生成（画像付き）開始", { locationNumber, deviceCategory });
+
+  try {
+    // まずQRコード用URLを生成
+    const urlResult = generateCommonFormUrl(locationNumber, deviceCategory, true);
+    
+    if (!urlResult.success) {
+      throw new Error("URL生成に失敗しました: " + urlResult.error);
+    }
+
+    // URLからQRコード画像を生成
+    const imageResult = generateQRCodeImage(urlResult.url);
+    
+    if (!imageResult.success) {
+      // 画像生成に失敗してもURLは返す
+      return {
+        success: true,
+        url: urlResult.url,
+        locationNumber: locationNumber,
+        deviceCategory: deviceCategory,
+        imageError: imageResult.error
+      };
+    }
+
+    endPerformanceTimer(startTime, "QRコード生成（画像付き）");
+    addLog("QRコード生成（画像付き）完了", { 
+      locationNumber, 
+      deviceCategory,
+      provider: imageResult.provider 
+    });
+
+    // URL生成結果と画像データを統合
+    return {
+      success: true,
+      url: urlResult.url,
+      baseUrl: urlResult.baseUrl,
+      locationNumber: locationNumber,
+      deviceCategory: deviceCategory,
+      isQrUrl: urlResult.isQrUrl,
+      imageData: imageResult.imageData,
+      imageProvider: imageResult.provider
+    };
+
+  } catch (error) {
+    endPerformanceTimer(startTime, "QRコード生成（画像付き）エラー");
+    addLog("QRコード生成（画像付き）エラー", {
+      locationNumber,
+      deviceCategory,
+      error: error.toString()
+    });
+
+    return {
+      success: false,
+      error: error.toString(),
+      locationNumber: locationNumber,
+      deviceCategory: deviceCategory
+    };
+  }
+}
