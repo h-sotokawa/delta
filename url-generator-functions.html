@@ -101,13 +101,15 @@
     const masterTypeText = document.getElementById('masterTypeText');
     const urlStatusText = document.getElementById('urlStatusText');
     const categoryHelp = document.getElementById('categoryHelp');
-    const assetNumberGroup = document.getElementById('assetNumberGroup');
+    const terminalAttributesSection = document.getElementById('terminalAttributesSection');
+    const softwareInput = document.getElementById('software');
+    const osInput = document.getElementById('os');
     const assetNumberInput = document.getElementById('assetNumber');
     
     if (!categorySelect.value) {
       categoryInfo.style.display = 'none';
       categoryHelp.textContent = '選択したカテゴリに応じた共通フォームURLが使用されます';
-      assetNumberGroup.style.display = 'none';
+      terminalAttributesSection.style.display = 'none';
       return;
     }
     
@@ -132,14 +134,22 @@
       hasUrl = window.commonFormSettings?.printer || false;
     }
     
-    // 資産管理番号フィールドの表示制御
+    // 端末属性セクションの表示制御
     if (isTerminal) {
-      assetNumberGroup.style.display = 'block';
+      terminalAttributesSection.style.display = 'block';
+      // 端末の場合は必須項目に設定
+      softwareInput.setAttribute('required', 'required');
+      osInput.setAttribute('required', 'required');
       assetNumberInput.setAttribute('required', 'required');
     } else {
-      assetNumberGroup.style.display = 'none';
+      terminalAttributesSection.style.display = 'none';
+      // 非表示時は必須属性を削除し、値をクリア
+      softwareInput.removeAttribute('required');
+      osInput.removeAttribute('required');
       assetNumberInput.removeAttribute('required');
-      assetNumberInput.value = ''; // 非表示時は値をクリア
+      softwareInput.value = '';
+      osInput.value = '';
+      assetNumberInput.value = '';
     }
     
     formTypeText.textContent = formType;
@@ -740,7 +750,17 @@
       }
     }
     
-    // 資産管理番号の取得（端末の場合のみ）
+    // 端末属性の取得（端末の場合のみ）
+    const softwareInput = document.getElementById('software');
+    const software = softwareInput && softwareInput.hasAttribute('required') 
+      ? softwareInput.value.trim() 
+      : '';
+    
+    const osInput = document.getElementById('os');
+    const os = osInput && osInput.hasAttribute('required') 
+      ? osInput.value.trim() 
+      : '';
+    
     const assetNumberInput = document.getElementById('assetNumber');
     const assetNumber = assetNumberInput && assetNumberInput.hasAttribute('required') 
       ? assetNumberInput.value.trim() 
@@ -752,6 +772,8 @@
       category: deviceCategory,
       serialNumber: serialNumber,
       sequenceNumber: sequenceNumber,
+      software: software,        // ソフトウェアを追加
+      os: os,                   // OSを追加
       assetNumber: assetNumber  // 資産管理番号を追加
     };
     
@@ -930,8 +952,42 @@
       return false;
     }
     
-    // 資産管理番号のバリデーション（端末の場合のみ）
+    // 端末属性のバリデーション（端末の場合のみ）
+    const softwareInput = document.getElementById('software');
+    const osInput = document.getElementById('os');
     const assetNumberInput = document.getElementById('assetNumber');
+    
+    // ソフトウェアのバリデーション
+    if (softwareInput && softwareInput.hasAttribute('required')) {
+      const software = softwareInput.value.trim();
+      if (!software) {
+        showErrorMessage('ソフトウェアを入力してください');
+        return false;
+      }
+      
+      const softwarePattern = /^[A-Za-z0-9\s._-]+$/;
+      if (!softwarePattern.test(software)) {
+        showErrorMessage('ソフトウェアは英数字、スペース、ピリオド、ハイフン、アンダースコアのみ使用可能です');
+        return false;
+      }
+    }
+    
+    // OSのバリデーション
+    if (osInput && osInput.hasAttribute('required')) {
+      const os = osInput.value.trim();
+      if (!os) {
+        showErrorMessage('OSを入力してください');
+        return false;
+      }
+      
+      const osPattern = /^[A-Za-z0-9\s._-]+$/;
+      if (!osPattern.test(os)) {
+        showErrorMessage('OSは英数字、スペース、ピリオド、ハイフン、アンダースコアのみ使用可能です');
+        return false;
+      }
+    }
+    
+    // 資産管理番号のバリデーション
     if (assetNumberInput && assetNumberInput.hasAttribute('required')) {
       const assetNumber = assetNumberInput.value.trim();
       if (!assetNumber) {

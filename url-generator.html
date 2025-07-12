@@ -131,19 +131,6 @@
             <small class="help-text">同一製造番号の機器がある場合の連番</small>
           </div>
 
-          <!-- 資産管理番号入力（端末の場合のみ表示） -->
-          <div class="form-group" id="assetNumberGroup" style="display: none;">
-            <label for="assetNumber">
-              <i class="fas fa-id-card"></i>
-              資産管理番号 <span class="required">*</span>
-            </label>
-            <input type="text" id="assetNumber" name="assetNumber"
-              placeholder="例: IT-2024-0001" 
-              pattern="[A-Za-z0-9_-]+"
-              title="英数字、ハイフン、アンダースコアのみ使用可能">
-            <small class="help-text">会社の資産管理番号を入力してください</small>
-          </div>
-
           <!-- 自動生成された拠点管理番号 -->
           <div class="form-group full-width">
             <label for="locationNumber">
@@ -154,6 +141,56 @@
               placeholder="上記の情報を入力すると自動生成されます"
               class="generated-field">
             <small class="help-text">形式: 拠点_カテゴリ_モデル_製造番号_連番</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- 端末属性セクション（端末系カテゴリの場合のみ表示） -->
+      <div class="form-section" id="terminalAttributesSection" style="display: none;">
+        <h3 class="form-section-title">
+          <i class="fas fa-desktop"></i>
+          端末属性
+        </h3>
+        <p class="form-section-description">端末系カテゴリ（Server、Desktop、Laptop）の場合のみ入力してください</p>
+        
+        <div class="form-grid">
+          <!-- ソフトウェア入力 -->
+          <div class="form-group">
+            <label for="software">
+              <i class="fas fa-file-code"></i>
+              ソフトウェア <span class="required">*</span>
+            </label>
+            <input type="text" id="software" name="software"
+              placeholder="例: Office 2021" 
+              pattern="[A-Za-z0-9\s._-]+"
+              title="英数字、スペース、ピリオド、ハイフン、アンダースコアのみ使用可能">
+            <small class="help-text">インストールされている主要ソフトウェア</small>
+          </div>
+
+          <!-- OS入力 -->
+          <div class="form-group">
+            <label for="os">
+              <i class="fas fa-laptop-code"></i>
+              OS <span class="required">*</span>
+            </label>
+            <input type="text" id="os" name="os"
+              placeholder="例: Windows 11" 
+              pattern="[A-Za-z0-9\s._-]+"
+              title="英数字、スペース、ピリオド、ハイフン、アンダースコアのみ使用可能">
+            <small class="help-text">オペレーティングシステムのバージョン</small>
+          </div>
+
+          <!-- 資産管理番号入力 -->
+          <div class="form-group">
+            <label for="assetNumber">
+              <i class="fas fa-id-card"></i>
+              資産管理番号 <span class="required">*</span>
+            </label>
+            <input type="text" id="assetNumber" name="assetNumber"
+              placeholder="例: IT-2024-0001" 
+              pattern="[A-Za-z0-9_-]+"
+              title="英数字、ハイフン、アンダースコアのみ使用可能">
+            <small class="help-text">会社の資産管理番号を入力してください</small>
           </div>
         </div>
       </div>
