@@ -207,25 +207,41 @@ function doGet(e) {
   // リダイレクトURLを構築
   const redirectUrl = `${form.formUrl}?${form.entryField}=${encodeURIComponent(locationNumber)}`;
   
-  // 即座にリダイレクト（meta refreshを0秒に設定）
-  const htmlOutput = HtmlService.createHtmlOutput(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta http-equiv="refresh" content="0;url=${redirectUrl}">
-        <title>リダイレクト中...</title>
-      </head>
-      <body>
-        <script>
-          // JavaScriptでも即座にリダイレクト（念のため）
-          window.location.href = '${redirectUrl}';
-        </script>
-      </body>
-    </html>
-  `);
-  
-  return htmlOutput;
+  // HTTPリダイレクトを試みる
+  try {
+    return HtmlService.createHtmlOutput(
+      '<script>window.top.location.href="' + redirectUrl + '";</script>'
+    );
+  } catch (e) {
+    // フォールバック: meta refreshとJavaScriptの組み合わせ
+    const htmlOutput = HtmlService.createHtmlOutput(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta http-equiv="refresh" content="0;url=${redirectUrl}">
+          <title>リダイレクト中...</title>
+          <script>
+            // 即座にリダイレクト
+            window.location.replace('${redirectUrl}');
+          </script>
+        </head>
+        <body>
+          <script>
+            // bodyロード後も念のため
+            document.addEventListener('DOMContentLoaded', function() {
+              window.location.href = '${redirectUrl}';
+            });
+          </script>
+          <noscript>
+            <p>リダイレクト中です。自動的に移動しない場合は<a href="${redirectUrl}">こちら</a>をクリックしてください。</p>
+          </noscript>
+        </body>
+      </html>
+    `);
+    
+    return htmlOutput;
+  }
 }
 
 function getCategoryFromLocationNumber(locationNumber) {
