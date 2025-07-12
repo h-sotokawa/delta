@@ -1072,6 +1072,18 @@
         </div>
         <div class="result-value">${new Date().toLocaleString('ja-JP')}</div>
       </div>
+      
+      ${result.qrUrl ? `
+        <div class="result-item full-width">
+          <div class="result-label">
+            <i class="fas fa-qrcode"></i>
+            QRコード用URL
+          </div>
+          <div class="result-value url-display">
+            <input type="text" id="qrUrl" value="${result.qrUrl}" readonly>
+          </div>
+        </div>
+      ` : ''}
     `;
     
     resultSection.style.display = 'block';
@@ -1705,11 +1717,19 @@
         
         console.log('QRコード生成結果:', qrResult);
         
-        if (qrResult.success) {
+        if (qrResult.success && qrResult.url) {
           displayQRCode(qrResult, locationNumber);
           showSuccessMessage('QRコードを生成しました');
+        } else if (qrResult.success && !qrResult.url) {
+          // URLが空の場合は通常のURLを使用
+          const fallbackResult = {
+            ...qrResult,
+            url: window.generatedResult.generatedUrl || window.generatedResult.url
+          };
+          displayQRCode(fallbackResult, locationNumber);
+          showSuccessMessage('QRコードを生成しました（通常URLを使用）');
         } else {
-          showErrorMessage('QRコード生成に失敗しました: ' + qrResult.error);
+          showErrorMessage('QRコード生成に失敗しました: ' + (qrResult.error || '不明なエラー'));
         }
       })
       .withFailureHandler(function(error) {

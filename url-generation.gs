@@ -652,6 +652,13 @@ function generateAndSaveCommonFormUrl(requestData) {
       isNewEntry: saveResult.isNewEntry || false,
     });
 
+    // QRコード用URLも生成（QR_REDIRECT_URLが設定されている場合）
+    let qrUrl = null;
+    const settings = getCommonFormsSettings();
+    if (settings.qrRedirectUrl) {
+      qrUrl = `${settings.qrRedirectUrl}?id=${encodeURIComponent(locationNumber)}`;
+    }
+
     return {
       success: true,
       locationNumber: locationNumber,
@@ -663,6 +670,7 @@ function generateAndSaveCommonFormUrl(requestData) {
       savedColumn: saveResult.savedColumn,
       isQrUrl: false,
       isNewEntry: saveResult.isNewEntry || false,
+      qrUrl: qrUrl, // QRコード用URLを追加
     };
   } catch (error) {
     endPerformanceTimer(startTime, "URL生成・保存一括処理エラー");
