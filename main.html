@@ -71,7 +71,7 @@
         showDebugInfo('showPage: スプレッドシートページ表示', { pageId });
       }
       
-      // 新しい初期化関数を使用
+      // 新しい初期化関数を使用（さらに遅延を増やす）
       setTimeout(() => {
         if (typeof window.initSpreadsheetPage === 'function') {
           console.log('Calling initSpreadsheetPage');
@@ -132,7 +132,7 @@
               .getLocations();
           }
         }
-      }, 300);
+      }, 500); // タイミングを増やす
     }
 
     // URL生成ページの場合、URL生成機能を初期化

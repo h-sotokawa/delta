@@ -49,6 +49,9 @@
   // データタイプマスタデータ（動的読み込み）
   let dataTypeMasterData = [];
   
+  // グローバルに公開
+  window.dataTypeMasterData = dataTypeMasterData;
+  
   // 拠点IDから拠点名を取得（拠点マスタベース）
   function getLocationNameByIdSpreadsheet(locationId) {
     if (spreadsheetLocationMasterData && spreadsheetLocationMasterData.length > 0) {
@@ -124,6 +127,7 @@
       .withSuccessHandler(function(response) {
         if (response.success) {
           dataTypeMasterData = response.dataTypes || [];
+          window.dataTypeMasterData = dataTypeMasterData;  // グローバルにも設定
           console.log('データタイプマスタ読み込み完了:', dataTypeMasterData);
           
           // データタイプドロップダウンを更新
@@ -3357,9 +3361,10 @@
     }
     
     // 選択されたデータタイプの情報を取得
-    const selectedDataType = dataTypeMasterData.find(dt => dt.dataTypeId === dataTypeId);
+    const masterData = window.dataTypeMasterData || dataTypeMasterData || [];
+    const selectedDataType = masterData.find(dt => dt.dataTypeId === dataTypeId);
     if (!selectedDataType) {
-      console.error('選択されたデータタイプが見つかりません:', dataTypeId);
+      console.error('選択されたデータタイプが見つかりません:', dataTypeId, 'Available:', masterData);
       return;
     }
     
