@@ -341,7 +341,7 @@
             tableContainer.innerHTML = '';
           }
 
-          if (response.logs && DEBUG_MODE) {
+          if (response.logs && typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
             showServerLogs(response.logs);
           }
         })
@@ -376,14 +376,17 @@
 
   // スプレッドシートデータを読み込む
   window.loadSpreadsheet = function loadSpreadsheet(location, queryType, deviceType = 'terminal') {
+    console.log('loadSpreadsheet called with:', { location, queryType, deviceType });
+    
     // プリロードされたデータがある場合はそれを使用
     if (typeof loadSpreadsheetWithPreload === 'function') {
+      console.log('Using loadSpreadsheetWithPreload');
       loadSpreadsheetWithPreload(location, queryType, deviceType);
       return;
     }
     
     // 以下は既存のロジック（プリロード機能がない場合のフォールバック）
-    if (DEBUG_MODE) {
+    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
       showDebugInfo('データ取得開始（フォールバック）', { location, queryType });
     }
     
@@ -400,12 +403,12 @@
         throw new Error('Google Apps Scriptの実行環境が正しく初期化されていません');
       }
 
-      if (DEBUG_MODE) {
+      if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
         showDebugInfo('getSpreadsheetData関数の呼び出し開始', { location, queryType });
       }
       google.script.run
         .withSuccessHandler(function(response) {
-          if (DEBUG_MODE) {
+          if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
             showDebugInfo('サーバーからの応答', response);
           }
           loadingDiv.style.display = 'none';
@@ -418,7 +421,7 @@
           }
           
           if (response.success) {
-            if (DEBUG_MODE) {
+            if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
               showDebugInfo('データ表示開始', response.data);
             }
             displayData(response.data, queryType);
@@ -439,7 +442,7 @@
             tableContainer.innerHTML = '';
           }
 
-          if (response.logs && DEBUG_MODE) {
+          if (response.logs && typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
             showServerLogs(response.logs);
           }
         })
@@ -473,7 +476,7 @@
   }
 
   // データを表示する
-  function displayData(data, queryType, dataType = 'main') {
+  window.displayData = function displayData(data, queryType, dataType = 'main') {
     if (!data || data.length === 0) {
       showDebugInfo('データが空', {});
       const tableContainer = document.getElementById('tableContainer');
@@ -846,7 +849,7 @@
   }
 
   // 最終更新時刻を更新する関数
-  function updateLastUpdateTime(elementId, textElementId, location = null) {
+  window.updateLastUpdateTime = function updateLastUpdateTime(elementId, textElementId, location = null) {
     const now = new Date();
     const timeString = now.toLocaleString('ja-JP', {
       year: 'numeric',
@@ -1043,7 +1046,7 @@
             tableContainer.innerHTML = '';
           }
           
-          if (response.logs && DEBUG_MODE) {
+          if (response.logs && typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
             showServerLogs(response.logs);
           }
         })
@@ -1124,7 +1127,7 @@
             tableContainer.innerHTML = '';
           }
           
-          if (response.logs && DEBUG_MODE) {
+          if (response.logs && typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
             showServerLogs(response.logs);
           }
         })
@@ -3064,7 +3067,7 @@
             tableContainer.innerHTML = '';
           }
 
-          if (response.logs && DEBUG_MODE) {
+          if (response.logs && typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
             showServerLogs(response.logs);
           }
         })
@@ -3484,6 +3487,7 @@
       }
       const deviceTypeSelect = document.getElementById('deviceType');
       const selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
+      console.log('Calling loadSpreadsheet with:', { location, queryType, selectedDeviceType });
       loadSpreadsheet(location, queryType, selectedDeviceType);
       
     } else if (dataTypeId === 'AUDIT') {
@@ -3532,7 +3536,7 @@
             tableContainer.innerHTML = '';
           }
           
-          if (response.logs && DEBUG_MODE) {
+          if (response.logs && typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
             showServerLogs(response.logs);
           }
         })
