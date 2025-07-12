@@ -892,21 +892,65 @@ function generateQRCodeImage(url) {
       throw new Error("URLが指定されていません");
     }
 
-    // QuickChart.io APIを使用してQRコード画像を取得
-    const quickChartUrl = 'https://quickchart.io/qr?' + 
-      'text=' + encodeURIComponent(url) + '&' +
-      'size=200&' +  // サイズ
-      'margin=1';    // マージン
+    // 1. QR Server API (オープンソース、高信頼性)
+    const qrServerUrl = 'https://api.qrserver.com/v1/create-qr-code/?' + 
+      'data=' + encodeURIComponent(url) + '&' +
+      'size=200x200&' +  // サイズ
+      'margin=10&' +     // マージン
+      'format=png';      // フォーマット
 
     try {
-      // UrlFetchAppを使用してサーバーサイドで画像を取得
-      const response = UrlFetchApp.fetch(quickChartUrl, {
+      const response = UrlFetchApp.fetch(qrServerUrl, {
         muteHttpExceptions: true,
-        validateHttpsCertificates: true
+        validateHttpsCertificates: true,
+        headers: {
+          'User-Agent': 'Google Apps Script'
+        }
       });
 
       if (response.getResponseCode() === 200) {
-        // 画像データをBase64エンコード
+        const blob = response.getBlob();
+        const base64Data = Utilities.base64Encode(blob.getBytes());
+        const contentType = blob.getContentType();
+
+        endPerformanceTimer(startTime, "QRコード画像生成（QR Server）");
+        addLog("QRコード画像生成成功（QR Server）", { 
+          url, 
+          imageSize: blob.getBytes().length 
+        });
+
+        return {
+          success: true,
+          imageData: 'data:' + contentType + ';base64,' + base64Data,
+          provider: 'QR Server',
+          url: url
+        };
+      }
+    } catch (qrServerError) {
+      addLog("QR Server API エラー", { 
+        error: qrServerError.toString() 
+      });
+    }
+
+    // 2. フォールバック: QuickChart.io API
+    const quickChartUrl = 'https://quickchart.io/qr?' + 
+      'text=' + encodeURIComponent(url) + '&' +
+      'size=200&' +      // サイズ
+      'margin=1&' +      // マージン
+      'dark=000000&' +   // 前景色（黒）
+      'light=ffffff&' +  // 背景色（白）
+      'ecLevel=M';       // エラー訂正レベル（中）
+
+    try {
+      const response = UrlFetchApp.fetch(quickChartUrl, {
+        muteHttpExceptions: true,
+        validateHttpsCertificates: true,
+        headers: {
+          'User-Agent': 'Google Apps Script'
+        }
+      });
+
+      if (response.getResponseCode() === 200) {
         const blob = response.getBlob();
         const base64Data = Utilities.base64Encode(blob.getBytes());
         const contentType = blob.getContentType();
@@ -930,27 +974,33 @@ function generateQRCodeImage(url) {
       });
     }
 
-    // フォールバック: Google Charts APIを試す
-    const googleChartsUrl = 'https://chart.googleapis.com/chart?' + 
-      'chs=200x200&' +  // サイズ
-      'cht=qr&' +        // QRコード
-      'chl=' + encodeURIComponent(url) + '&' +  // データ
-      'choe=UTF-8';      // エンコーディング
+    // 3. 最終フォールバック: goqr.me API（シンプルで信頼性が高い）
+    const goQrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' + 
+      'data=' + encodeURIComponent(url) + '&' +
+      'size=200x200&' +
+      'format=png&' +
+      'bgcolor=ffffff&' +  // 背景色（白）
+      'color=000000&' +    // 前景色（黒）
+      'qzone=1&' +         // 静寂ゾーン
+      'margin=10';         // マージン
 
     try {
-      const response = UrlFetchApp.fetch(googleChartsUrl, {
+      const response = UrlFetchApp.fetch(goQrUrl, {
         muteHttpExceptions: true,
-        validateHttpsCertificates: true
+        validateHttpsCertificates: true,
+        headers: {
+          'User-Agent': 'Google Apps Script',
+          'Accept': 'image/png'
+        }
       });
 
       if (response.getResponseCode() === 200) {
-        // 画像データをBase64エンコード
         const blob = response.getBlob();
         const base64Data = Utilities.base64Encode(blob.getBytes());
-        const contentType = blob.getContentType();
+        const contentType = blob.getContentType() || 'image/png';
 
-        endPerformanceTimer(startTime, "QRコード画像生成（Google Charts）");
-        addLog("QRコード画像生成成功（Google Charts）", { 
+        endPerformanceTimer(startTime, "QRコード画像生成（goqr.me）");
+        addLog("QRコード画像生成成功（goqr.me）", { 
           url, 
           imageSize: blob.getBytes().length 
         });
@@ -958,18 +1008,18 @@ function generateQRCodeImage(url) {
         return {
           success: true,
           imageData: 'data:' + contentType + ';base64,' + base64Data,
-          provider: 'Google Charts',
+          provider: 'goqr.me',
           url: url
         };
       }
-    } catch (googleChartsError) {
-      addLog("Google Charts API エラー", { 
-        error: googleChartsError.toString() 
+    } catch (goQrError) {
+      addLog("goqr.me API エラー", { 
+        error: goQrError.toString() 
       });
     }
 
-    // 両方のAPIが失敗した場合
-    throw new Error("QRコード画像の生成に失敗しました。両方のAPIがエラーを返しました。");
+    // すべてのAPIが失敗した場合
+    throw new Error("QRコード画像の生成に失敗しました。すべてのAPIがエラーを返しました。");
 
   } catch (error) {
     endPerformanceTimer(startTime, "QRコード画像生成エラー");
