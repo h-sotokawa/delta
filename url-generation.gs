@@ -245,6 +245,12 @@ function saveUrlToTerminalMaster(
           case "資産管理番号":
             newRowData[index] = deviceInfo.assetNumber || "";
             break;
+          case "OS":
+            newRowData[index] = deviceInfo.os || "";
+            break;
+          case "ソフトウェア":
+            newRowData[index] = deviceInfo.software || "";
+            break;
           case "作成日":
             newRowData[index] = today;
             break;
@@ -276,6 +282,27 @@ function saveUrlToTerminalMaster(
       // QRコードURLも更新
       if (qrUrl && qrUrlColIndex !== -1) {
         sheet.getRange(targetRow, qrUrlColIndex + 1).setValue(qrUrl);
+      }
+      
+      // 端末属性も更新（デバイス情報が提供されている場合）
+      if (deviceInfo) {
+        // OSの更新
+        const osColIndex = headerRow.indexOf("OS");
+        if (osColIndex !== -1 && deviceInfo.os) {
+          sheet.getRange(targetRow, osColIndex + 1).setValue(deviceInfo.os);
+        }
+        
+        // ソフトウェアの更新
+        const softwareColIndex = headerRow.indexOf("ソフトウェア");
+        if (softwareColIndex !== -1 && deviceInfo.software) {
+          sheet.getRange(targetRow, softwareColIndex + 1).setValue(deviceInfo.software);
+        }
+        
+        // 資産管理番号の更新
+        const assetColIndex = headerRow.indexOf("資産管理番号");
+        if (assetColIndex !== -1 && deviceInfo.assetNumber) {
+          sheet.getRange(targetRow, assetColIndex + 1).setValue(deviceInfo.assetNumber);
+        }
       }
 
       // 更新日も更新
@@ -407,6 +434,12 @@ function saveUrlToPrinterMaster(
             break;
           case "資産管理番号":
             newRowData[index] = deviceInfo.assetNumber || "";
+            break;
+          case "OS":
+            newRowData[index] = deviceInfo.os || "";
+            break;
+          case "ソフトウェア":
+            newRowData[index] = deviceInfo.software || "";
             break;
           case "作成日":
             newRowData[index] = today;
