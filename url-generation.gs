@@ -23,22 +23,30 @@ function generateCommonFormUrl(
     const settings = getCommonFormsSettings();
 
     // QRコード用URL（中間ページ）を生成する場合
-    if (generateQrUrl && settings.qrRedirectUrl) {
-      const qrUrl = `${settings.qrRedirectUrl}?id=${encodeURIComponent(
-        locationNumber
-      )}`;
+    if (generateQrUrl) {
+      if (settings.qrRedirectUrl) {
+        // QRリダイレクトURLが設定されている場合
+        const qrUrl = `${settings.qrRedirectUrl}?id=${encodeURIComponent(
+          locationNumber
+        )}`;
 
-      endPerformanceTimer(startTime, "QRコード用URL生成");
-      addLog("QRコード用URL生成完了", { locationNumber, qrUrl });
+        endPerformanceTimer(startTime, "QRコード用URL生成");
+        addLog("QRコード用URL生成完了", { locationNumber, qrUrl });
 
-      return {
-        success: true,
-        url: qrUrl,
-        baseUrl: settings.qrRedirectUrl,
-        locationNumber: locationNumber,
-        deviceCategory: deviceCategory,
-        isQrUrl: true,
-      };
+        return {
+          success: true,
+          url: qrUrl,
+          baseUrl: settings.qrRedirectUrl,
+          locationNumber: locationNumber,
+          deviceCategory: deviceCategory,
+          isQrUrl: true,
+        };
+      } else {
+        // QRリダイレクトURLが設定されていない場合は、通常のURLを返す
+        addLog("QRリダイレクトURLが未設定のため、通常のURLでQRコードを生成", { locationNumber, deviceCategory });
+        // generateQrUrlフラグをfalseにして、通常のURL生成処理を継続
+        generateQrUrl = false;
+      }
     }
 
     // 通常の共通フォームURL生成

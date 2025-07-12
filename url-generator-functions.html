@@ -1020,8 +1020,11 @@
     
     if (!resultSection || !resultContent) return;
     
-    // 結果データをグローバルに保存
-    window.generatedResult = result;
+    // 結果データをグローバルに保存（deviceCategory含む）
+    window.generatedResult = {
+      ...result,
+      deviceCategory: result.deviceCategory || document.getElementById('deviceCategory').value
+    };
     
     // QRコードセクションを非表示（新しい結果のため）
     if (qrSection) qrSection.style.display = 'none';
@@ -1685,7 +1688,13 @@
     
     const result = window.generatedResult;
     const locationNumber = result.locationNumber;
-    const deviceCategory = result.deviceCategory;
+    const deviceCategory = result.deviceCategory || document.getElementById('deviceCategory').value;
+    
+    console.log('QRコード生成開始:', {
+      locationNumber: locationNumber,
+      deviceCategory: deviceCategory,
+      fullResult: result
+    });
     
     showLoadingMessage('QRコードを生成中...');
     
@@ -1693,6 +1702,8 @@
     google.script.run
       .withSuccessHandler(function(qrResult) {
         hideLoadingMessage();
+        
+        console.log('QRコード生成結果:', qrResult);
         
         if (qrResult.success) {
           displayQRCode(qrResult, locationNumber);
@@ -1717,6 +1728,18 @@
     const qrLocationNumber = document.getElementById('qrLocationNumber');
     const qrUrl = document.getElementById('qrUrl');
     const printBtn = document.getElementById('printQrBtn');
+    
+    // URLの確認
+    if (!qrResult.url) {
+      console.error('QRコード用URLが空です:', qrResult);
+      showErrorMessage('QRコード用URLが生成されませんでした');
+      return;
+    }
+    
+    console.log('QRコード表示:', {
+      url: qrResult.url,
+      locationNumber: locationNumber
+    });
     
     // QRコード画像のURLを作成（Google Charts APIを使用）
     const qrCodeUrl = 'https://chart.googleapis.com/chart?' + 
