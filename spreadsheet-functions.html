@@ -1765,10 +1765,148 @@
     return true;
   }
 
+  // 通常データの列を並び替える関数
+  function reorderColumnsForNormalData(data) {
+    if (!data || data.length === 0) {
+      return data;
+    }
+    
+    const headers = data[0];
+    
+    // 必要な列のインデックスを検索
+    const columnIndices = {
+      locationNumber: -1,  // 拠点管理番号
+      category: -1,        // カテゴリ/機器種別
+      modelName: -1,       // 機種名
+      status: -1          // ステータス（0-4.ステータス）
+    };
+    
+    // 各列のインデックスを特定
+    headers.forEach((header, index) => {
+      const headerStr = header.toString();
+      const headerLower = headerStr.toLowerCase();
+      
+      // 拠点管理番号
+      if (headerStr.includes('拠点管理番号') || headerLower.includes('location')) {
+        columnIndices.locationNumber = index;
+      }
+      // カテゴリ/機器種別
+      else if (headerStr.includes('カテゴリ') || headerStr.includes('機器種別') || headerLower.includes('category')) {
+        columnIndices.category = index;
+      }
+      // 機種名
+      else if (headerStr.includes('機種名') || headerStr.includes('モデル') || headerLower.includes('model')) {
+        columnIndices.modelName = index;
+      }
+      // ステータス（0-4.ステータス）
+      else if (headerStr.includes('0-4.ステータス')) {
+        columnIndices.status = index;
+      }
+    });
+    
+    // デバッグ情報
+    if (DEBUG_MODE) {
+      showDebugInfo('列インデックス特定結果', {
+        columnIndices,
+        headers: headers.map((h, i) => `${i}: ${h}`)
+      });
+    }
+    
+    // 新しい列順序を定義
+    const orderedIndices = [];
+    const usedIndices = new Set();
+    
+    // 1. 拠点管理番号
+    if (columnIndices.locationNumber !== -1) {
+      orderedIndices.push(columnIndices.locationNumber);
+      usedIndices.add(columnIndices.locationNumber);
+    }
+    
+    // 2. カテゴリ/機器種別
+    if (columnIndices.category !== -1) {
+      orderedIndices.push(columnIndices.category);
+      usedIndices.add(columnIndices.category);
+    }
+    
+    // 3. 機種名
+    if (columnIndices.modelName !== -1) {
+      orderedIndices.push(columnIndices.modelName);
+      usedIndices.add(columnIndices.modelName);
+    }
+    
+    // 4. ステータス
+    if (columnIndices.status !== -1) {
+      orderedIndices.push(columnIndices.status);
+      usedIndices.add(columnIndices.status);
+    }
+    
+    // 5. ステータスに応じた動的な列（ステータスの直後に配置）
+    // ステータスの接頭辞を取得
+    let statusPrefix = null;
+    if (columnIndices.status !== -1 && data.length > 1) {
+      // データ行からステータス値のサンプルを取得
+      for (let i = 1; i < data.length && i < 10; i++) {
+        const statusValue = data[i][columnIndices.status];
+        if (statusValue) {
+          const match = statusValue.toString().match(/^(\d+)\./);
+          if (match) {
+            statusPrefix = match[1];
+            break;
+          }
+        }
+      }
+    }
+    
+    // ステータスに関連する列を追加
+    if (statusPrefix) {
+      headers.forEach((header, index) => {
+        if (!usedIndices.has(index) && header.toString().startsWith(statusPrefix + '-')) {
+          orderedIndices.push(index);
+          usedIndices.add(index);
+        }
+      });
+    }
+    
+    // 6. その他の列（残りの列を元の順序で追加）
+    headers.forEach((header, index) => {
+      if (!usedIndices.has(index)) {
+        orderedIndices.push(index);
+      }
+    });
+    
+    // データを並び替え
+    const reorderedData = data.map(row => {
+      const newRow = [];
+      orderedIndices.forEach(index => {
+        newRow.push(row[index]);
+      });
+      return newRow;
+    });
+    
+    if (DEBUG_MODE) {
+      showDebugInfo('列並び替え完了', {
+        元の列数: headers.length,
+        並び替え後の列数: orderedIndices.length,
+        新しい列順: reorderedData[0].map((h, i) => `${i}: ${h}`),
+        ステータスプレフィックス: statusPrefix
+      });
+    }
+    
+    return reorderedData;
+  }
+
   function createTable(data, queryType, prependContent = '', displayMode = 'main') {
     const tableContainer = document.getElementById('tableContainer');
     
-    // 拠点管理番号の列インデックスを取得
+    // データタイプを取得
+    const dataTypeId = document.getElementById('dataType') ? document.getElementById('dataType').value : '';
+    
+    // 通常データの場合は列を並び替え
+    if (dataTypeId === 'NORMAL' && displayMode === 'main') {
+      data = reorderColumnsForNormalData(data);
+    }
+    
+    // 拠点管理番号の列インデックスを取得（並び替え後のデータで検索）
     const locationCodeColumnIndex = findLocationCodeColumnIndex(data[0]);
     
     // ステータス駆動型列フィルタリングのための処理

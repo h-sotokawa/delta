@@ -281,6 +281,20 @@ function onFormSubmit(e) {
         "0-4.ステータス",
         "更新日時"
       ]
+    },
+    "displayColumnOrder": {
+      "enabled": true,
+      "description": "通常データ表示時の固定列順序",
+      "fixedOrder": [
+        { "columnId": "#", "label": "項番", "type": "rowNumber" },
+        { "columnId": "locationNumber", "label": "拠点管理番号", "type": "data" },
+        { "columnId": "category", "label": "カテゴリ", "type": "data" },
+        { "columnId": "modelName", "label": "機種名", "type": "data" },
+        { "columnId": "status", "label": "ステータス", "type": "data" },
+        { "columnId": "statusRelated", "label": "ステータス連動列", "type": "dynamic" }
+      ],
+      "implementation": "spreadsheet-functions.html:reorderColumnsForNormalData()",
+      "note": "ステータス連動列は0-4.ステータスの値に基づいて動的に表示される列"
     }
   },
   "ステータス": "active"
