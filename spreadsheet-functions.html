@@ -72,8 +72,8 @@
       .getLocationMaster();
   }
   
-  // 拠点一覧を取得してプルダウンメニューに設定
-  function initializeLocations() {
+  // 拠点一覧を取得してプルダウンメニューに設定（グローバルスコープで定義）
+  window.initializeLocations = function() {
     // 拠点マスタを読み込み
     loadLocationMasterForSpreadsheet();
     

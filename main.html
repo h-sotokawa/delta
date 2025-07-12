@@ -65,14 +65,34 @@
       targetLink.classList.add('active');
     }
 
-    // スプレッドシートページの場合、フロート横スクロールバーを初期化
+    // スプレッドシートページの場合、初期化処理を実行
     if (pageId === 'spreadsheet') {
       if (DEBUG_MODE) {
         showDebugInfo('showPage: スプレッドシートページ表示', { pageId });
       }
+      
+      // スプレッドシートページの初期化（拠点とデータタイプの読み込み）
       setTimeout(() => {
         try {
-          // グローバルスコープから関数を探す
+          // 拠点とデータタイプマスタを初期化
+          if (typeof window.initializeLocations === 'function') {
+            if (DEBUG_MODE) {
+              showDebugInfo('showPage: 拠点とデータタイプ初期化（window）', {});
+            }
+            window.initializeLocations();
+          } else if (typeof initializeLocations === 'function') {
+            if (DEBUG_MODE) {
+              showDebugInfo('showPage: 拠点とデータタイプ初期化（ローカル）', {});
+            }
+            initializeLocations();
+          } else {
+            console.error('initializeLocations関数が見つかりません', {
+              windowFunc: typeof window.initializeLocations,
+              localFunc: typeof initializeLocations
+            });
+          }
+          
+          // フロートスクロールバーを初期化
           if (typeof window.initializeFloatScrollbar === 'function') {
             if (DEBUG_MODE) {
               showDebugInfo('showPage遅延実行: フロートスクロールバー初期化', {});
@@ -95,9 +115,9 @@
           }
         } catch (error) {
           // エラーが発生してもページ表示は継続
-          console.error('フロートスクロールバー初期化エラー:', error);
+          console.error('スプレッドシートページ初期化エラー:', error);
           if (DEBUG_MODE) {
-            showDebugInfo('showPage: フロートスクロールバー初期化エラー', {
+            showDebugInfo('showPage: スプレッドシートページ初期化エラー', {
               error: error.message,
               stack: error.stack
             });
