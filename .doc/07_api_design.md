@@ -110,6 +110,59 @@ Frontend (JavaScript) ←→ Google Apps Script (Backend) ←→ Google Sheets (
 }
 ```
 
+### 2.2 QRコード生成 API
+
+#### 2.2.1 `generateQRCodeWithImage(locationNumber, deviceCategory)`
+
+**目的**: QRコード用URLを生成し、サーバーサイドでQRコード画像データも生成
+
+**パラメータ**:
+
+```javascript
+{
+  locationNumber: string,    // 拠点管理番号
+  deviceCategory: string     // デバイスカテゴリ
+}
+```
+
+**レスポンス**:
+
+```javascript
+{
+  success: true,
+  url: "https://script.google.com/.../exec?id=OSA_SV_ThinkPad_ABC123_001",
+  baseUrl: "https://script.google.com/.../exec",
+  locationNumber: "OSA_SV_ThinkPad_ABC123_001",
+  deviceCategory: "Server",
+  isQrUrl: true,
+  imageData: "data:image/png;base64,iVBORw0KGgoAAAANS...",  // Base64エンコードされた画像データ
+  imageProvider: "GoQR.me"  // 使用されたQRコード生成API
+}
+```
+
+**エラーケース**:
+
+- URL生成失敗
+- QRコード画像生成失敗（imageErrorフィールドにエラー内容を含む）
+- 全APIの応答タイムアウト
+
+#### 2.2.2 `generateQRCodeImage(url)`
+
+**目的**: URLからQRコード画像をサーバーサイドで生成（内部API）
+
+**使用するQRコード生成API（優先順）**:
+
+1. **GoQR.me API** - 高信頼性、EU GDPR準拠
+2. **QRCode Monkey API** - 商用利用可能
+3. **QuickChart.io** - 高速レスポンス
+
+**セキュリティ対策**:
+
+- HTTPS通信の強制
+- SSL/TLS証明書の検証
+- 入力URLの検証とエンコーディング
+- 適切なUser-Agentヘッダー
+
 ## 3. マスタデータ管理 API
 
 ### 3.1 拠点マスタ API

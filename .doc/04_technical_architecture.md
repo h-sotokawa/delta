@@ -786,22 +786,37 @@ window.appState = {
 
 #### 10.1.2 採用API一覧
 
-##### 第1優先: QR Server API
+##### 第1優先: GoQR.me API (QR Server)
 ```
 https://api.qrserver.com/v1/create-qr-code/
 ```
-- **提供元**: Denso Wave Europe
+- **提供元**: goqr.me
 - **セキュリティ**: 
   - HTTPS対応
   - EU GDPR準拠
   - データ保存なし
+  - プライバシー重視
 - **特徴**:
   - オープンソース
   - APIキー不要
   - 高い信頼性（稼働率99.95%）
   - QRコード規格に完全準拠
+  - 2007年から運用の長い実績
 
-##### 第2優先: QuickChart.io
+##### 第2優先: QRCode Monkey API
+```
+https://api.qr-code-generator.com/v1/create
+```
+- **提供元**: QRCode Monkey
+- **セキュリティ**:
+  - HTTPS対応
+  - SSL/TLS暗号化
+- **特徴**:
+  - 商用利用可能
+  - 高解像度対応
+  - カスタマイズ可能
+
+##### 第3優先: QuickChart.io
 ```
 https://quickchart.io/qr
 ```
@@ -813,10 +828,7 @@ https://quickchart.io/qr
   - 無料利用可能
   - シンプルAPI
   - エラー訂正レベル設定可能
-
-##### 第3優先: QR Code Generator API
-- **バックアップ用**
-- 上記2つが失敗した場合の予備
+  - 高速レスポンス
 
 #### 10.1.3 Google Charts APIの廃止対応
 

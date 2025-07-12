@@ -892,15 +892,21 @@ function generateQRCodeImage(url) {
       throw new Error("URLが指定されていません");
     }
 
-    // 1. QR Server API (オープンソース、高信頼性)
-    const qrServerUrl = 'https://api.qrserver.com/v1/create-qr-code/?' + 
-      'data=' + encodeURIComponent(url) + '&' +
-      'size=200x200&' +  // サイズ
-      'margin=10&' +     // マージン
-      'format=png';      // フォーマット
+    // URLの長さをチェック（QRコードの制限を考慮）
+    if (url.length > 2000) {
+      addLog("警告: URLが長すぎます", { 
+        urlLength: url.length,
+        url: url.substring(0, 100) + "..."
+      });
+    }
+
+    // 1. 最初にシンプルなGoQR.me APIを試す
+    const goQrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' + 
+      'size=200x200&' +
+      'data=' + encodeURIComponent(url);
 
     try {
-      const response = UrlFetchApp.fetch(qrServerUrl, {
+      const response = UrlFetchApp.fetch(goQrUrl, {
         muteHttpExceptions: true,
         validateHttpsCertificates: true,
         headers: {
@@ -913,8 +919,8 @@ function generateQRCodeImage(url) {
         const base64Data = Utilities.base64Encode(blob.getBytes());
         const contentType = blob.getContentType();
 
-        endPerformanceTimer(startTime, "QRコード画像生成（QR Server）");
-        addLog("QRコード画像生成成功（QR Server）", { 
+        endPerformanceTimer(startTime, "QRコード画像生成（GoQR.me）");
+        addLog("QRコード画像生成成功（GoQR.me）", { 
           url, 
           imageSize: blob.getBytes().length 
         });
@@ -922,13 +928,21 @@ function generateQRCodeImage(url) {
         return {
           success: true,
           imageData: 'data:' + contentType + ';base64,' + base64Data,
-          provider: 'QR Server',
+          provider: 'GoQR.me',
           url: url
         };
+      } else {
+        addLog("GoQR.me API レスポンスエラー", { 
+          statusCode: response.getResponseCode(),
+          statusText: response.getContentText().substring(0, 200),
+          url: goQrUrl
+        });
       }
-    } catch (qrServerError) {
-      addLog("QR Server API エラー", { 
-        error: qrServerError.toString() 
+    } catch (goQrError) {
+      addLog("GoQR.me API エラー", { 
+        error: goQrError.toString(),
+        message: goQrError.message,
+        url: goQrUrl
       });
     }
 
@@ -967,22 +981,25 @@ function generateQRCodeImage(url) {
           provider: 'QuickChart',
           url: url
         };
+      } else {
+        addLog("QuickChart API レスポンスエラー", { 
+          statusCode: response.getResponseCode(),
+          statusText: response.getContentText(),
+          url: quickChartUrl
+        });
       }
     } catch (quickChartError) {
       addLog("QuickChart API エラー", { 
-        error: quickChartError.toString() 
+        error: quickChartError.toString(),
+        message: quickChartError.message,
+        url: quickChartUrl
       });
     }
 
-    // 3. 最終フォールバック: goqr.me API（シンプルで信頼性が高い）
+    // 3. 最終フォールバック: 同じQR Server APIだが異なるパラメータ
     const goQrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' + 
       'data=' + encodeURIComponent(url) + '&' +
-      'size=200x200&' +
-      'format=png&' +
-      'bgcolor=ffffff&' +  // 背景色（白）
-      'color=000000&' +    // 前景色（黒）
-      'qzone=1&' +         // 静寂ゾーン
-      'margin=10';         // マージン
+      'size=200x200';      // 最小限のパラメータで再試行
 
     try {
       const response = UrlFetchApp.fetch(goQrUrl, {
@@ -999,8 +1016,8 @@ function generateQRCodeImage(url) {
         const base64Data = Utilities.base64Encode(blob.getBytes());
         const contentType = blob.getContentType() || 'image/png';
 
-        endPerformanceTimer(startTime, "QRコード画像生成（goqr.me）");
-        addLog("QRコード画像生成成功（goqr.me）", { 
+        endPerformanceTimer(startTime, "QRコード画像生成（QR Server Alt）");
+        addLog("QRコード画像生成成功（QR Server Alt）", { 
           url, 
           imageSize: blob.getBytes().length 
         });
@@ -1008,13 +1025,21 @@ function generateQRCodeImage(url) {
         return {
           success: true,
           imageData: 'data:' + contentType + ';base64,' + base64Data,
-          provider: 'goqr.me',
+          provider: 'QR Server (Alternative)',
           url: url
         };
+      } else {
+        addLog("QR Server Alt API レスポンスエラー", { 
+          statusCode: response.getResponseCode(),
+          statusText: response.getContentText(),
+          url: goQrUrl
+        });
       }
     } catch (goQrError) {
-      addLog("goqr.me API エラー", { 
-        error: goQrError.toString() 
+      addLog("QR Server Alt API エラー", { 
+        error: goQrError.toString(),
+        message: goQrError.message,
+        url: goQrUrl
       });
     }
 
