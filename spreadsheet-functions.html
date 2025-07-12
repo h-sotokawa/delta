@@ -192,18 +192,16 @@
     loadingDiv.style.display = 'none';
     
     if (selectedLocation) {
-      // バックグラウンド読み込み状況をチェック
-      const loadStatus = typeof getBackgroundLoadStatus === 'function' ? 
-        getBackgroundLoadStatus(selectedLocation) : 'not_started';
-      
-      if (DEBUG_MODE) {
-        showDebugInfo('拠点変更：読み込み状況チェック', { 
-          location: selectedLocation, 
-          loadStatus: loadStatus 
+      // デバッグ情報
+      if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+        showDebugInfo('拠点変更', { 
+          location: selectedLocation,
+          deviceType: selectedDeviceType
         });
       }
       
-      if (loadStatus === 'completed' && isDataPreloaded(selectedLocation)) {
+      // 拠点が選択されたらデータを読み込む
+      if (false) { // バックグラウンド読み込み機能は一時的に無効化
         // データ読み込み済み：即座に表示
         currentLocation = selectedLocation;
         querySelector.style.display = 'block';
@@ -269,7 +267,7 @@
         const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
         
         // データ取得を実行
-        loadSpreadsheetDirectly(selectedLocation, queryType, selectedDeviceType);
+        loadSpreadsheet(selectedLocation, queryType, selectedDeviceType);
         return;
       }
       
@@ -377,7 +375,7 @@
   }
 
   // スプレッドシートデータを読み込む
-  function loadSpreadsheet(location, queryType, deviceType = 'terminal') {
+  window.loadSpreadsheet = function loadSpreadsheet(location, queryType, deviceType = 'terminal') {
     // プリロードされたデータがある場合はそれを使用
     if (typeof loadSpreadsheetWithPreload === 'function') {
       loadSpreadsheetWithPreload(location, queryType, deviceType);
@@ -940,7 +938,7 @@
   }
 
   // 拠点変更時に該当拠点の最終更新時刻を表示する関数
-  function displayLocationUpdateTime(location) {
+  window.displayLocationUpdateTime = function displayLocationUpdateTime(location) {
     const updateTime = getLocationUpdateTime(location);
     const element = document.getElementById('lastUpdateTime');
     const textElement = document.getElementById('lastUpdateTimeText');

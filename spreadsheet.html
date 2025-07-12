@@ -7,7 +7,7 @@
     <!-- データタイプ選択（データタイプマスタから動的に読み込み） -->
     <div class="data-type-selector">
       <label for="dataType">データタイプを選択：</label>
-      <select id="dataType" onchange="handleDataTypeChange()">
+      <select id="dataType" onchange="if(window.handleDataTypeChange) window.handleDataTypeChange()">
         <option value="">読み込み中...</option>
       </select>
     </div>
@@ -15,17 +15,17 @@
     <!-- 拠点選択（通常データ選択時のみ表示） -->
     <div class="location-selector" style="display: none;">
       <label for="location">拠点を選択：</label>
-      <select id="location" onchange="handleLocationChange()">
+      <select id="location" onchange="if(window.handleLocationChange) window.handleLocationChange()">
         <option value="">拠点を選択してください</option>
       </select>
       
       <label for="deviceType">データ種別：</label>
-      <select id="deviceType" onchange="handleDeviceTypeChange()">
+      <select id="deviceType" onchange="if(window.handleDeviceTypeChange) window.handleDeviceTypeChange()">
         <option value="terminal">端末マスタ</option>
         <option value="printer">プリンタマスタ</option>
       </select>
       
-      <button id="refreshButton" class="refresh-button" onclick="refreshCurrentLocation()" disabled>
+      <button id="refreshButton" class="refresh-button" onclick="if(window.refreshCurrentLocation) window.refreshCurrentLocation()" disabled>
         <i class="fas fa-sync-alt"></i>
         更新
       </button>
@@ -38,13 +38,13 @@
     <!-- 監査データ用の詳細選択 -->
     <div class="audit-sheet-selector" style="display: none;">
       <label for="auditSheet">監査シートを選択：</label>
-      <select id="auditSheet" onchange="handleAuditSheetChange()">
+      <select id="auditSheet" onchange="if(window.handleAuditSheetChange) window.handleAuditSheetChange()">
         <option value="">選択してください</option>
         <option value="大阪">大阪</option>
         <option value="神戸">神戸</option>
         <option value="姫路">姫路</option>
       </select>
-      <button id="refreshAuditButton" class="refresh-button" onclick="refreshAuditData()" disabled>
+      <button id="refreshAuditButton" class="refresh-button" onclick="if(window.refreshAuditData) window.refreshAuditData()" disabled>
         <i class="fas fa-sync-alt"></i>
         更新
       </button>
@@ -57,7 +57,7 @@
     <!-- サマリーデータ用の更新ボタン -->
     <div class="summary-refresh-selector" style="display: none;">
       <label>サマリーデータ：</label>
-      <button id="refreshSummaryButton" class="refresh-button" onclick="refreshSummaryData()">
+      <button id="refreshSummaryButton" class="refresh-button" onclick="if(window.refreshSummaryData) window.refreshSummaryData()">
         <i class="fas fa-sync-alt"></i>
         更新
       </button>
@@ -71,11 +71,11 @@
       <label>表示内容：</label>
       <div class="radio-group">
         <label>
-          <input type="radio" name="queryType" value="all" checked onchange="handleQueryChange()">
+          <input type="radio" name="queryType" value="all" checked onchange="if(window.handleQueryChange) window.handleQueryChange()">
           一覧
         </label>
         <label>
-          <input type="radio" name="queryType" value="lending" onchange="handleQueryChange()">
+          <input type="radio" name="queryType" value="lending" onchange="if(window.handleQueryChange) window.handleQueryChange()">
           <span title="「預りユーザー機のシリアルNo.」に内容がある場合に表示">
             貸出中(ユーザー預り機有)
           </span>
@@ -101,9 +101,9 @@
     <div id="debug" class="debug">
       <h3>デバッグ情報 <span style="color: var(--success-color); font-size: 0.8em;">(デバッグモード: ON)</span></h3>
       <div class="debug-controls">
-        <button onclick="clearDebugInfo()">ログをクリア</button>
-        <button onclick="exportDebugInfo()">ログをエクスポート</button>
-        <button onclick="toggleDebugMode()">デバッグモード切替</button>
+        <button onclick="if(window.clearDebugInfo) window.clearDebugInfo()">ログをクリア</button>
+        <button onclick="if(window.exportDebugInfo) window.exportDebugInfo()">ログをエクスポート</button>
+        <button onclick="if(window.toggleDebugMode) window.toggleDebugMode()">デバッグモード切替</button>
       </div>
       <pre id="debugInfo"></pre>
     </div>
@@ -166,6 +166,13 @@
                     // location selectorを表示
                     document.querySelector('.location-selector').style.display = 'block';
                     document.querySelector('.query-selector').style.display = 'block';
+                  }
+                  
+                  // データを読み込む
+                  if (typeof window.loadDataBasedOnDataType === 'function') {
+                    setTimeout(() => {
+                      window.loadDataBasedOnDataType();
+                    }, 100);
                   }
                 }
               }
