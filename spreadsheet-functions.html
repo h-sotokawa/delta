@@ -518,6 +518,44 @@
     `;
   }
 
+  // 拠点名が有効かどうかをチェック
+  function isValidLocationName(locationName) {
+    if (!locationName || typeof locationName !== 'string' || locationName.trim() === '') {
+      return false;
+    }
+    
+    // 拠点マスタデータから拠点名のリストを取得
+    if (spreadsheetLocationMasterData && spreadsheetLocationMasterData.length > 0) {
+      const isValid = spreadsheetLocationMasterData.some(location => 
+        location.locationName === locationName.trim()
+      );
+      
+      if (DEBUG_MODE) {
+        showDebugInfo('拠点名検証', {
+          locationName: locationName,
+          isValid: isValid,
+          availableLocations: spreadsheetLocationMasterData.map(loc => loc.locationName),
+          totalLocations: spreadsheetLocationMasterData.length
+        });
+      }
+      
+      return isValid;
+    }
+    
+    // 拠点マスタデータが読み込まれていない場合
+    if (DEBUG_MODE) {
+      showDebugInfo('拠点マスタ未読み込み', {
+        locationName: locationName,
+        spreadsheetLocationMasterDataExists: !!spreadsheetLocationMasterData,
+        spreadsheetLocationMasterDataLength: spreadsheetLocationMasterData ? spreadsheetLocationMasterData.length : 0
+      });
+    }
+    
+    // 拠点マスタデータが読み込まれていない場合は、空でない文字列を有効とする
+    // （初期ロード時のフォールバック）
+    return true;
+  }
+
   // サマリーカードを作成する関数
   function createSummaryCards(data) {
     let cardsHtml = '';
@@ -559,15 +597,16 @@
       } else if (secondCell === 'SV') {
         // ヘッダー行をスキップ
         continue;
-      } else if (firstCell === '大阪' || firstCell === '神戸' || firstCell === '姫路' || firstCell === '合計') {
-        // データ行を追加
+      } else if (firstCell === '合計' || isValidLocationName(firstCell)) {
+        // データ行を追加（合計行または有効な拠点名の場合）
         currentCategoryData.push(row);
         
         if (DEBUG_MODE) {
           showDebugInfo('データ行追加', {
             location: firstCell,
             row: row,
-            category: currentCategory
+            category: currentCategory,
+            isValidLocation: isValidLocationName(firstCell)
           });
         }
       }

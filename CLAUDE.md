@@ -319,10 +319,29 @@ function include(filename) {
    - spreadsheet.html: 管轄選択UI追加
    - spreadsheet-functions.html: フィルタリング機能実装
 
+## 2025年1月: サマリー表示の動的化
+
+### 問題点
+- サマリーカード生成で拠点名をハードコード（`'大阪' || '神戸' || '姫路'`）
+- 新規拠点追加時に自動反映されない
+
+### 修正内容
+1. **動的拠点名検証機能**
+   - `isValidLocationName()`: 拠点マスタベースの動的検証
+   - ハードコード削除、拠点マスタから動的に取得
+
+2. **拡張性の実現**
+   - 新規拠点追加時の自動反映
+   - 拠点名変更時の自動対応
+   - 管轄フィルタリングとの完全統合
+
 ### テスト関数
 ```javascript
 // 管轄機能の統合テスト
 testJurisdictionFeatures()
+
+// サマリーデータの動的拠点表示テスト
+testDynamicSummaryDisplay()
 ```
 
 ## 未実装・改善予定

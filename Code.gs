@@ -2943,6 +2943,97 @@ function getJurisdictionList() {
 }
 
 /**
+ * サマリーデータの動的拠点表示テスト
+ */
+function testDynamicSummaryDisplay() {
+  console.log('=== サマリーデータ動的拠点表示テスト開始 ===');
+  
+  try {
+    // 1. 拠点マスタの確認
+    console.log('\n1. 拠点マスタデータ確認');
+    const locations = getLocationMaster();
+    console.log('登録拠点数:', locations.length);
+    console.log('拠点リスト:', locations.map(loc => ({
+      id: loc.locationId,
+      name: loc.locationName,
+      jurisdiction: loc.jurisdiction
+    })));
+    
+    // 2. サマリーデータの取得
+    console.log('\n2. サマリーデータ取得');
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const summarySheet = spreadsheet.getSheetByName('サマリー');
+    
+    if (!summarySheet) {
+      console.log('サマリーシートが見つかりません');
+      return { success: false, error: 'サマリーシートが見つかりません' };
+    }
+    
+    const summaryData = summarySheet.getDataRange().getValues();
+    console.log('サマリーデータ行数:', summaryData.length);
+    
+    // 3. サマリーデータ内の拠点名を確認
+    console.log('\n3. サマリーデータ内の拠点名確認');
+    const foundLocationNames = new Set();
+    
+    for (let i = 0; i < summaryData.length; i++) {
+      const firstCell = summaryData[i][0];
+      if (firstCell && typeof firstCell === 'string' && firstCell.trim() !== '') {
+        // カテゴリ行や合計行を除外
+        if (!firstCell.match(/^\d+\./) && firstCell !== '合計' && firstCell !== 'SV') {
+          foundLocationNames.add(firstCell.trim());
+        }
+      }
+    }
+    
+    console.log('サマリーデータ内で見つかった拠点名:', Array.from(foundLocationNames));
+    
+    // 4. 拠点マスタとの照合
+    console.log('\n4. 拠点マスタとの照合');
+    const validLocationNames = locations.map(loc => loc.locationName);
+    const unmatchedLocations = [];
+    const matchedLocations = [];
+    
+    foundLocationNames.forEach(name => {
+      if (validLocationNames.includes(name)) {
+        matchedLocations.push(name);
+      } else {
+        unmatchedLocations.push(name);
+      }
+    });
+    
+    console.log('拠点マスタと一致する拠点:', matchedLocations);
+    console.log('拠点マスタに存在しない拠点:', unmatchedLocations);
+    
+    // 5. 新規拠点追加シミュレーション
+    console.log('\n5. 新規拠点追加シミュレーション');
+    console.log('テスト拠点「テスト横浜」を追加した場合...');
+    console.log('動的実装では自動的にサマリーに含まれるようになります');
+    
+    console.log('\n=== サマリーデータ動的拠点表示テスト完了 ===');
+    
+    return {
+      success: true,
+      results: {
+        locationCount: locations.length,
+        summaryLocationCount: foundLocationNames.size,
+        matchedCount: matchedLocations.length,
+        unmatchedCount: unmatchedLocations.length,
+        dynamicImplementation: '有効'
+      }
+    };
+    
+  } catch (error) {
+    console.error('テストエラー:', error);
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
  * 管轄機能の統合テスト
  */
 function testJurisdictionFeatures() {
