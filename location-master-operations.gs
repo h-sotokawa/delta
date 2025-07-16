@@ -64,8 +64,10 @@ function getLocationMasterSheet() {
         '拠点名',          // B列
         '拠点コード',      // C列
         '管轄',            // D列
-        '作成日時',        // E列
-        'ステータス変更通知' // F列
+        'グループメール',  // E列
+        '作成日時',        // F列
+        'ステータス変更通知', // G列
+        'ステータス'      // H列
       ];
       
       sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -81,11 +83,13 @@ function getLocationMasterSheet() {
       sheet.setColumnWidth(2, 150); // 拠点名
       sheet.setColumnWidth(3, 120); // 拠点コード
       sheet.setColumnWidth(4, 100); // 管轄
-      sheet.setColumnWidth(5, 150); // 作成日時
-      sheet.setColumnWidth(6, 150); // ステータス変更通知
+      sheet.setColumnWidth(5, 200); // グループメール
+      sheet.setColumnWidth(6, 150); // 作成日時
+      sheet.setColumnWidth(7, 150); // ステータス変更通知
+      sheet.setColumnWidth(8, 100); // ステータス
       
       // 日付列のフォーマットをテキストに設定
-      const dateColumn = sheet.getRange(2, 5, sheet.getMaxRows() - 1, 1);
+      const dateColumn = sheet.getRange(2, 6, sheet.getMaxRows() - 1, 1);
       dateColumn.setNumberFormat('@');
       
       addLog('拠点マスタシート作成完了');
@@ -129,8 +133,10 @@ function getLocationMaster() {
     const nameCol = columnMap['拠点名'] !== undefined ? columnMap['拠点名'] : -1;
     const codeCol = columnMap['拠点コード'] !== undefined ? columnMap['拠点コード'] : -1;
     const jurisdictionCol = columnMap['管轄'] !== undefined ? columnMap['管轄'] : -1;
+    const groupEmailCol = columnMap['グループメール'] !== undefined ? columnMap['グループメール'] : columnMap['グループメールアドレス'] !== undefined ? columnMap['グループメールアドレス'] : -1;
     const createdDateCol = columnMap['作成日時'] !== undefined ? columnMap['作成日時'] : columnMap['作成日'] !== undefined ? columnMap['作成日'] : -1;
     const statusNotificationCol = columnMap['ステータス変更通知'] !== undefined ? columnMap['ステータス変更通知'] : -1;
+    const statusCol = columnMap['ステータス'] !== undefined ? columnMap['ステータス'] : -1;
     
     // 必須列の確認
     if (idCol === -1 || nameCol === -1) {
@@ -150,8 +156,10 @@ function getLocationMaster() {
         locationName: nameCol >= 0 ? (row[nameCol] || '') : '',
         locationCode: codeCol >= 0 ? (row[codeCol] || '') : '',
         jurisdiction: jurisdictionCol >= 0 ? (row[jurisdictionCol] || '') : '',
+        groupEmail: groupEmailCol >= 0 ? (row[groupEmailCol] || '') : '',
         createdDate: createdDateCol >= 0 ? (row[createdDateCol] || '') : '',
-        statusNotification: statusNotificationCol >= 0 ? (row[statusNotificationCol] === true || row[statusNotificationCol] === 'TRUE' || row[statusNotificationCol] === 'true') : false
+        statusNotification: statusNotificationCol >= 0 ? (row[statusNotificationCol] === true || row[statusNotificationCol] === 'TRUE' || row[statusNotificationCol] === 'true') : false,
+        status: statusCol >= 0 ? (row[statusCol] || 'active') : 'active'
       });
     }
     
@@ -234,6 +242,10 @@ function addLocation(locationData) {
     if (columnMap['管轄']) {
       sheet.getRange(newRow, columnMap['管轄']).setValue(locationData.jurisdiction || '関西');
     }
+    if (columnMap['グループメール'] || columnMap['グループメールアドレス']) {
+      const emailCol = columnMap['グループメール'] || columnMap['グループメールアドレス'];
+      sheet.getRange(newRow, emailCol).setValue(locationData.groupEmail || '');
+    }
     if (columnMap['作成日時'] || columnMap['作成日']) {
       const dateCol = columnMap['作成日時'] || columnMap['作成日'];
       sheet.getRange(newRow, dateCol).setValue(today);
@@ -242,6 +254,9 @@ function addLocation(locationData) {
     }
     if (columnMap['ステータス変更通知']) {
       sheet.getRange(newRow, columnMap['ステータス変更通知']).setValue(locationData.statusNotification || false);
+    }
+    if (columnMap['ステータス']) {
+      sheet.getRange(newRow, columnMap['ステータス']).setValue(locationData.status || 'active');
     }
     
     endPerformanceTimer(startTime, '拠点追加');
@@ -296,8 +311,15 @@ function updateLocation(locationId, updateData) {
         if (updateData.jurisdiction !== undefined && columnMap['管轄']) {
           sheet.getRange(row, columnMap['管轄']).setValue(updateData.jurisdiction);
         }
+        if (updateData.groupEmail !== undefined && (columnMap['グループメール'] || columnMap['グループメールアドレス'])) {
+          const emailCol = columnMap['グループメール'] || columnMap['グループメールアドレス'];
+          sheet.getRange(row, emailCol).setValue(updateData.groupEmail);
+        }
         if (updateData.statusNotification !== undefined && columnMap['ステータス変更通知']) {
           sheet.getRange(row, columnMap['ステータス変更通知']).setValue(updateData.statusNotification);
+        }
+        if (updateData.status !== undefined && columnMap['ステータス']) {
+          sheet.getRange(row, columnMap['ステータス']).setValue(updateData.status);
         }
         
         endPerformanceTimer(startTime, '拠点更新');
