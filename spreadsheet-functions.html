@@ -1101,76 +1101,117 @@
     errorDiv.textContent = '';
     tableContainer.innerHTML = '';
 
-    try {
+    // サマリー更新用に拠点マスタデータを確実に読み込み
+    if (!spreadsheetLocationMasterData || spreadsheetLocationMasterData.length === 0) {
+      if (DEBUG_MODE) {
+        showDebugInfo('サマリー更新: 拠点マスタデータを読み込み中', {
+          currentDataLength: spreadsheetLocationMasterData ? spreadsheetLocationMasterData.length : 0
+        });
+      }
+      
       google.script.run
-        .withSuccessHandler(function(response) {
-          loadingDiv.style.display = 'none';
-          
-          // ボタンのローディング状態を解除
-          if (refreshButton) {
-            refreshButton.classList.remove('loading');
-            refreshButton.disabled = false;
+        .withSuccessHandler(function(locations) {
+          spreadsheetLocationMasterData = locations || [];
+          if (DEBUG_MODE) {
+            showDebugInfo('サマリー更新: 拠点マスタデータ読み込み完了', {
+              locationsCount: spreadsheetLocationMasterData.length,
+              locationNames: spreadsheetLocationMasterData.map(loc => loc.locationName)
+            });
           }
           
-          if (!response) {
-            errorDiv.textContent = 'エラーが発生しました : スプレッドシート内の日時の表示形式を"書式なし"に変更してください';
-            tableContainer.innerHTML = '';
-            return;
-          }
-          
-          if (response.success) {
-            // 管轄フィルタリングを適用
-            if (selectedJurisdiction) {
-              filterSummaryDataByJurisdiction(response.data, selectedJurisdiction).then(function(filteredData) {
-                displayData(filteredData, 'all', 'summary');
+          // 拠点マスタ読み込み後にサマリーデータを取得
+          performSummaryDataRefresh();
+        })
+        .withFailureHandler(function(error) {
+          console.error('サマリー更新: 拠点マスタデータ読み込み失敗:', error);
+          spreadsheetLocationMasterData = [];
+          // エラーでも続行（フォールバック）
+          performSummaryDataRefresh();
+        })
+        .getLocationMaster();
+    } else {
+      // 既に読み込み済みの場合は直接サマリーデータを取得
+      if (DEBUG_MODE) {
+        showDebugInfo('サマリー更新: 拠点マスタデータ既存', {
+          locationsCount: spreadsheetLocationMasterData.length
+        });
+      }
+      performSummaryDataRefresh();
+    }
+    
+    // 実際のサマリーデータ更新処理
+    function performSummaryDataRefresh() {
+      try {
+        google.script.run
+          .withSuccessHandler(function(response) {
+            loadingDiv.style.display = 'none';
+            
+            // ボタンのローディング状態を解除
+            if (refreshButton) {
+              refreshButton.classList.remove('loading');
+              refreshButton.disabled = false;
+            }
+            
+            if (!response) {
+              errorDiv.textContent = 'エラーが発生しました : スプレッドシート内の日時の表示形式を"書式なし"に変更してください';
+              tableContainer.innerHTML = '';
+              return;
+            }
+            
+            if (response.success) {
+              // 管轄フィルタリングを適用
+              if (selectedJurisdiction) {
+                filterSummaryDataByJurisdiction(response.data, selectedJurisdiction).then(function(filteredData) {
+                  displayData(filteredData, 'all', 'summary');
+                  errorDiv.textContent = '';
+                  showPopupMessage('サマリーデータを更新しました');
+                  
+                  // 最終更新時刻を表示
+                  updateLastUpdateTime('lastUpdateTimeSummary', 'lastUpdateTimeSummaryText');
+                });
+              } else {
+                displayData(response.data, 'all', 'summary');
                 errorDiv.textContent = '';
                 showPopupMessage('サマリーデータを更新しました');
                 
                 // 最終更新時刻を表示
                 updateLastUpdateTime('lastUpdateTimeSummary', 'lastUpdateTimeSummaryText');
-              });
+              }
             } else {
-              displayData(response.data, 'all', 'summary');
-              errorDiv.textContent = '';
-              showPopupMessage('サマリーデータを更新しました');
-              
-              // 最終更新時刻を表示
-              updateLastUpdateTime('lastUpdateTimeSummary', 'lastUpdateTimeSummaryText');
+              const errorMessage = response.error || '不明なエラーが発生しました';
+              errorDiv.textContent = `サマリーデータの取得に失敗しました: ${errorMessage}`;
+              tableContainer.innerHTML = '';
             }
-          } else {
-            const errorMessage = response.error || '不明なエラーが発生しました';
-            errorDiv.textContent = `サマリーデータの取得に失敗しました: ${errorMessage}`;
+            
+            if (response.logs && typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+              showServerLogs(response.logs);
+            }
+          })
+          .withFailureHandler(function(error) {
+            loadingDiv.style.display = 'none';
+            
+            // ボタンのローディング状態を解除
+            if (refreshButton) {
+              refreshButton.classList.remove('loading');
+              refreshButton.disabled = false;
+            }
+            
+            errorDiv.textContent = `サマリーデータの取得中にエラーが発生しました: ${error}`;
             tableContainer.innerHTML = '';
-          }
-          
-          if (response.logs && typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-            showServerLogs(response.logs);
-          }
-        })
-        .withFailureHandler(function(error) {
-          loadingDiv.style.display = 'none';
-          
-          // ボタンのローディング状態を解除
-          if (refreshButton) {
-            refreshButton.classList.remove('loading');
-            refreshButton.disabled = false;
-          }
-          
-          errorDiv.textContent = `サマリーデータの取得中にエラーが発生しました: ${error}`;
-          tableContainer.innerHTML = '';
-        })
-        .getDestinationSheetData('サマリー', 'all');
-    } catch (error) {
-      loadingDiv.style.display = 'none';
-      
-      // ボタンのローディング状態を解除
-      if (refreshButton) {
-        refreshButton.classList.remove('loading');
-        refreshButton.disabled = false;
+          })
+          .getDestinationSheetData('サマリー', 'all');
+      } catch (error) {
+        loadingDiv.style.display = 'none';
+        
+        // ボタンのローディング状態を解除
+        if (refreshButton) {
+          refreshButton.classList.remove('loading');
+          refreshButton.disabled = false;
+        }
+        
+        errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
+        tableContainer.innerHTML = '';
       }
-      
-      errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
-      tableContainer.innerHTML = '';
     }
   }
 
@@ -3697,85 +3738,127 @@
       
       loadingDiv.style.display = 'block';
       
-      try {
-        if (!google || !google.script || !google.script.run) {
-          throw new Error('Google Apps Scriptの実行環境が正しく初期化されていません');
+      // サマリー表示用に拠点マスタデータを読み込み
+      if (!spreadsheetLocationMasterData || spreadsheetLocationMasterData.length === 0) {
+        if (DEBUG_MODE) {
+          showDebugInfo('サマリー表示: 拠点マスタデータを読み込み中', {
+            currentDataLength: spreadsheetLocationMasterData ? spreadsheetLocationMasterData.length : 0
+          });
         }
         
         google.script.run
-          .withSuccessHandler(function(response) {
+          .withSuccessHandler(function(locations) {
+            spreadsheetLocationMasterData = locations || [];
             if (DEBUG_MODE) {
-              showDebugInfo('サマリーデータ取得成功', {
-                response: response,
-                responseType: typeof response,
-                responseNull: response === null,
-                responseUndefined: response === undefined,
-                responseString: String(response)
+              showDebugInfo('サマリー表示: 拠点マスタデータ読み込み完了', {
+                locationsCount: spreadsheetLocationMasterData.length,
+                locationNames: spreadsheetLocationMasterData.map(loc => loc.locationName)
               });
             }
             
-            loadingDiv.style.display = 'none';
-            
-            if (!response) {
-              errorDiv.textContent = 'エラーが発生しました : スプレッドシート内の日時の表示形式を"書式なし"に変更してください';
-              tableContainer.innerHTML = '';
-              
-              // サーバーサイドのログを強制取得
-              if (DEBUG_MODE) {
-                console.log('⚠️ レスポンスがnullのため、サーバーログを確認します...');
-                google.script.run
-                  .withSuccessHandler(function(logResponse) {
-                    console.log('📋 サーバーログ取得結果:', logResponse);
-                    if (logResponse && logResponse.logs) {
-                      showServerLogs(logResponse.logs);
-                    }
-                  })
-                  .withFailureHandler(function(error) {
-                    console.log('❌ サーバーログ取得エラー:', error);
-                  })
-                  .getDestinationSheetData('サマリー', 'all');
-              }
-              return;
-            }
-            
-            if (response.success) {
-              displayData(response.data, 'all', 'summary');
-              errorDiv.textContent = '';
-              
-              // 最終更新時刻を表示
-              updateLastUpdateTime('lastUpdateTimeSummary', 'lastUpdateTimeSummaryText');
-              
-              if (typeof showPopupMessage === 'function') {
-                showPopupMessage('サマリーデータを読み込みました');
-              }
-            } else {
-              const errorMessage = response.error || '不明なエラーが発生しました';
-              errorDiv.textContent = `サマリーデータの取得に失敗しました: ${errorMessage}`;
-              tableContainer.innerHTML = '';
-            }
-            
-            if (response.logs && DEBUG_MODE) {
-              showServerLogs(response.logs);
-            }
+            // 拠点マスタ読み込み後にサマリーデータを取得
+            loadSummaryDataAfterLocationMaster();
           })
           .withFailureHandler(function(error) {
-            if (DEBUG_MODE) {
-              showDebugInfo('サマリーデータ通信エラー', { error });
-            }
-            
-            loadingDiv.style.display = 'none';
-            errorDiv.textContent = `サマリーデータの取得中にエラーが発生しました: ${error}`;
-            tableContainer.innerHTML = '';
+            console.error('サマリー表示: 拠点マスタデータ読み込み失敗:', error);
+            spreadsheetLocationMasterData = [];
+            // エラーでも続行（フォールバック）
+            loadSummaryDataAfterLocationMaster();
           })
-          .getDestinationSheetData('サマリー', 'all');
-      } catch (error) {
+          .getLocationMaster();
+      } else {
+        // 既に読み込み済みの場合は直接サマリーデータを取得
         if (DEBUG_MODE) {
-          showDebugInfo('サマリーデータ処理エラー', { error });
+          showDebugInfo('サマリー表示: 拠点マスタデータ既存', {
+            locationsCount: spreadsheetLocationMasterData.length
+          });
         }
-        
-        loadingDiv.style.display = 'none';
-        errorDiv.textContent = `クライアントサイドでエラーが発生しました: ${error}`;
-        tableContainer.innerHTML = '';
+        loadSummaryDataAfterLocationMaster();
+      }
+      
+      // 拠点マスタ読み込み後にサマリーデータを取得する関数
+      function loadSummaryDataAfterLocationMaster() {
+        try {
+          if (!google || !google.script || !google.script.run) {
+            throw new Error('Google Apps Scriptの実行環境が正しく初期化されていません');
+          }
+          
+          google.script.run
+            .withSuccessHandler(function(response) {
+              if (DEBUG_MODE) {
+                showDebugInfo('サマリーデータ取得成功', {
+                  response: response,
+                  responseType: typeof response,
+                  responseNull: response === null,
+                  responseUndefined: response === undefined,
+                  responseString: String(response),
+                  spreadsheetLocationMasterDataLength: spreadsheetLocationMasterData.length
+                });
+              }
+              
+              loadingDiv.style.display = 'none';
+              
+              if (!response) {
+                errorDiv.textContent = 'エラーが発生しました : スプレッドシート内の日時の表示形式を"書式なし"に変更してください';
+                tableContainer.innerHTML = '';
+                
+                // サーバーサイドのログを強制取得
+                if (DEBUG_MODE) {
+                  console.log('⚠️ レスポンスがnullのため、サーバーログを確認します...');
+                  google.script.run
+                    .withSuccessHandler(function(logResponse) {
+                      console.log('📋 サーバーログ取得結果:', logResponse);
+                      if (logResponse && logResponse.logs) {
+                        showServerLogs(logResponse.logs);
+                      }
+                    })
+                    .withFailureHandler(function(error) {
+                      console.log('❌ サーバーログ取得エラー:', error);
+                    })
+                    .getDestinationSheetData('サマリー', 'all');
+                }
+                return;
+              }
+              
+              if (response.success) {
+                displayData(response.data, 'all', 'summary');
+                errorDiv.textContent = '';
+                
+                // 最終更新時刻を表示
+                updateLastUpdateTime('lastUpdateTimeSummary', 'lastUpdateTimeSummaryText');
+                
+                if (typeof showPopupMessage === 'function') {
+                  showPopupMessage('サマリーデータを読み込みました');
+                }
+              } else {
+                const errorMessage = response.error || '不明なエラーが発生しました';
+                errorDiv.textContent = `サマリーデータの取得に失敗しました: ${errorMessage}`;
+                tableContainer.innerHTML = '';
+              }
+              
+              if (response.logs && DEBUG_MODE) {
+                showServerLogs(response.logs);
+              }
+            })
+            .withFailureHandler(function(error) {
+              if (DEBUG_MODE) {
+                showDebugInfo('サマリーデータ通信エラー', { error });
+              }
+              
+              loadingDiv.style.display = 'none';
+              errorDiv.textContent = `サマリーデータの取得中にエラーが発生しました: ${error}`;
+              tableContainer.innerHTML = '';
+            })
+            .getDestinationSheetData('サマリー', 'all');
+        } catch (error) {
+          if (DEBUG_MODE) {
+            showDebugInfo('サマリーデータ処理エラー', { error });
+          }
+          
+          loadingDiv.style.display = 'none';
+          errorDiv.textContent = `クライアントサイドでエラーが発生しました: ${error}`;
+          tableContainer.innerHTML = '';
+        }
       }
     }
   }
