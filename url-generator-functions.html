@@ -1316,22 +1316,18 @@
     // 既存のオプションをクリア
     locationSelect.innerHTML = '<option value="">拠点を選択してください</option>';
     
-    // 静的な拠点データ
-    const staticLocations = [
-      { locationId: 'himeji', locationName: '姫路', locationCode: 'HMJ' },
-      { locationId: 'nara', locationName: '奈良', locationCode: 'NAR' },
-      { locationId: 'keiji', locationName: '京滋', locationCode: 'KEI' },
-      { locationId: 'osaka', locationName: '大阪', locationCode: 'OSK' },
-      { locationId: 'kobe', locationName: '神戸', locationCode: 'KOB' }
-    ];
-    
-    staticLocations.forEach(function(location) {
-      const option = document.createElement('option');
-      option.value = location.locationId;
-      option.textContent = location.locationName;
-      option.setAttribute('data-code', location.locationCode);
-      locationSelect.appendChild(option);
-    });
+    // 拠点マスタデータから動的に取得
+    if (urlGeneratorLocationMasterData && urlGeneratorLocationMasterData.length > 0) {
+      urlGeneratorLocationMasterData.forEach(function(location) {
+        const option = document.createElement('option');
+        option.value = location.locationId;
+        option.textContent = location.locationName;
+        option.setAttribute('data-code', location.locationCode || location.locationId.toUpperCase());
+        locationSelect.appendChild(option);
+      });
+    } else {
+      console.error('URL生成: 拠点マスタデータが読み込まれていません');
+    }
     
     console.log('静的拠点データを追加しました。オプション数:', locationSelect.options.length);
     showErrorMessage('拠点データの読み込みに失敗したため、既定の拠点リストを使用しています');
@@ -1438,22 +1434,19 @@
     // 既存のオプションをクリア
     correctSelect.innerHTML = '<option value="">拠点を選択してください</option>';
     
-    // 手動でオプションを追加
-    const locations = [
-      { id: 'himeji', name: '姫路', code: 'HIMEJI' },
-      { id: 'nara', name: '奈良', code: 'NARA' },
-      { id: 'keiji', name: '京滋', code: 'KEIJI' },
-      { id: 'osaka', name: '大阪', code: 'OSAKA' }
-    ];
-    
-    locations.forEach(loc => {
-      const option = document.createElement('option');
-      option.value = loc.id;
-      option.textContent = loc.name;
-      option.setAttribute('data-code', loc.code);
-      correctSelect.appendChild(option);
-      console.log(`追加: ${loc.name}`);
-    });
+    // 拠点マスタデータから動的に追加
+    if (urlGeneratorLocationMasterData && urlGeneratorLocationMasterData.length > 0) {
+      urlGeneratorLocationMasterData.forEach(loc => {
+        const option = document.createElement('option');
+        option.value = loc.locationId;
+        option.textContent = loc.locationName;
+        option.setAttribute('data-code', loc.locationCode || loc.locationId.toUpperCase());
+        correctSelect.appendChild(option);
+        console.log(`追加: ${loc.locationName}`);
+      });
+    } else {
+      console.log('拠点マスタデータが未読み込みです');
+    }
     
     console.log('完了。現在のオプション数:', correctSelect.options.length);
     console.log('現在のHTML:', correctSelect.outerHTML);

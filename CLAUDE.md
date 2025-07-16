@@ -344,6 +344,54 @@ testJurisdictionFeatures()
 testDynamicSummaryDisplay()
 ```
 
+## 2025年1月: サマリー表示の動的拠点フィルタリング修正
+
+### 変更理由
+サマリー表示で拠点がハードコードされていた問題を修正し、全管轄表示時に全拠点が表示されない問題を解決
+
+### 変更内容
+
+#### ハードコード削除
+1. **opening-screen-functions.html**:
+   - フォールバック拠点（大阪・神戸・姫路）を削除
+   - 拠点マスタ未読み込み時は空配列を使用
+
+2. **url-generator-functions.html**:
+   - 静的拠点データを削除
+   - 拠点マスタから動的取得に変更
+
+#### 拠点マスタデータ読み込み修正
+**spreadsheet-functions.html**:
+1. **サマリー表示開始時の修正**:
+   - `loadDataBasedOnDataType()`関数で拠点マスタデータを確実に読み込む
+   - 読み込み完了後にサマリーデータを取得する順序に変更
+
+2. **サマリー更新時の修正**:
+   - `refreshSummaryData()`関数でも同様の処理を追加
+   - 既存データがある場合は再利用
+
+#### 全管轄対応修正
+**filterSummaryDataByJurisdiction()関数**:
+```javascript
+// 変更前: !jurisdictionで早期リターン
+if (!data || data.length === 0 || !jurisdiction) {
+  return data;
+}
+
+// 変更後: 全管轄（空文字）の場合も適切に処理
+if (!data || data.length === 0) {
+  return Promise.resolve(data);
+}
+if (!jurisdiction) {
+  return Promise.resolve(data); // 全管轄の場合は全データを返す
+}
+```
+
+### 影響範囲
+- **サマリー表示**: 拠点マスタに登録された全拠点が動的に表示される
+- **管轄フィルタリング**: 選択した管轄の拠点のみが表示される
+- **全管轄表示**: すべての拠点が正しく表示される
+
 ## 未実装・改善予定
 
 ### 優先度：高

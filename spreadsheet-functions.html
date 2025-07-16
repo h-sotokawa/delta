@@ -3492,12 +3492,16 @@
   
   // サマリーデータを管轄でフィルタリングする関数
   window.filterSummaryDataByJurisdiction = function filterSummaryDataByJurisdiction(data, jurisdiction) {
-    if (!data || data.length === 0 || !jurisdiction) {
-      return data;
+    if (!data || data.length === 0) {
+      return Promise.resolve(data);
     }
     
-    // 管轄に基づいて拠点リストを取得（同期的に処理するため事前に取得済みと仮定）
-    // 実際の実装では、拠点リストを事前に取得してキャッシュしておく必要があります
+    // 全管轄の場合（jurisdictionが空文字の場合）は、全データを返す
+    if (!jurisdiction) {
+      return Promise.resolve(data);
+    }
+    
+    // 特定の管轄が選択された場合のみフィルタリング
     return new Promise(function(resolve) {
       google.script.run
         .withSuccessHandler(function(locations) {
@@ -3514,10 +3518,19 @@
             const row = data[i];
             const rowLocation = row[0]; // 第1列が拠点名
             
-            // カテゴリ行（数字で始まる）または該当拠点の行を含める
-            if (!rowLocation || /^\d+\./.test(rowLocation) || locationNames.includes(rowLocation)) {
+            // カテゴリ行（数字で始まる）、合計行、または該当拠点の行を含める
+            if (!rowLocation || rowLocation === '合計' || /^\d+\./.test(rowLocation) || locationNames.includes(rowLocation)) {
               filteredData.push(row);
             }
+          }
+          
+          if (DEBUG_MODE) {
+            showDebugInfo('管轄フィルタリング結果', {
+              jurisdiction: jurisdiction,
+              totalRows: data.length,
+              filteredRows: filteredData.length,
+              locationNames: locationNames
+            });
           }
           
           resolve(filteredData);

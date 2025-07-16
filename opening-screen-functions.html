@@ -75,7 +75,7 @@
     // プログレス初期化
     const locations = locationMasterData.length > 0 ? 
       locationMasterData.map(loc => loc.locationId) : 
-      ['osaka', 'kobe', 'himeji']; // フォールバック
+      []; // 拠点マスタが未読み込みの場合は空配列
     totalLocations = locations.length;
     completedLocations = 0;
     preloadedData = {};
@@ -88,7 +88,7 @@
   function loadAllLocationsDataInBackground() {
     const locations = locationMasterData.length > 0 ? 
       locationMasterData.map(loc => loc.locationId) : 
-      ['osaka', 'kobe', 'himeji']; // フォールバック
+      []; // 拠点マスタが未読み込みの場合は空配列
     let currentIndex = 0;
     
     function loadNextLocation() {
@@ -278,11 +278,7 @@
     console.log('プリロードデータの状況:');
     const locations = locationMasterData.length > 0 ? 
       locationMasterData : 
-      [
-        {locationId: 'osaka', locationName: '大阪'},
-        {locationId: 'kobe', locationName: '神戸'},
-        {locationId: 'himeji', locationName: '姫路'}
-      ]; // フォールバック
+      []; // 拠点マスタが未読み込みの場合は空配列
     
     locations.forEach(location => {
       const status = isDataPreloaded(location.locationId) ? '✓ ロード済み' : '✗ 未ロード';
