@@ -2569,23 +2569,23 @@ function getLocationMasterSheet() {
       // シートが存在しない場合は作成
       sheet = spreadsheet.insertSheet('拠点マスタ');
       
-      // ヘッダー行を設定
-      const headers = ['拠点ID', '拠点名', '拠点コード', 'グループメールアドレス', 'ステータス', '作成日', '更新日'];
+      // ヘッダー行を設定（管轄とステータス変更通知を追加）
+      const headers = ['拠点ID', '拠点名', '拠点コード', '管轄', 'グループメールアドレス', 'ステータス変更通知', 'ステータス', '作成日', '更新日'];
       sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
       
-      // 初期データを挿入
+      // 初期データを挿入（設計書に基づいた管轄情報を追加）
       const initialData = [
-        ['osaka', '大阪', 'OSK', '', 'active', Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')],
-        ['kobe', '神戸', 'KOB', '', 'active', Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')],
-        ['himeji', '姫路', 'HMJ', '', 'active', Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')]
+        ['osaka', '大阪', 'OSAKA', '関西', 'test-group@example.com', false, 'active', Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')],
+        ['kobe', '神戸', 'KOBE', '関西', 'test-group@example.com', false, 'active', Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')],
+        ['himeji', '姫路', 'HIMEJI', '関西', 'test-group@example.com', false, 'active', Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'), Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')]
       ];
       
       if (initialData.length > 0) {
         sheet.getRange(2, 1, initialData.length, headers.length).setValues(initialData);
       }
       
-      // 日付列のフォーマットを設定
-      sheet.getRange(2, 6, sheet.getLastRow() - 1, 2).setNumberFormat('@'); // テキスト形式
+      // 日付列のフォーマットを設定（8列目と9列目が日付列）
+      sheet.getRange(2, 8, sheet.getLastRow() - 1, 2).setNumberFormat('@'); // テキスト形式
       
       addLog('拠点マスタシート作成完了');
     }
@@ -2623,7 +2623,7 @@ function getLocationMaster() {
       return [];
     }
     
-    const dataRange = sheet.getRange(2, 1, lastRow - 1, 7);
+    const dataRange = sheet.getRange(2, 1, lastRow - 1, 9); // 9列に変更
     const data = dataRange.getValues();
     addLog('データ取得', { 
       rangeAddress: dataRange.getA1Notation(),
@@ -2640,9 +2640,12 @@ function getLocationMaster() {
           locationId: String(row[0]),
           locationName: String(row[1]),
           locationCode: String(row[2]),
-          groupEmail: String(row[3] || ''),
-          status: String(row[4])
-          // createdAt と updatedAt を削除（日付処理をスキップ）
+          jurisdiction: String(row[3]),  // 管轄を追加
+          groupEmail: String(row[4] || ''),
+          statusChangeNotification: row[5] === true || row[5] === 'true',  // ステータス変更通知を追加
+          status: String(row[6]),
+          createdAt: String(row[7] || ''),  // 作成日
+          updatedAt: String(row[8] || '')   // 更新日
         };
         locations.push(location);
         addLog(`拠点データ追加 ${i + 1}`, location);
@@ -2707,12 +2710,14 @@ function addLocation(locationData) {
       throw new Error('同じ拠点IDが既に存在します');
     }
     
-    // 新規行を追加
+    // 新規行を追加（管轄とステータス変更通知を含む）
     const newRow = [
       locationData.locationId,
       locationData.locationName,
       locationData.locationCode,
+      locationData.jurisdiction || '',  // 管轄
       locationData.groupEmail || '',
+      locationData.statusChangeNotification === true || locationData.statusChangeNotification === 'true',  // ステータス変更通知
       locationData.status || 'active',
       Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'),
       Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd')
@@ -2720,9 +2725,9 @@ function addLocation(locationData) {
     
     sheet.appendRow(newRow);
     
-    // 日付列のフォーマットを設定
+    // 日付列のフォーマットを設定（8列目と9列目）
     const lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow, 6, 1, 2).setNumberFormat('@'); // テキスト形式
+    sheet.getRange(lastRow, 8, 1, 2).setNumberFormat('@'); // テキスト形式
     
     endPerformanceTimer(startTime, '新規拠点追加');
     addLog('新規拠点追加完了');
@@ -2757,16 +2762,22 @@ function updateLocation(locationId, updateData) {
         if (updateData.locationCode !== undefined) {
           sheet.getRange(row, 3).setValue(updateData.locationCode);
         }
+        if (updateData.jurisdiction !== undefined) {
+          sheet.getRange(row, 4).setValue(updateData.jurisdiction);  // 管轄
+        }
         if (updateData.groupEmail !== undefined) {
-          sheet.getRange(row, 4).setValue(updateData.groupEmail);
+          sheet.getRange(row, 5).setValue(updateData.groupEmail);
+        }
+        if (updateData.statusChangeNotification !== undefined) {
+          sheet.getRange(row, 6).setValue(updateData.statusChangeNotification === true || updateData.statusChangeNotification === 'true');  // ステータス変更通知
         }
         if (updateData.status !== undefined) {
-          sheet.getRange(row, 5).setValue(updateData.status);
+          sheet.getRange(row, 7).setValue(updateData.status);
         }
         
-        // 更新日を更新
-        sheet.getRange(row, 7).setValue(Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'));
-        sheet.getRange(row, 7).setNumberFormat('@'); // テキスト形式
+        // 更新日を更新（9列目）
+        sheet.getRange(row, 9).setValue(Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd'));
+        sheet.getRange(row, 9).setNumberFormat('@'); // テキスト形式
         
         endPerformanceTimer(startTime, '拠点情報更新');
         addLog('拠点情報更新完了');
@@ -2812,6 +2823,213 @@ function deleteLocation(locationId) {
     endPerformanceTimer(startTime, '拠点削除エラー');
     addLog('拠点削除エラー', { error: error.toString() });
     return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * 既存の拠点マスタに管轄フィールドを追加する初期化関数
+ */
+function initializeLocationMasterJurisdiction() {
+  const startTime = startPerformanceTimer();
+  addLog('拠点マスタ管轄フィールド初期化開始');
+  
+  try {
+    const sheet = getLocationMasterSheet();
+    const lastRow = sheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      addLog('データがないため初期化をスキップ');
+      return { success: true, message: 'データがないため初期化をスキップしました' };
+    }
+    
+    // ヘッダー行を確認
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const hasJurisdiction = headers.includes('管轄');
+    const hasStatusNotification = headers.includes('ステータス変更通知');
+    
+    if (hasJurisdiction && hasStatusNotification) {
+      addLog('既に管轄フィールドが存在します');
+      return { success: true, message: '既に管轄フィールドが存在します' };
+    }
+    
+    // 既存データの管轄情報を設定
+    for (let row = 2; row <= lastRow; row++) {
+      const locationId = sheet.getRange(row, 1).getValue();
+      
+      // 既存拠点の管轄を設定（デフォルトは関西）
+      if (!hasJurisdiction) {
+        const currentJurisdiction = sheet.getRange(row, 4).getValue();
+        if (!currentJurisdiction || currentJurisdiction === '') {
+          sheet.getRange(row, 4).setValue('関西');
+        }
+      }
+      
+      // ステータス変更通知のデフォルト値を設定
+      if (!hasStatusNotification) {
+        const currentNotification = sheet.getRange(row, 6).getValue();
+        if (currentNotification === '' || currentNotification === null) {
+          sheet.getRange(row, 6).setValue(false);
+        }
+      }
+    }
+    
+    endPerformanceTimer(startTime, '拠点マスタ管轄フィールド初期化');
+    addLog('拠点マスタ管轄フィールド初期化完了');
+    
+    return { success: true, message: '管轄フィールドの初期化が完了しました' };
+  } catch (error) {
+    endPerformanceTimer(startTime, '拠点マスタ管轄フィールド初期化エラー');
+    addLog('拠点マスタ管轄フィールド初期化エラー', { error: error.toString() });
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * 管轄に基づいて拠点を取得
+ */
+function getLocationsByJurisdiction(jurisdiction) {
+  const startTime = startPerformanceTimer();
+  addLog('管轄別拠点取得開始', { jurisdiction });
+  
+  try {
+    const allLocations = getLocationMaster();
+    
+    if (!jurisdiction || jurisdiction === '') {
+      // 管轄指定なしの場合は全拠点を返す
+      endPerformanceTimer(startTime, '管轄別拠点取得（全件）');
+      return allLocations;
+    }
+    
+    // 指定された管轄の拠点のみをフィルタリング
+    const filteredLocations = allLocations.filter(location => 
+      location.jurisdiction === jurisdiction
+    );
+    
+    endPerformanceTimer(startTime, '管轄別拠点取得');
+    addLog('管轄別拠点取得完了', { 
+      jurisdiction,
+      totalLocations: allLocations.length,
+      filteredLocations: filteredLocations.length 
+    });
+    
+    return filteredLocations;
+  } catch (error) {
+    endPerformanceTimer(startTime, '管轄別拠点取得エラー');
+    addLog('管轄別拠点取得エラー', { error: error.toString() });
+    throw error;
+  }
+}
+
+/**
+ * 管轄リストを取得（重複なし）
+ */
+function getJurisdictionList() {
+  const startTime = startPerformanceTimer();
+  addLog('管轄リスト取得開始');
+  
+  try {
+    const locations = getLocationMaster();
+    const jurisdictions = [...new Set(locations.map(loc => loc.jurisdiction).filter(j => j && j !== ''))];
+    
+    endPerformanceTimer(startTime, '管轄リスト取得');
+    addLog('管轄リスト取得完了', { jurisdictions });
+    
+    return jurisdictions.sort();
+  } catch (error) {
+    endPerformanceTimer(startTime, '管轄リスト取得エラー');
+    addLog('管轄リスト取得エラー', { error: error.toString() });
+    throw error;
+  }
+}
+
+/**
+ * 管轄機能の統合テスト
+ */
+function testJurisdictionFeatures() {
+  console.log('=== 管轄機能統合テスト開始 ===');
+  
+  try {
+    // 1. 既存データの初期化
+    console.log('\n1. 既存データの管轄フィールド初期化');
+    const initResult = initializeLocationMasterJurisdiction();
+    console.log('初期化結果:', initResult);
+    
+    // 2. 管轄リストの取得テスト
+    console.log('\n2. 管轄リスト取得テスト');
+    const jurisdictions = getJurisdictionList();
+    console.log('管轄リスト:', jurisdictions);
+    
+    // 3. 管轄別拠点取得テスト
+    console.log('\n3. 管轄別拠点取得テスト');
+    jurisdictions.forEach(jurisdiction => {
+      const locations = getLocationsByJurisdiction(jurisdiction);
+      console.log(`管轄「${jurisdiction}」の拠点数:`, locations.length);
+      console.log('拠点リスト:', locations.map(loc => loc.locationName));
+    });
+    
+    // 4. 新規拠点追加テスト（管轄とステータス変更通知を含む）
+    console.log('\n4. 新規拠点追加テスト');
+    const testLocation = {
+      locationId: 'test_tokyo',
+      locationName: 'テスト東京',
+      locationCode: 'TESTTOKYO',
+      jurisdiction: '関東',
+      groupEmail: 'tokyo-test@example.com',
+      statusChangeNotification: true,
+      status: 'active'
+    };
+    
+    // 既存の場合は削除
+    try {
+      deleteLocation(testLocation.locationId);
+    } catch (e) {
+      // 無視
+    }
+    
+    const addResult = addLocation(testLocation);
+    console.log('追加結果:', addResult);
+    
+    // 5. 追加した拠点の確認
+    console.log('\n5. 追加した拠点の確認');
+    const addedLocation = getLocationById(testLocation.locationId);
+    console.log('追加された拠点:', addedLocation);
+    
+    // 6. 拠点情報の更新テスト
+    console.log('\n6. 拠点情報更新テスト');
+    const updateData = {
+      jurisdiction: '中部',
+      statusChangeNotification: false
+    };
+    const updateResult = updateLocation(testLocation.locationId, updateData);
+    console.log('更新結果:', updateResult);
+    
+    // 7. 更新後の確認
+    console.log('\n7. 更新後の確認');
+    const updatedLocation = getLocationById(testLocation.locationId);
+    console.log('更新された拠点:', updatedLocation);
+    
+    // 8. テストデータのクリーンアップ
+    console.log('\n8. テストデータのクリーンアップ');
+    const deleteResult = deleteLocation(testLocation.locationId);
+    console.log('削除結果:', deleteResult);
+    
+    console.log('\n=== 管轄機能統合テスト完了 ===');
+    
+    return {
+      success: true,
+      results: {
+        initResult,
+        jurisdictions,
+        testResults: 'All tests passed'
+      }
+    };
+    
+  } catch (error) {
+    console.error('テストエラー:', error);
+    return {
+      success: false,
+      error: error.toString()
+    };
   }
 }
 

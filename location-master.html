@@ -29,7 +29,9 @@
             <th>拠点ID</th>
             <th>拠点名</th>
             <th>拠点コード</th>
+            <th>管轄</th>
             <th>グループメールアドレス</th>
+            <th>ステータス変更通知</th>
             <th>ステータス</th>
             <th>作成日</th>
             <th>更新日</th>
@@ -77,8 +79,17 @@
               拠点コード <span class="required">*</span>
             </label>
             <input type="text" id="locationCode" name="locationCode" required 
-                   placeholder="例: OSA" maxlength="10" pattern="[A-Z0-9]+">
-            <small class="help-text">大文字英数字のみ使用可能</small>
+                   placeholder="例: OSAKA" maxlength="20" pattern="[A-Z]+">
+            <small class="help-text">大文字英語のみ使用可能（数字不可）</small>
+          </div>
+
+          <div class="form-group">
+            <label for="jurisdiction">
+              管轄 <span class="required">*</span>
+            </label>
+            <input type="text" id="jurisdiction" name="jurisdiction" required 
+                   placeholder="例: 関西" maxlength="50">
+            <small class="help-text">管轄エリア名（関西、関東、九州など）</small>
           </div>
 
           <div class="form-group">
@@ -86,8 +97,21 @@
               グループメールアドレス <span class="required">*</span>
             </label>
             <input type="email" id="groupEmail" name="groupEmail" required
-                   placeholder="例: osaka-group@company.jp" maxlength="100">
+                   placeholder="例: test-group@example.com" maxlength="100">
             <small class="help-text">課のグループメールアドレスを入力してください</small>
+          </div>
+
+          <div class="form-group">
+            <label for="statusChangeNotification">
+              ステータス変更通知
+            </label>
+            <div class="checkbox-wrapper">
+              <input type="checkbox" id="statusChangeNotification" name="statusChangeNotification">
+              <label for="statusChangeNotification" class="checkbox-label">
+                ステータス変更時に通知を送信する
+              </label>
+            </div>
+            <small class="help-text">チェックを入れると、この拠点の機器のステータスが変更された際に通知メールが送信されます</small>
           </div>
 
           <div class="form-group">

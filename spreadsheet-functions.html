@@ -1044,6 +1044,7 @@
   // サマリーデータを更新
   window.refreshSummaryData = function refreshSummaryData() {
     const refreshButton = document.getElementById('refreshSummaryButton');
+    const selectedJurisdiction = document.getElementById('jurisdictionSummary').value;
     
     // ボタンのローディング状態を設定
     if (refreshButton) {
@@ -1051,7 +1052,7 @@
       refreshButton.disabled = true;
     }
 
-    showDebugInfo('サマリーデータ手動更新開始', {});
+    showDebugInfo('サマリーデータ手動更新開始', { jurisdiction: selectedJurisdiction });
     
     const errorDiv = document.getElementById('error');
     const tableContainer = document.getElementById('tableContainer');
@@ -1079,12 +1080,24 @@
           }
           
           if (response.success) {
-            displayData(response.data, 'all', 'summary');
-            errorDiv.textContent = '';
-            showPopupMessage('サマリーデータを更新しました');
-            
-            // 最終更新時刻を表示
-            updateLastUpdateTime('lastUpdateTimeSummary', 'lastUpdateTimeSummaryText');
+            // 管轄フィルタリングを適用
+            if (selectedJurisdiction) {
+              filterSummaryDataByJurisdiction(response.data, selectedJurisdiction).then(function(filteredData) {
+                displayData(filteredData, 'all', 'summary');
+                errorDiv.textContent = '';
+                showPopupMessage('サマリーデータを更新しました');
+                
+                // 最終更新時刻を表示
+                updateLastUpdateTime('lastUpdateTimeSummary', 'lastUpdateTimeSummaryText');
+              });
+            } else {
+              displayData(response.data, 'all', 'summary');
+              errorDiv.textContent = '';
+              showPopupMessage('サマリーデータを更新しました');
+              
+              // 最終更新時刻を表示
+              updateLastUpdateTime('lastUpdateTimeSummary', 'lastUpdateTimeSummaryText');
+            }
           } else {
             const errorMessage = response.error || '不明なエラーが発生しました';
             errorDiv.textContent = `サマリーデータの取得に失敗しました: ${errorMessage}`;
@@ -3378,12 +3391,16 @@
       document.querySelector('.audit-sheet-selector').style.display = 'block';
       document.querySelector('.summary-refresh-selector').style.display = 'none';
       document.querySelector('.query-selector').style.display = 'none';
+      // 管轄リストを読み込む
+      loadJurisdictionList('audit');
     } else if (dataTypeId === 'SUMMARY') {
       // サマリーデータの場合
       document.querySelector('.location-selector').style.display = 'none';
       document.querySelector('.audit-sheet-selector').style.display = 'none';
       document.querySelector('.summary-refresh-selector').style.display = 'block';
       document.querySelector('.query-selector').style.display = 'none';
+      // 管轄リストを読み込む
+      loadJurisdictionList('summary');
     } else {
       // その他のデータタイプ（カスタム）
       document.querySelector('.location-selector').style.display = 'block';
@@ -3393,6 +3410,107 @@
     }
   }
   
+  // サマリーデータを管轄でフィルタリングする関数
+  window.filterSummaryDataByJurisdiction = function filterSummaryDataByJurisdiction(data, jurisdiction) {
+    if (!data || data.length === 0 || !jurisdiction) {
+      return data;
+    }
+    
+    // 管轄に基づいて拠点リストを取得（同期的に処理するため事前に取得済みと仮定）
+    // 実際の実装では、拠点リストを事前に取得してキャッシュしておく必要があります
+    return new Promise(function(resolve) {
+      google.script.run
+        .withSuccessHandler(function(locations) {
+          const locationNames = locations.map(loc => loc.locationName);
+          const filteredData = [];
+          
+          // ヘッダー行は必ず含める
+          if (data.length > 0) {
+            filteredData.push(data[0]);
+          }
+          
+          // データ行をフィルタリング
+          for (let i = 1; i < data.length; i++) {
+            const row = data[i];
+            const rowLocation = row[0]; // 第1列が拠点名
+            
+            // カテゴリ行（数字で始まる）または該当拠点の行を含める
+            if (!rowLocation || /^\d+\./.test(rowLocation) || locationNames.includes(rowLocation)) {
+              filteredData.push(row);
+            }
+          }
+          
+          resolve(filteredData);
+        })
+        .withFailureHandler(function(error) {
+          console.error('拠点リスト取得エラー:', error);
+          resolve(data); // エラー時は元のデータを返す
+        })
+        .getLocationsByJurisdiction(jurisdiction);
+    });
+  }
+
+  // 管轄リストを読み込む関数
+  window.loadJurisdictionList = function loadJurisdictionList(dataType) {
+    google.script.run
+      .withSuccessHandler(function(jurisdictions) {
+        const selectId = dataType === 'audit' ? 'jurisdictionAudit' : 'jurisdictionSummary';
+        const select = document.getElementById(selectId);
+        
+        // 既存のオプションをクリア
+        select.innerHTML = dataType === 'audit' 
+          ? '<option value="">管轄を選択してください</option>'
+          : '<option value="">全管轄</option>';
+        
+        // 管轄オプションを追加
+        jurisdictions.forEach(function(jurisdiction) {
+          const option = document.createElement('option');
+          option.value = jurisdiction;
+          option.textContent = jurisdiction;
+          select.appendChild(option);
+        });
+      })
+      .withFailureHandler(function(error) {
+        console.error('管轄リスト読み込みエラー:', error);
+      })
+      .getJurisdictionList();
+  }
+  
+  // 管轄変更イベントハンドラー
+  window.handleJurisdictionChange = function handleJurisdictionChange(dataType) {
+    if (dataType === 'audit') {
+      const jurisdiction = document.getElementById('jurisdictionAudit').value;
+      const auditSheetSelect = document.getElementById('auditSheet');
+      
+      if (jurisdiction) {
+        // 管轄に基づいて拠点リストを更新
+        google.script.run
+          .withSuccessHandler(function(locations) {
+            auditSheetSelect.innerHTML = '<option value="">拠点を選択してください</option>';
+            locations.forEach(function(location) {
+              const option = document.createElement('option');
+              option.value = location.locationName;
+              option.textContent = location.locationName;
+              auditSheetSelect.appendChild(option);
+            });
+            auditSheetSelect.disabled = false;
+          })
+          .withFailureHandler(function(error) {
+            console.error('拠点リスト読み込みエラー:', error);
+          })
+          .getLocationsByJurisdiction(jurisdiction);
+      } else {
+        // 管轄が選択されていない場合
+        auditSheetSelect.innerHTML = '<option value="">管轄を先に選択してください</option>';
+        auditSheetSelect.disabled = true;
+        document.getElementById('refreshAuditButton').disabled = true;
+      }
+    } else if (dataType === 'summary') {
+      // サマリーデータの管轄変更時は即座に更新
+      refreshSummaryData();
+    }
+  }
+
   // 監査シート変更イベントハンドラー
   window.handleAuditSheetChange = function handleAuditSheetChange() {
     const auditSheet = document.getElementById('auditSheet').value;
@@ -3528,7 +3646,7 @@
         })
         .getDestinationSheetData(auditSheet, 'all');
         
-    } else if (sheetType === 'summary') {
+    } else if (dataTypeId === 'SUMMARY') {
       // サマリーデータ：即座に読み込み
       if (DEBUG_MODE) {
         showDebugInfo('サマリーデータ読み込み開始', {});

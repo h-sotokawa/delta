@@ -35,7 +35,7 @@
     tbody.innerHTML = '';
 
     if (!locations || locations.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="text-center">拠点データがありません</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" class="text-center">拠点データがありません</td></tr>';
       return;
     }
 
@@ -46,15 +46,21 @@
       const statusBadge = location.status === 'active' 
         ? '<span class="badge badge-success">有効</span>'
         : '<span class="badge badge-secondary">無効</span>';
+      
+      const notificationBadge = location.statusChangeNotification 
+        ? '<span class="badge badge-info">ON</span>'
+        : '<span class="badge badge-light">OFF</span>';
 
       row.innerHTML = `
         <td>${escapeHtml(location.locationId)}</td>
         <td>${escapeHtml(location.locationName)}</td>
         <td>${escapeHtml(location.locationCode)}</td>
+        <td>${escapeHtml(location.jurisdiction || '')}</td>
         <td>${escapeHtml(location.groupEmail || '')}</td>
+        <td>${notificationBadge}</td>
         <td>${statusBadge}</td>
-        <td>${location.createdAt || '-'}</td>
-        <td>${location.updatedAt || '-'}</td>
+        <td>${formatDate(location.createdAt) || '-'}</td>
+        <td>${formatDate(location.updatedAt) || '-'}</td>
         <td>
           <button class="btn btn-sm btn-outline-primary" onclick="editLocation('${location.locationId}')">
             <i class="fas fa-edit"></i> 編集
@@ -109,7 +115,9 @@
     document.getElementById('locationId').disabled = true;
     document.getElementById('locationName').value = location.locationName;
     document.getElementById('locationCode').value = location.locationCode;
+    document.getElementById('jurisdiction').value = location.jurisdiction || '';
     document.getElementById('groupEmail').value = location.groupEmail || '';
+    document.getElementById('statusChangeNotification').checked = location.statusChangeNotification === true;
     document.getElementById('locationStatus').value = location.status;
     document.getElementById('locationModal').style.display = 'block';
   }
@@ -160,7 +168,9 @@
       locationId: locationId, // 上で取得した正しい拠点IDを使用
       locationName: formData.get('locationName'),
       locationCode: formData.get('locationCode'),
+      jurisdiction: formData.get('jurisdiction'),
       groupEmail: formData.get('groupEmail'),
+      statusChangeNotification: formData.get('statusChangeNotification') === 'on',
       status: formData.get('status')
     };
     const operation = isEdit ? '更新' : '追加';
@@ -251,9 +261,18 @@
       return false;
     }
 
-    if (!locationCode || !locationCode.match(/^[A-Z0-9]+$/)) {
+    if (!locationCode || !locationCode.match(/^[A-Z]+$/)) {
       console.log('拠点コードバリデーションエラー:', locationCode);
-      const errorMsg = '拠点コードは大文字英数字のみ使用可能です';
+      const errorMsg = '拠点コードは大文字英語のみ使用可能です（数字不可）';
+      showError(errorMsg);
+      setTimeout(() => alert('エラー: ' + errorMsg), 100);
+      return false;
+    }
+    
+    const jurisdiction = formData.get('jurisdiction');
+    if (!jurisdiction) {
+      console.log('管轄バリデーションエラー:', jurisdiction);
+      const errorMsg = '管轄を入力してください';
       showError(errorMsg);
       setTimeout(() => alert('エラー: ' + errorMsg), 100);
       return false;
@@ -279,6 +298,33 @@
 
     console.log('バリデーション全て成功');
     return true;
+  }
+
+  // ========================================
+  // 日付フォーマット関数
+  // ========================================
+  function formatDate(dateValue) {
+    if (!dateValue) return '';
+    
+    try {
+      // 既に文字列の場合はそのまま返す
+      if (typeof dateValue === 'string') {
+        return dateValue;
+      }
+      
+      // Dateオブジェクトの場合
+      if (dateValue instanceof Date) {
+        const year = dateValue.getFullYear();
+        const month = (dateValue.getMonth() + 1).toString().padStart(2, '0');
+        const day = dateValue.getDate().toString().padStart(2, '0');
+        return `${year}/${month}/${day}`;
+      }
+      
+      return dateValue.toString();
+    } catch (error) {
+      console.error('日付フォーマットエラー:', error, dateValue);
+      return '';
+    }
   }
 
   // ========================================

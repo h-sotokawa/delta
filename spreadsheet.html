@@ -37,12 +37,14 @@
     
     <!-- 監査データ用の詳細選択 -->
     <div class="audit-sheet-selector" style="display: none;">
+      <label for="jurisdictionAudit">管轄を選択：</label>
+      <select id="jurisdictionAudit" onchange="if(window.handleJurisdictionChange) window.handleJurisdictionChange('audit')">
+        <option value="">管轄を選択してください</option>
+      </select>
+      
       <label for="auditSheet">監査シートを選択：</label>
-      <select id="auditSheet" onchange="if(window.handleAuditSheetChange) window.handleAuditSheetChange()">
-        <option value="">選択してください</option>
-        <option value="大阪">大阪</option>
-        <option value="神戸">神戸</option>
-        <option value="姫路">姫路</option>
+      <select id="auditSheet" onchange="if(window.handleAuditSheetChange) window.handleAuditSheetChange()" disabled>
+        <option value="">管轄を先に選択してください</option>
       </select>
       <button id="refreshAuditButton" class="refresh-button" onclick="if(window.refreshAuditData) window.refreshAuditData()" disabled>
         <i class="fas fa-sync-alt"></i>
@@ -56,7 +58,11 @@
     
     <!-- サマリーデータ用の更新ボタン -->
     <div class="summary-refresh-selector" style="display: none;">
-      <label>サマリーデータ：</label>
+      <label for="jurisdictionSummary">管轄を選択：</label>
+      <select id="jurisdictionSummary" onchange="if(window.handleJurisdictionChange) window.handleJurisdictionChange('summary')">
+        <option value="">全管轄</option>
+      </select>
+      
       <button id="refreshSummaryButton" class="refresh-button" onclick="if(window.refreshSummaryData) window.refreshSummaryData()">
         <i class="fas fa-sync-alt"></i>
         更新
