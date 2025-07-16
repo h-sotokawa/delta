@@ -3658,6 +3658,22 @@
       return;
     }
     
+    // カスタムデータタイプの処理
+    const dataTypeData = dataTypeMasterData.find(dt => dt.dataTypeId === dataTypeId);
+    if (dataTypeData && dataTypeData.targetSheet) {
+      switch (dataTypeData.targetSheet) {
+        case 'INTEGRATED_VIEW':
+          loadViewSheetData('integrated_view');
+          return;
+        case 'SEARCH_INDEX':
+          loadViewSheetData('search_index');
+          return;
+        case 'SUMMARY_VIEW':
+          loadViewSheetData('summary_view');
+          return;
+      }
+    }
+    
     if (dataTypeId === 'NORMAL') {
       // 通常データ：拠点選択が必要
       const location = locationSelect ? locationSelect.value : '';
@@ -3901,6 +3917,125 @@
   };
   */
   
+  // ビューシートデータを読み込む関数
+  window.loadViewSheetData = function loadViewSheetData(viewType) {
+    showDebugInfo('ビューシートデータ読み込み開始', { viewType });
+    
+    const errorDiv = document.getElementById('error');
+    const tableContainer = document.getElementById('tableContainer');
+    const loadingDiv = document.getElementById('loading');
+    
+    loadingDiv.style.display = 'block';
+    errorDiv.textContent = '';
+    tableContainer.innerHTML = '';
+    
+    // フィルター条件を収集
+    const filters = {};
+    
+    // 管轄フィルター
+    const jurisdictionSelect = document.getElementById('jurisdictionFilter');
+    if (jurisdictionSelect && jurisdictionSelect.value) {
+      filters.jurisdiction = jurisdictionSelect.value;
+    }
+    
+    // 拠点フィルター
+    const locationSelect = document.getElementById('location');
+    if (locationSelect && locationSelect.value && viewType !== 'search_index') {
+      // 検索インデックス以外では拠点フィルターを適用
+      const locationData = spreadsheetLocationMasterData.find(loc => loc.locationId === locationSelect.value);
+      if (locationData) {
+        filters.location = locationData.locationName;
+      }
+    }
+    
+    // 検索キーワード（検索インデックス用）
+    const searchInput = document.getElementById('searchKeyword');
+    if (searchInput && searchInput.value && viewType === 'search_index') {
+      filters.keyword = searchInput.value;
+    }
+    
+    try {
+      google.script.run
+        .withSuccessHandler(function(response) {
+          loadingDiv.style.display = 'none';
+          
+          if (response.success) {
+            // ビューシートタイプに応じた表示
+            displayViewSheetData(response.data, viewType, response.metadata);
+            errorDiv.textContent = '';
+            
+            // 最終更新時刻を表示
+            const updateTimeElementId = `lastUpdateTime${viewType.charAt(0).toUpperCase() + viewType.slice(1)}`;
+            updateLastUpdateTime(updateTimeElementId, updateTimeElementId + 'Text');
+            
+            showPopupMessage(`${getViewSheetDisplayName(viewType)}を読み込みました`);
+          } else {
+            errorDiv.textContent = `${getViewSheetDisplayName(viewType)}の取得に失敗しました: ${response.error}`;
+            tableContainer.innerHTML = '';
+          }
+        })
+        .withFailureHandler(function(error) {
+          loadingDiv.style.display = 'none';
+          errorDiv.textContent = `${getViewSheetDisplayName(viewType)}の取得中にエラーが発生しました: ${error}`;
+          tableContainer.innerHTML = '';
+        })
+        .getViewSheetData(viewType, filters);
+    } catch (error) {
+      loadingDiv.style.display = 'none';
+      errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
+      tableContainer.innerHTML = '';
+    }
+  }
+  
+  // ビューシートデータを表示する関数
+  function displayViewSheetData(data, viewType, metadata) {
+    const tableContainer = document.getElementById('tableContainer');
+    
+    if (!data || data.length === 0) {
+      tableContainer.innerHTML = '<p>データがありません</p>';
+      return;
+    }
+    
+    showDebugInfo('ビューシートデータ表示', {
+      viewType: viewType,
+      rows: data.length,
+      columns: data[0].length,
+      metadata: metadata
+    });
+    
+    // ビューシートタイプに応じた表示モードを設定
+    let displayMode = 'main';
+    if (viewType === 'search_index') {
+      displayMode = 'search-index';
+    } else if (viewType === 'summary_view') {
+      displayMode = 'summary';
+    }
+    
+    // テーブルを作成
+    createTable(data, 'all', '', displayMode);
+    
+    // メタデータ情報を表示
+    if (metadata && (metadata.totalRows > 0 || metadata.filteredRows > 0)) {
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'view-sheet-info';
+      infoDiv.textContent = `総レコード数: ${metadata.totalRows}件`;
+      if (metadata.filteredRows !== undefined && metadata.filteredRows !== metadata.totalRows) {
+        infoDiv.textContent += ` / フィルター後: ${metadata.filteredRows}件`;
+      }
+      tableContainer.insertBefore(infoDiv, tableContainer.firstChild);
+    }
+  }
+  
+  // ビューシートの表示名を取得
+  function getViewSheetDisplayName(viewType) {
+    const displayNames = {
+      'integrated_view': '統合ビュー',
+      'search_index': '検索インデックス',
+      'summary_view': 'サマリービュー'
+    };
+    return displayNames[viewType] || viewType;
+  }
+
   // デバッグ: スクリプトが読み込まれたことを確認
   console.log('spreadsheet-functions.html loaded');
   console.log('initializeLocations available:', typeof window.initializeLocations);

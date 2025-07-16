@@ -767,6 +767,9 @@ function getSheetTypeFromName(sheetName) {
   if (sheetName === 'その他マスタ') return 'other';
   if (sheetName === 'サマリー') return 'summary';
   if (sheetName === '監査データ') return 'audit';
+  if (sheetName === 'integrated_view') return 'integrated_view';
+  if (sheetName === 'search_index') return 'search_index';
+  if (sheetName === 'summary_view') return 'summary_view';
   return 'unknown';
 }
 
