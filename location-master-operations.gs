@@ -117,21 +117,41 @@ function getLocationMaster() {
       return [];
     }
     
-    const data = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+    // ヘッダー行を取得して列のインデックスを動的に特定
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const columnMap = {};
+    headers.forEach((header, index) => {
+      columnMap[header] = index;
+    });
+    
+    // 列インデックスを取得（存在しない場合は-1）
+    const idCol = columnMap['拠点ID'] !== undefined ? columnMap['拠点ID'] : -1;
+    const nameCol = columnMap['拠点名'] !== undefined ? columnMap['拠点名'] : -1;
+    const codeCol = columnMap['拠点コード'] !== undefined ? columnMap['拠点コード'] : -1;
+    const jurisdictionCol = columnMap['管轄'] !== undefined ? columnMap['管轄'] : -1;
+    const createdDateCol = columnMap['作成日時'] !== undefined ? columnMap['作成日時'] : columnMap['作成日'] !== undefined ? columnMap['作成日'] : -1;
+    const statusNotificationCol = columnMap['ステータス変更通知'] !== undefined ? columnMap['ステータス変更通知'] : -1;
+    
+    // 必須列の確認
+    if (idCol === -1 || nameCol === -1) {
+      throw new Error('拠点マスタシートの必須列（拠点ID、拠点名）が見つかりません');
+    }
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
     const locations = [];
     
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       // 拠点IDが空の行はスキップ
-      if (!row[0] || row[0] === '') continue;
+      if (idCol >= 0 && (!row[idCol] || row[idCol] === '')) continue;
       
       locations.push({
-        locationId: row[0] || '',
-        locationName: row[1] || '',
-        locationCode: row[2] || '',
-        jurisdiction: row[3] || '',
-        createdDate: row[4] || '',
-        statusNotification: row[5] === true || row[5] === 'TRUE' || row[5] === 'true'
+        locationId: idCol >= 0 ? (row[idCol] || '') : '',
+        locationName: nameCol >= 0 ? (row[nameCol] || '') : '',
+        locationCode: codeCol >= 0 ? (row[codeCol] || '') : '',
+        jurisdiction: jurisdictionCol >= 0 ? (row[jurisdictionCol] || '') : '',
+        createdDate: createdDateCol >= 0 ? (row[createdDateCol] || '') : '',
+        statusNotification: statusNotificationCol >= 0 ? (row[statusNotificationCol] === true || row[statusNotificationCol] === 'TRUE' || row[statusNotificationCol] === 'true') : false
       });
     }
     
@@ -190,21 +210,39 @@ function addLocation(locationData) {
       throw new Error('この拠点IDは既に存在します');
     }
     
+    // ヘッダー行を取得して列のインデックスを動的に特定
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const columnMap = {};
+    headers.forEach((header, index) => {
+      columnMap[header] = index + 1; // 1ベースの列番号
+    });
+    
     // 新規行を追加
     const newRow = sheet.getLastRow() + 1;
     const today = Utilities.formatDate(new Date(), TIMEZONE, 'yyyy/MM/dd');
     
-    sheet.getRange(newRow, 1, 1, 6).setValues([[
-      locationData.locationId,
-      locationData.locationName,
-      locationData.locationCode,
-      locationData.jurisdiction || '関西',
-      today,
-      locationData.statusNotification || false
-    ]]);
-    
-    // 日付列の書式をテキストに設定
-    sheet.getRange(newRow, 5).setNumberFormat('@');
+    // 各列に値を設定
+    if (columnMap['拠点ID']) {
+      sheet.getRange(newRow, columnMap['拠点ID']).setValue(locationData.locationId);
+    }
+    if (columnMap['拠点名']) {
+      sheet.getRange(newRow, columnMap['拠点名']).setValue(locationData.locationName);
+    }
+    if (columnMap['拠点コード']) {
+      sheet.getRange(newRow, columnMap['拠点コード']).setValue(locationData.locationCode || '');
+    }
+    if (columnMap['管轄']) {
+      sheet.getRange(newRow, columnMap['管轄']).setValue(locationData.jurisdiction || '関西');
+    }
+    if (columnMap['作成日時'] || columnMap['作成日']) {
+      const dateCol = columnMap['作成日時'] || columnMap['作成日'];
+      sheet.getRange(newRow, dateCol).setValue(today);
+      // 日付列の書式をテキストに設定
+      sheet.getRange(newRow, dateCol).setNumberFormat('@');
+    }
+    if (columnMap['ステータス変更通知']) {
+      sheet.getRange(newRow, columnMap['ステータス変更通知']).setValue(locationData.statusNotification || false);
+    }
     
     endPerformanceTimer(startTime, '拠点追加');
     addLog('拠点追加完了');
@@ -231,22 +269,35 @@ function updateLocation(locationId, updateData) {
     const sheet = getLocationMasterSheet();
     const lastRow = sheet.getLastRow();
     
+    // ヘッダー行を取得して列のインデックスを動的に特定
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const columnMap = {};
+    headers.forEach((header, index) => {
+      columnMap[header] = index + 1; // 1ベースの列番号
+    });
+    
+    // 拠点ID列を特定
+    const idCol = columnMap['拠点ID'];
+    if (!idCol) {
+      throw new Error('拠点ID列が見つかりません');
+    }
+    
     // 該当行を検索
     for (let row = 2; row <= lastRow; row++) {
-      const currentId = sheet.getRange(row, 1).getValue();
+      const currentId = sheet.getRange(row, idCol).getValue();
       if (currentId === locationId) {
         // 更新データを設定
-        if (updateData.locationName !== undefined) {
-          sheet.getRange(row, 2).setValue(updateData.locationName);
+        if (updateData.locationName !== undefined && columnMap['拠点名']) {
+          sheet.getRange(row, columnMap['拠点名']).setValue(updateData.locationName);
         }
-        if (updateData.locationCode !== undefined) {
-          sheet.getRange(row, 3).setValue(updateData.locationCode);
+        if (updateData.locationCode !== undefined && columnMap['拠点コード']) {
+          sheet.getRange(row, columnMap['拠点コード']).setValue(updateData.locationCode);
         }
-        if (updateData.jurisdiction !== undefined) {
-          sheet.getRange(row, 4).setValue(updateData.jurisdiction);
+        if (updateData.jurisdiction !== undefined && columnMap['管轄']) {
+          sheet.getRange(row, columnMap['管轄']).setValue(updateData.jurisdiction);
         }
-        if (updateData.statusNotification !== undefined) {
-          sheet.getRange(row, 6).setValue(updateData.statusNotification);
+        if (updateData.statusNotification !== undefined && columnMap['ステータス変更通知']) {
+          sheet.getRange(row, columnMap['ステータス変更通知']).setValue(updateData.statusNotification);
         }
         
         endPerformanceTimer(startTime, '拠点更新');
@@ -277,9 +328,17 @@ function deleteLocation(locationId) {
     const sheet = getLocationMasterSheet();
     const lastRow = sheet.getLastRow();
     
+    // ヘッダー行を取得して拠点ID列を特定
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const idCol = headers.indexOf('拠点ID') + 1; // 1ベースに変換
+    
+    if (idCol === 0) {
+      throw new Error('拠点ID列が見つかりません');
+    }
+    
     // 該当行を検索
     for (let row = 2; row <= lastRow; row++) {
-      const currentId = sheet.getRange(row, 1).getValue();
+      const currentId = sheet.getRange(row, idCol).getValue();
       if (currentId === locationId) {
         sheet.deleteRow(row);
         
@@ -325,23 +384,25 @@ function initializeLocationMasterJurisdiction() {
       return { success: true, message: '既に管轄フィールドが存在します' };
     }
     
+    // 列インデックスを取得
+    const jurisdictionCol = headers.indexOf('管轄') + 1;
+    const statusNotificationCol = headers.indexOf('ステータス変更通知') + 1;
+    
     // 既存データの管轄情報を設定
     for (let row = 2; row <= lastRow; row++) {
-      const locationId = sheet.getRange(row, 1).getValue();
-      
       // 既存拠点の管轄を設定（デフォルトは関西）
-      if (!hasJurisdiction) {
-        const currentJurisdiction = sheet.getRange(row, 4).getValue();
+      if (!hasJurisdiction && jurisdictionCol > 0) {
+        const currentJurisdiction = sheet.getRange(row, jurisdictionCol).getValue();
         if (!currentJurisdiction || currentJurisdiction === '') {
-          sheet.getRange(row, 4).setValue('関西');
+          sheet.getRange(row, jurisdictionCol).setValue('関西');
         }
       }
       
       // ステータス変更通知のデフォルト値を設定
-      if (!hasStatusNotification) {
-        const currentNotification = sheet.getRange(row, 6).getValue();
+      if (!hasStatusNotification && statusNotificationCol > 0) {
+        const currentNotification = sheet.getRange(row, statusNotificationCol).getValue();
         if (currentNotification === '' || currentNotification === null) {
-          sheet.getRange(row, 6).setValue(false);
+          sheet.getRange(row, statusNotificationCol).setValue(false);
         }
       }
     }
