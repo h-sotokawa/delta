@@ -19,11 +19,13 @@
         <option value="">拠点を選択してください</option>
       </select>
       
-      <label for="deviceType">データ種別：</label>
-      <select id="deviceType" onchange="if(window.handleDeviceTypeChange) window.handleDeviceTypeChange()">
-        <option value="terminal">端末マスタ</option>
-        <option value="printer">プリンタマスタ</option>
-      </select>
+      <div id="deviceTypeContainer">
+        <label for="deviceType">データ種別：</label>
+        <select id="deviceType" onchange="if(window.handleDeviceTypeChange) window.handleDeviceTypeChange()">
+          <option value="terminal">端末マスタ</option>
+          <option value="printer">プリンタマスタ</option>
+        </select>
+      </div>
       
       <button id="refreshButton" class="refresh-button" onclick="if(window.refreshCurrentLocation) window.refreshCurrentLocation()" disabled>
         <i class="fas fa-sync-alt"></i>
@@ -122,110 +124,12 @@
   (function() {
     console.log('Spreadsheet page initialization script loaded');
     
-    // グローバル関数として初期化関数を定義
-    window.initSpreadsheetPage = function() {
-      console.log('initSpreadsheetPage called');
-      
-      // データタイプドロップダウンを直接初期化
-      const dataTypeSelect = document.getElementById('dataType');
-      if (dataTypeSelect) {
-        // データタイプマスタを直接読み込む
-        if (typeof google !== 'undefined' && google.script && google.script.run) {
-          console.log('Loading data types directly via Google Apps Script');
-          google.script.run
-            .withSuccessHandler(function(response) {
-              console.log('Data type response:', response);
-              if (response.success && response.dataTypes) {
-                // グローバル変数にも保存
-                if (typeof window.dataTypeMasterData === 'undefined') {
-                  window.dataTypeMasterData = [];
-                }
-                window.dataTypeMasterData = response.dataTypes;
-                
-                dataTypeSelect.innerHTML = '<option value="">データタイプを選択してください</option>';
-                response.dataTypes.forEach(dataType => {
-                  const option = document.createElement('option');
-                  option.value = dataType.dataTypeId;
-                  option.textContent = dataType.dataTypeName;
-                  if (dataType.description) {
-                    option.title = dataType.description;
-                  }
-                  // デフォルトでNORMALを選択
-                  if (dataType.dataTypeId === 'NORMAL') {
-                    option.selected = true;
-                  }
-                  dataTypeSelect.appendChild(option);
-                });
-                console.log('Data types loaded:', response.dataTypes.length);
-                
-                // デフォルトでNORMALが選択されている場合、UIを更新
-                if (dataTypeSelect.value === 'NORMAL') {
-                  // 直接UIを更新（データタイプマスタを待たずに）
-                  console.log('Default NORMAL selected, updating UI directly');
-                  // location selectorを表示
-                  document.querySelector('.location-selector').style.display = 'block';
-                  document.querySelector('.query-selector').style.display = 'block';
-                  
-                  // handleDataTypeChangeがあれば呼び出す
-                  setTimeout(() => {
-                    if (typeof window.handleDataTypeChange === 'function') {
-                      console.log('Calling handleDataTypeChange');
-                      window.handleDataTypeChange();
-                    }
-                  }, 100);
-                }
-                  
-                  // データを読み込む
-                  if (typeof window.loadDataBasedOnDataType === 'function') {
-                    setTimeout(() => {
-                      window.loadDataBasedOnDataType();
-                    }, 200); // handleDataTypeChangeの後に実行
-                  }
-                }
-              }
-            })
-            .withFailureHandler(function(error) {
-              console.error('Failed to load data types:', error);
-              dataTypeSelect.innerHTML = '<option value="">データタイプの読み込みに失敗しました</option>';
-            })
-            .getDataTypeMaster(true);
-            
-          // 拠点データも読み込む
-          const locationSelect = document.getElementById('location');
-          if (locationSelect) {
-            console.log('Loading locations directly via Google Apps Script');
-            google.script.run
-              .withSuccessHandler(function(response) {
-                console.log('Locations response:', response);
-                if (response.success && response.locations) {
-                  // 既存のオプションをクリア（最初の「拠点を選択してください」は残す）
-                  while (locationSelect.options.length > 1) {
-                    locationSelect.remove(1);
-                  }
-                  Object.entries(response.locations).forEach(([key, name]) => {
-                    const option = document.createElement('option');
-                    option.value = key;
-                    option.textContent = name;
-                    locationSelect.appendChild(option);
-                  });
-                  console.log('Locations loaded:', Object.keys(response.locations).length);
-                }
-              })
-              .withFailureHandler(function(error) {
-                console.error('Failed to load locations:', error);
-              })
-              .getLocations();
-          }
-        }
-      }
-      
-      // フロートスクロールバーも初期化
-      if (typeof window.initializeFloatScrollbar === 'function') {
-        setTimeout(() => {
-          console.log('Initializing float scrollbar');
-          window.initializeFloatScrollbar();
-        }, 200);
-      }
-    };
+    // 既存のinitSpreadsheetPage関数が定義されていない場合のみ定義
+    if (typeof window.initSpreadsheetPage === 'undefined') {
+      window.initSpreadsheetPage = function() {
+        console.log('initSpreadsheetPage called from spreadsheet.html');
+        // spreadsheet-functions.htmlの関数を使用
+      };
+    }
   })();
 </script> 

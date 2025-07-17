@@ -3419,10 +3419,10 @@
       document.querySelector('.summary-refresh-selector').style.display = 'none';
       document.querySelector('.query-selector').style.display = 'block';
       
-      // 機器種別選択は不要（事前に分離済み）
-      const deviceTypeSelector = document.querySelector('.device-type-selector');
-      if (deviceTypeSelector) {
-        deviceTypeSelector.style.display = 'none';
+      // 統合ビューでは機器種別選択は不要（事前に分離済み）
+      const deviceTypeContainer = document.getElementById('deviceTypeContainer');
+      if (deviceTypeContainer) {
+        deviceTypeContainer.style.display = 'none';
       }
     } else if (dataTypeId === 'AUDIT') {
       // 監査データの場合
@@ -3432,6 +3432,11 @@
       document.querySelector('.query-selector').style.display = 'none';
       // 管轄リストを読み込む
       loadJurisdictionList('audit');
+      // 機器種別選択も非表示
+      const deviceTypeContainer = document.getElementById('deviceTypeContainer');
+      if (deviceTypeContainer) {
+        deviceTypeContainer.style.display = 'none';
+      }
     } else if (dataTypeId === 'SUMMARY') {
       // サマリーデータの場合
       document.querySelector('.location-selector').style.display = 'none';
@@ -3440,12 +3445,22 @@
       document.querySelector('.query-selector').style.display = 'none';
       // 管轄リストを読み込む
       loadJurisdictionList('summary');
+      // 機器種別選択も非表示
+      const deviceTypeContainer = document.getElementById('deviceTypeContainer');
+      if (deviceTypeContainer) {
+        deviceTypeContainer.style.display = 'none';
+      }
     } else {
       // その他のデータタイプ（カスタム）
       document.querySelector('.location-selector').style.display = 'block';
       document.querySelector('.audit-sheet-selector').style.display = 'none';
       document.querySelector('.summary-refresh-selector').style.display = 'none';
       document.querySelector('.query-selector').style.display = 'block';
+      // 機器種別選択を表示
+      const deviceTypeContainer = document.getElementById('deviceTypeContainer');
+      if (deviceTypeContainer) {
+        deviceTypeContainer.style.display = '';
+      }
     }
   }
   
