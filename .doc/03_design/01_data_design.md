@@ -15,18 +15,18 @@
     ├── 拠点マスタ           # 拠点情報
     ├── 機種マスタ           # 機種情報
     ├── データタイプマスタ   # データタイプ情報
-    ├── 端末マスタ           # 端末機器情報（数式/QUERYで収集シートから取得）
-    ├── プリンタマスタ       # プリンタ機器情報（数式/QUERYで収集シートから取得）
-    └── その他マスタ         # その他機器情報（数式/QUERYで収集シートから取得）
+    ├── 端末マスタ           # 端末機器情報（トリガーで収集シートから取得）
+    ├── プリンタマスタ       # プリンタ機器情報（トリガーで収集シートから取得）
+    └── その他マスタ         # その他機器情報（トリガーで収集シートから取得）
 ```
 
 ### 1.2 データ関係
 
 ```mermaid
 erDiagram
-    端末ステータス収集 ||--|| 端末マスタ : "QUERY/数式で自動連携"
-    プリンタステータス収集 ||--|| プリンタマスタ : "QUERY/数式で自動連携"
-    その他ステータス収集 ||--|| その他マスタ : "QUERY/数式で自動連携"
+    端末ステータス収集 ||--|| 端末マスタ : "トリガーで自動連携"
+    プリンタステータス収集 ||--|| プリンタマスタ : "トリガーで自動連携"
+    その他ステータス収集 ||--|| その他マスタ : "トリガーで自動連携"
     拠点マスタ ||--o{ 端末マスタ : "拠点ID"
     拠点マスタ ||--o{ プリンタマスタ : "拠点ID"
     拠点マスタ ||--o{ その他マスタ : "拠点ID"
@@ -39,7 +39,7 @@ erDiagram
 ```
 [Google Forms] → [ステータス収集シート] → [マスタシート]
       ↓                    ↓                      ↓
-   回答送信         onFormSubmitトリガー    数式/QUERYで自動更新
+   回答送信         onFormSubmitトリガー    トリガーで自動更新
                            ↓
                      通知メール送信
                   （ステータス変更時のみ）
@@ -47,7 +47,7 @@ erDiagram
 
 **重要なポイント**:
 - Google Formsの回答は必ず「ステータス収集シート」に送信される
-- マスタシートは収集シートから最新データを自動的に取得（数式/QUERY使用）
+- マスタシートは収集シートから最新データをバッチ処理で取得
 - 通知はフォーム送信時（onFormSubmitトリガー）のみ発生
 - スプレッドシートビューアーでの編集では通知は発生しない
 
@@ -103,8 +103,7 @@ function onFormSubmit(e) {
 
 #### 2.4.3 マスタシートとの連携
 - マスタシートは最新データのみを表示
-- QUERY関数で拠点管理番号ごとの最新レコードを取得
-- 例：`=QUERY('端末ステータス収集'!A:Z, "SELECT * WHERE C = '拠点管理番号' ORDER BY A DESC LIMIT 1")`
+- フォーム送信時のトリガーで拠点管理番号ごとの最新レコードを取得してマスタシートを更新
 
 ## 3. マスタデータ設計
 
@@ -691,7 +690,7 @@ graph TD
     A[Google Forms] -->|回答送信| B[ステータス収集シート]
     B -->|onFormSubmitトリガー| C[通知処理]
     C -->|ステータス変更検知| D[メール送信]
-    B -->|QUERY/数式| E[マスタシート]
+    B -->|トリガー処理| E[マスタシート]
     E --> F[スプレッドシートビューアー]
 ```
 
@@ -705,16 +704,15 @@ graph TD
 
 ### 3.5 マスタシートでの最新データ取得
 
-```sql
--- 端末マスタでの数式例
-=QUERY(
-  '端末ステータス収集'!A:Z,
-  "SELECT * 
-   WHERE B = '"&A2&"' 
-   ORDER BY A DESC 
-   LIMIT 1",
-  0
-)
+マスタシートは収集シートからの最新データを、QUERY関数ではなく、フォーム送信時のトリガー処理により自動更新されます。
+
+```javascript
+// onFormSubmitトリガーでの処理例
+function updateMasterFromCollection(managementNumber, latestData) {
+  // 拠点管理番号に対応するマスタシートの行を更新
+  const masterSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('端末マスタ');
+  // 最新データでマスタシートを更新
+}
 ```
 
 ## 4. 管轄ベースフィルタリング設計
@@ -880,17 +878,19 @@ graph LR
 
 #### 4.1.4 データ結合ロジック
 
-```sql
--- ビューシート用QUERY例
-=QUERY({
-  端末マスタ!A:K,
-  ARRAYFORMULA(VLOOKUP(
-    端末マスタ!A:A,
-    SORT(端末ステータス収集!C:AG, 1, FALSE, 1, FALSE),
-    {4,7,8,11,12,13,14,15,19,20},
-    FALSE
-  ))
-}, "SELECT * WHERE Col1 IS NOT NULL")
+統合ビューはQUERY関数を使用せず、フォーム送信時のトリガーで動的に更新されます。
+
+```javascript
+// 統合ビュー更新処理例
+function updateIntegratedView() {
+  // マスタシートとステータス収集シートからデータを統合
+  const masterData = getMasterSheetData();
+  const statusData = getLatestStatusData();
+  const integratedData = mergeData(masterData, statusData);
+  
+  // 統合ビューシートに書き込み
+  updateIntegratedViewSheet(integratedData);
+}
 ```
 
 ### 4.2 インデックスシート設計

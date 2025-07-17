@@ -106,17 +106,16 @@ interface IntegratedDeviceData {
 
 ### 3.2 ビューシート構造
 
-```sql
--- ビューシート作成用QUERY（Google Sheets）
-=QUERY({
-  ARRAYFORMULA(VLOOKUP(
-    '端末マスタ'!A:A,
-    SORT('端末ステータス収集'!C:AG, 1, FALSE),
-    {1,4,7,8,9,10,11,12,13,14,15},
-    FALSE
-  )),
-  '端末マスタ'!A:K
-}, "SELECT * WHERE Col1 IS NOT NULL")
+統合ビューはQUERY関数を使用せず、フォーム送信時のトリガーで動的に更新されます。
+
+```javascript
+// 統合ビュー更新処理
+function updateIntegratedView() {
+  const masterData = getMasterSheetData();
+  const statusData = getLatestStatusCollectionData();
+  const integratedData = integrateDeviceData(masterData, statusData);
+  updateIntegratedViewSheet(integratedData);
+}
 ```
 
 ## 4. 機能詳細設計
