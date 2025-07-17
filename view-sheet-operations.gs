@@ -749,6 +749,69 @@ function buildSummaryViewData() {
 }
 
 /**
+ * 指定された拠点管理番号で統合ビューデータを取得
+ * @param {Array<string>} managementNumbers - 拠点管理番号の配列
+ * @return {Object} データ取得結果
+ */
+function getIntegratedViewByIds(managementNumbers) {
+  const startTime = startPerformanceTimer();
+  addLog('ID指定統合ビューデータ取得開始', { count: managementNumbers.length });
+  
+  try {
+    const sheet = getIntegratedViewSheet();
+    const lastRow = sheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      return {
+        success: true,
+        data: [sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]], // ヘッダーのみ
+        metadata: {
+          totalRows: 0,
+          filteredRows: 0
+        }
+      };
+    }
+    
+    const data = sheet.getRange(1, 1, lastRow, sheet.getLastColumn()).getValues();
+    const headers = data[0];
+    const rows = data.slice(1);
+    
+    // 拠点管理番号の列インデックスを取得
+    const managementNumberIndex = headers.indexOf('拠点管理番号');
+    if (managementNumberIndex < 0) {
+      throw new Error('拠点管理番号列が見つかりません');
+    }
+    
+    // 指定されたIDに一致する行のみを抽出
+    const filteredRows = rows.filter(row => 
+      managementNumbers.includes(row[managementNumberIndex])
+    );
+    
+    // ヘッダーと抽出されたデータを結合
+    const resultData = [headers, ...filteredRows];
+    
+    endPerformanceTimer(startTime, 'ID指定統合ビューデータ取得');
+    
+    return {
+      success: true,
+      data: resultData,
+      metadata: {
+        totalRows: rows.length,
+        filteredRows: filteredRows.length
+      }
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, 'ID指定統合ビューデータ取得エラー');
+    addLog('ID指定統合ビューデータ取得エラー', { error: error.toString() });
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
  * ビューシートのテスト関数
  */
 function testViewSheets() {

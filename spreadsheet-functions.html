@@ -3663,10 +3663,7 @@
     if (dataTypeData && dataTypeData.targetSheet) {
       switch (dataTypeData.targetSheet) {
         case 'INTEGRATED_VIEW':
-          loadViewSheetData('integrated_view');
-          return;
-        case 'SEARCH_INDEX':
-          loadViewSheetData('search_index');
+          loadIntegratedViewWithSearch();
           return;
         case 'SUMMARY_VIEW':
           loadViewSheetData('summary_view');
@@ -4026,6 +4023,105 @@
     }
   }
   
+  // 統合ビューを検索機能付きで読み込む
+  window.loadIntegratedViewWithSearch = function loadIntegratedViewWithSearch() {
+    showDebugInfo('検索機能付き統合ビュー読み込み開始', {});
+    
+    const errorDiv = document.getElementById('error');
+    const tableContainer = document.getElementById('tableContainer');
+    const loadingDiv = document.getElementById('loading');
+    
+    loadingDiv.style.display = 'block';
+    errorDiv.textContent = '';
+    tableContainer.innerHTML = '';
+    
+    // 検索キーワードを取得
+    const searchInput = document.getElementById('searchKeyword');
+    const searchKeyword = searchInput ? searchInput.value.trim() : '';
+    
+    // フィルター条件を収集
+    const filters = {};
+    
+    // 管轄フィルター
+    const jurisdictionSelect = document.getElementById('jurisdictionFilter');
+    if (jurisdictionSelect && jurisdictionSelect.value) {
+      filters.jurisdiction = jurisdictionSelect.value;
+    }
+    
+    // 拠点フィルター
+    const locationSelect = document.getElementById('location');
+    if (locationSelect && locationSelect.value) {
+      const locationData = spreadsheetLocationMasterData.find(loc => loc.locationId === locationSelect.value);
+      if (locationData) {
+        filters.location = locationData.locationName;
+      }
+    }
+    
+    try {
+      if (searchKeyword) {
+        // 検索キーワードがある場合は検索インデックスを使用
+        google.script.run
+          .withSuccessHandler(function(response) {
+            loadingDiv.style.display = 'none';
+            
+            if (response.success && response.results.length > 0) {
+              // 検索結果から拠点管理番号を取得して統合ビューから詳細データを取得
+              const managementNumbers = response.results.map(result => result.managementNumber);
+              loadIntegratedViewByIds(managementNumbers);
+            } else {
+              tableContainer.innerHTML = '<p>検索条件に一致するデータがありません</p>';
+              showPopupMessage('検索結果: 0件');
+            }
+          })
+          .withFailureHandler(function(error) {
+            loadingDiv.style.display = 'none';
+            errorDiv.textContent = `検索中にエラーが発生しました: ${error}`;
+          })
+          .searchWithIndex(searchKeyword, filters);
+      } else {
+        // 検索キーワードがない場合は通常の統合ビュー表示
+        loadViewSheetData('integrated_view');
+      }
+    } catch (error) {
+      loadingDiv.style.display = 'none';
+      errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
+    }
+  }
+  
+  // 指定された拠点管理番号の統合ビューデータを取得
+  function loadIntegratedViewByIds(managementNumbers) {
+    const errorDiv = document.getElementById('error');
+    const tableContainer = document.getElementById('tableContainer');
+    const loadingDiv = document.getElementById('loading');
+    
+    loadingDiv.style.display = 'block';
+    
+    try {
+      google.script.run
+        .withSuccessHandler(function(response) {
+          loadingDiv.style.display = 'none';
+          
+          if (response.success) {
+            displayViewSheetData(response.data, 'integrated_view', response.metadata);
+            errorDiv.textContent = '';
+            showPopupMessage(`検索結果: ${response.metadata.filteredRows || 0}件`);
+          } else {
+            errorDiv.textContent = `データ取得に失敗しました: ${response.error}`;
+            tableContainer.innerHTML = '';
+          }
+        })
+        .withFailureHandler(function(error) {
+          loadingDiv.style.display = 'none';
+          errorDiv.textContent = `データ取得中にエラーが発生しました: ${error}`;
+          tableContainer.innerHTML = '';
+        })
+        .getIntegratedViewByIds(managementNumbers);
+    } catch (error) {
+      loadingDiv.style.display = 'none';
+      errorDiv.textContent = 'クライアントサイドでエラーが発生しました: ' + error;
+    }
+  }
+
   // ビューシートの表示名を取得
   function getViewSheetDisplayName(viewType) {
     const displayNames = {

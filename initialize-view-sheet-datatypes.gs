@@ -21,28 +21,10 @@ function initializeViewSheetDataTypes() {
           showAuditSheet: false,
           showQueryType: false,
           showJurisdiction: true,
-          showRefreshButton: true
+          showRefreshButton: true,
+          showSearchBox: true  // 統合ビューに検索機能を統合
         },
         sortOrder: 20,
-        isActive: true
-      },
-      {
-        dataTypeId: 'SEARCH_INDEX',
-        dataTypeName: '検索インデックス',
-        targetSheet: 'SEARCH_INDEX',
-        sheetName: 'search_index',
-        queryType: 'search',
-        description: '高速検索用に最適化されたインデックスデータ',
-        displayOptions: {
-          showLocation: false,
-          showDeviceType: false,
-          showAuditSheet: false,
-          showQueryType: false,
-          showJurisdiction: true,
-          showRefreshButton: true,
-          showSearchBox: true
-        },
-        sortOrder: 21,
         isActive: true
       },
       {
@@ -60,7 +42,7 @@ function initializeViewSheetDataTypes() {
           showJurisdiction: true,
           showRefreshButton: true
         },
-        sortOrder: 22,
+        sortOrder: 21,
         isActive: true
       }
     ];
@@ -82,6 +64,7 @@ function initializeViewSheetDataTypes() {
     
     console.log('=== ビューシートデータタイプ初期化完了 ===');
     console.log(`追加: ${addedCount}件, スキップ: ${skippedCount}件`);
+    console.log('注意: 検索インデックスは内部使用のため、データタイプには登録されません');
     
     return {
       success: true,
