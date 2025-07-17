@@ -3600,14 +3600,36 @@
     
     // カスタムデータタイプの処理
     const dataTypeData = dataTypeMasterData.find(dt => dt.dataTypeId === dataTypeId);
-    if (dataTypeData && dataTypeData.targetSheet) {
-      switch (dataTypeData.targetSheet) {
-        case 'INTEGRATED_VIEW':
-          loadIntegratedViewWithSearch();
-          return;
-        case 'SUMMARY_VIEW':
-          loadViewSheetData('summary_view');
-          return;
+    if (dataTypeData && dataTypeData.dataSourceConfig) {
+      const sourceConfig = dataTypeData.dataSourceConfig;
+      
+      // 統合ビューの場合の処理
+      if (sourceConfig.sourceSheets && sourceConfig.sourceSheets[0]) {
+        const sheetName = sourceConfig.sourceSheets[0];
+        
+        switch (sheetName) {
+          case 'integrated_view':
+            loadIntegratedViewWithSearch();
+            return;
+          case 'integrated_view_terminal':
+            loadIntegratedViewWithSearch('terminal');
+            return;
+          case 'integrated_view_printer_other':
+            loadIntegratedViewWithSearch('printer_other');
+            return;
+        }
+      }
+      
+      // その他のカスタムビューの処理
+      if (dataTypeData.targetSheet) {
+        switch (dataTypeData.targetSheet) {
+          case 'INTEGRATED_VIEW':
+            loadIntegratedViewWithSearch();
+            return;
+          case 'SUMMARY_VIEW':
+            loadViewSheetData('summary_view');
+            return;
+        }
       }
     }
     
@@ -3964,8 +3986,8 @@
   }
   
   // 統合ビューを検索機能付きで読み込む
-  window.loadIntegratedViewWithSearch = function loadIntegratedViewWithSearch() {
-    showDebugInfo('検索機能付き統合ビュー読み込み開始', {});
+  window.loadIntegratedViewWithSearch = function loadIntegratedViewWithSearch(viewSheetType = 'integrated') {
+    showDebugInfo('検索機能付き統合ビュー読み込み開始', { viewSheetType });
     
     const errorDiv = document.getElementById('error');
     const tableContainer = document.getElementById('tableContainer');
@@ -4020,7 +4042,14 @@
           .searchWithIndex(searchKeyword, filters);
       } else {
         // 検索キーワードがない場合は通常の統合ビュー表示
-        loadViewSheetData('integrated_view');
+        // viewSheetTypeに応じて適切なビューシートを読み込む
+        const viewSheetMapping = {
+          'integrated': 'integrated_view',
+          'terminal': 'integrated_view_terminal',
+          'printer_other': 'integrated_view_printer_other'
+        };
+        const viewSheetName = viewSheetMapping[viewSheetType] || 'integrated_view';
+        loadViewSheetData(viewSheetName);
       }
     } catch (error) {
       loadingDiv.style.display = 'none';

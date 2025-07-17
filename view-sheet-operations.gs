@@ -8,33 +8,71 @@
  */
 const VIEW_SHEET_TYPES = {
   INTEGRATED: 'integrated_view',
+  INTEGRATED_TERMINAL: 'integrated_view_terminal',
+  INTEGRATED_PRINTER_OTHER: 'integrated_view_printer_other',
   SEARCH_INDEX: 'search_index',
   SUMMARY: 'summary_view'
 };
 
 /**
- * 統合ビューシートを取得または作成
- * @return {GoogleAppsScript.Spreadsheet.Sheet} 統合ビューシート
+ * 統合ビューシートを取得または作成（旧関数、互換性のため維持）
+ * @deprecated 端末系とプリンタ・その他系に分割されました
+ * @return {GoogleAppsScript.Spreadsheet.Sheet} 端末系統合ビューシート
  */
 function getIntegratedViewSheet() {
+  return getIntegratedViewTerminalSheet();
+}
+
+/**
+ * 端末系統合ビューシートを取得または作成
+ * @return {GoogleAppsScript.Spreadsheet.Sheet} 端末系統合ビューシート
+ */
+function getIntegratedViewTerminalSheet() {
   const startTime = startPerformanceTimer();
   addLog('統合ビューシート取得開始');
   
   try {
     const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
     const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-    let sheet = spreadsheet.getSheetByName(VIEW_SHEET_TYPES.INTEGRATED);
+    let sheet = spreadsheet.getSheetByName(VIEW_SHEET_TYPES.INTEGRATED_TERMINAL);
     
     if (!sheet) {
       // シートが存在しない場合は作成
-      sheet = createIntegratedViewSheet(spreadsheet);
+      sheet = createIntegratedViewTerminalSheet(spreadsheet);
     }
     
-    endPerformanceTimer(startTime, '統合ビューシート取得');
+    endPerformanceTimer(startTime, '端末系統合ビューシート取得');
     return sheet;
   } catch (error) {
-    endPerformanceTimer(startTime, '統合ビューシート取得エラー');
-    addLog('統合ビューシート取得エラー', { error: error.toString() });
+    endPerformanceTimer(startTime, '端末系統合ビューシート取得エラー');
+    addLog('端末系統合ビューシート取得エラー', { error: error.toString() });
+    throw error;
+  }
+}
+
+/**
+ * プリンタ・その他系統合ビューシートを取得または作成
+ * @return {GoogleAppsScript.Spreadsheet.Sheet} プリンタ・その他系統合ビューシート
+ */
+function getIntegratedViewPrinterOtherSheet() {
+  const startTime = startPerformanceTimer();
+  addLog('プリンタ・その他系統合ビューシート取得開始');
+  
+  try {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    let sheet = spreadsheet.getSheetByName(VIEW_SHEET_TYPES.INTEGRATED_PRINTER_OTHER);
+    
+    if (!sheet) {
+      // シートが存在しない場合は作成
+      sheet = createIntegratedViewPrinterOtherSheet(spreadsheet);
+    }
+    
+    endPerformanceTimer(startTime, 'プリンタ・その他系統合ビューシート取得');
+    return sheet;
+  } catch (error) {
+    endPerformanceTimer(startTime, 'プリンタ・その他系統合ビューシート取得エラー');
+    addLog('プリンタ・その他系統合ビューシート取得エラー', { error: error.toString() });
     throw error;
   }
 }
@@ -94,14 +132,22 @@ function getSummaryViewSheet() {
 }
 
 /**
- * 統合ビューシートを作成
+ * 統合ビューシートを作成（旧関数、互換性のため維持）
+ * @deprecated
+ */
+function createIntegratedViewSheet(spreadsheet) {
+  return createIntegratedViewTerminalSheet(spreadsheet);
+}
+
+/**
+ * 端末系統合ビューシートを作成
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet - スプレッドシート
  * @return {GoogleAppsScript.Spreadsheet.Sheet} 作成されたシート
  */
-function createIntegratedViewSheet(spreadsheet) {
-  addLog('統合ビューシート作成開始');
+function createIntegratedViewTerminalSheet(spreadsheet) {
+  addLog('端末系統合ビューシート作成開始');
   
-  const sheet = spreadsheet.insertSheet(VIEW_SHEET_TYPES.INTEGRATED);
+  const sheet = spreadsheet.insertSheet(VIEW_SHEET_TYPES.INTEGRATED_TERMINAL);
   
   // ヘッダー行を設定
   const headers = [
@@ -175,9 +221,96 @@ function createIntegratedViewSheet(spreadsheet) {
   });
   
   // 統合ビューの初期データを設定（QUERY関数を使用）
-  setupIntegratedViewFormulas(sheet);
+  setupIntegratedViewFormulas(sheet, 'terminal');
   
-  addLog('統合ビューシート作成完了');
+  addLog('端末系統合ビューシート作成完了');
+  return sheet;
+}
+
+/**
+ * プリンタ・その他系統合ビューシートを作成
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet - スプレッドシート
+ * @return {GoogleAppsScript.Spreadsheet.Sheet} 作成されたシート
+ */
+function createIntegratedViewPrinterOtherSheet(spreadsheet) {
+  addLog('プリンタ・その他系統合ビューシート作成開始');
+  
+  const sheet = spreadsheet.insertSheet(VIEW_SHEET_TYPES.INTEGRATED_PRINTER_OTHER);
+  
+  // ヘッダー行を設定
+  const headers = [
+    '拠点管理番号',      // A列
+    'カテゴリ',          // B列
+    '機種名',            // C列
+    '製造番号',          // D列
+    '資産管理番号',      // E列（プリンタの場合空欄）
+    'ソフトウェア',      // F列（プリンタの場合空欄）
+    'OS',                // G列（プリンタの場合空欄）
+    '最終更新日時',      // H列
+    '現在ステータス',    // I列
+    '顧客名',            // J列
+    '顧客番号',          // K列
+    '住所',              // L列
+    'ユーザー機預り有無', // M列
+    '預りユーザー機シリアル', // N列
+    'お預かり証No',      // O列
+    '社内ステータス',    // P列
+    '棚卸フラグ',        // Q列
+    '現在拠点',          // R列
+    '備考',              // S列
+    '貸出日数',          // T列
+    '要注意フラグ',      // U列
+    '拠点名',            // V列
+    '管轄',              // W列
+    'formURL',           // X列
+    'QRコードURL'        // Y列
+  ];
+  
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  
+  // ヘッダー行のフォーマット
+  const headerRange = sheet.getRange(1, 1, 1, headers.length);
+  headerRange.setBackground('#70AD47'); // プリンタ系は緑色
+  headerRange.setFontColor('#FFFFFF');
+  headerRange.setFontWeight('bold');
+  
+  // 列幅の調整
+  const columnWidths = [
+    150, // 拠点管理番号
+    100, // カテゴリ
+    150, // 機種名
+    120, // 製造番号
+    120, // 資産管理番号
+    150, // ソフトウェア
+    100, // OS
+    150, // 最終更新日時
+    120, // 現在ステータス
+    150, // 顧客名
+    100, // 顧客番号
+    200, // 住所
+    120, // ユーザー機預り有無
+    150, // 預りユーザー機シリアル
+    120, // お預かり証No
+    120, // 社内ステータス
+    100, // 棚卸フラグ
+    100, // 現在拠点
+    200, // 備考
+    80,  // 貸出日数
+    100, // 要注意フラグ
+    100, // 拠点名
+    80,  // 管轄
+    200, // formURL
+    200  // QRコードURL
+  ];
+  
+  columnWidths.forEach((width, index) => {
+    sheet.setColumnWidth(index + 1, width);
+  });
+  
+  // 統合ビューの初期データを設定（QUERY関数を使用）
+  setupIntegratedViewFormulas(sheet, 'printer_other');
+  
+  addLog('プリンタ・その他系統合ビューシート作成完了');
   return sheet;
 }
 
@@ -290,15 +423,16 @@ function createSummaryViewSheet(spreadsheet) {
 /**
  * 統合ビューシートにQUERY関数を設定
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - 統合ビューシート
+ * @param {string} type - シートタイプ ('terminal' または 'printer_other')
  */
-function setupIntegratedViewFormulas(sheet) {
-  addLog('統合ビュー数式設定開始');
+function setupIntegratedViewFormulas(sheet, type) {
+  addLog('統合ビュー数式設定開始', { type });
   
   // 実装の簡略化のため、初期は空のままとし、
   // 実際のデータ統合は別途バッチ処理で行う
   // TODO: QUERY関数による自動統合の実装
   
-  addLog('統合ビュー数式設定完了');
+  addLog('統合ビュー数式設定完了', { type });
 }
 
 /**
@@ -315,7 +449,11 @@ function getViewSheetData(viewType, filters = {}) {
     let sheet;
     switch (viewType) {
       case VIEW_SHEET_TYPES.INTEGRATED:
-        sheet = getIntegratedViewSheet();
+      case VIEW_SHEET_TYPES.INTEGRATED_TERMINAL:
+        sheet = getIntegratedViewTerminalSheet();
+        break;
+      case VIEW_SHEET_TYPES.INTEGRATED_PRINTER_OTHER:
+        sheet = getIntegratedViewPrinterOtherSheet();
         break;
       case VIEW_SHEET_TYPES.SEARCH_INDEX:
         sheet = getSearchIndexSheet();
@@ -436,30 +574,72 @@ function applyFiltersToData(data, filters) {
 
 /**
  * 統合ビューのデータを更新（バッチ処理）
+ * @deprecated 両方の統合ビューを更新するためのupdateAllIntegratedViewsを使用
  * @return {Object} 更新結果
  */
 function updateIntegratedView() {
+  return updateAllIntegratedViews();
+}
+
+/**
+ * すべての統合ビューを更新
+ * @return {Object} 更新結果
+ */
+function updateAllIntegratedViews() {
   const startTime = startPerformanceTimer();
-  addLog('統合ビュー更新開始');
+  addLog('すべての統合ビュー更新開始');
   
   try {
-    const sheet = getIntegratedViewSheet();
+    // 端末系統合ビューを更新
+    const terminalResult = updateIntegratedViewTerminal();
+    if (!terminalResult.success) {
+      throw new Error('端末系統合ビュー更新失敗: ' + terminalResult.error);
+    }
     
-    // マスタシートからデータを収集
+    // プリンタ・その他系統合ビューを更新
+    const printerOtherResult = updateIntegratedViewPrinterOther();
+    if (!printerOtherResult.success) {
+      throw new Error('プリンタ・その他系統合ビュー更新失敗: ' + printerOtherResult.error);
+    }
+    
+    endPerformanceTimer(startTime, 'すべての統合ビュー更新');
+    
+    return {
+      success: true,
+      terminal: terminalResult,
+      printerOther: printerOtherResult,
+      totalRowsUpdated: terminalResult.rowsUpdated + printerOtherResult.rowsUpdated
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, 'すべての統合ビュー更新エラー');
+    addLog('すべての統合ビュー更新エラー', { error: error.toString() });
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * 端末系統合ビューのデータを更新
+ * @return {Object} 更新結果
+ */
+function updateIntegratedViewTerminal() {
+  const startTime = startPerformanceTimer();
+  addLog('端末系統合ビュー更新開始');
+  
+  try {
+    const sheet = getIntegratedViewTerminalSheet();
+    
+    // 端末マスタシートからデータを収集
     const terminalData = getTerminalMasterData();
-    const printerData = getPrinterMasterData();
-    const otherData = getOtherMasterData();
     
     // ステータス収集シートからデータを取得
-    const statusData = getLatestStatusData();
+    const statusData = getLatestStatusCollectionData();
     
     // データを統合
-    const integratedData = integrateAllData(
-      terminalData,
-      printerData,
-      otherData,
-      statusData
-    );
+    const integratedData = integrateDeviceData(terminalData, statusData, 'terminal');
     
     // シートに書き込み
     if (integratedData.length > 0) {
@@ -467,7 +647,7 @@ function updateIntegratedView() {
       sheet.getRange(2, 1, integratedData.length, integratedData[0].length).setValues(integratedData);
     }
     
-    endPerformanceTimer(startTime, '統合ビュー更新');
+    endPerformanceTimer(startTime, '端末系統合ビュー更新');
     
     return {
       success: true,
@@ -475,8 +655,54 @@ function updateIntegratedView() {
     };
     
   } catch (error) {
-    endPerformanceTimer(startTime, '統合ビュー更新エラー');
-    addLog('統合ビュー更新エラー', { error: error.toString() });
+    endPerformanceTimer(startTime, '端末系統合ビュー更新エラー');
+    addLog('端末系統合ビュー更新エラー', { error: error.toString() });
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * プリンタ・その他系統合ビューのデータを更新
+ * @return {Object} 更新結果
+ */
+function updateIntegratedViewPrinterOther() {
+  const startTime = startPerformanceTimer();
+  addLog('プリンタ・その他系統合ビュー更新開始');
+  
+  try {
+    const sheet = getIntegratedViewPrinterOtherSheet();
+    
+    // プリンタマスタとその他マスタからデータを収集
+    const printerData = getPrinterMasterData();
+    const otherData = getOtherMasterData();
+    
+    // ステータス収集シートからデータを取得
+    const statusData = getLatestStatusCollectionData();
+    
+    // データを統合
+    const printerIntegratedData = integrateDeviceData(printerData, statusData, 'printer');
+    const otherIntegratedData = integrateDeviceData(otherData, statusData, 'other');
+    const integratedData = [...printerIntegratedData, ...otherIntegratedData];
+    
+    // シートに書き込み
+    if (integratedData.length > 0) {
+      sheet.getRange(2, 1, sheet.getMaxRows() - 1, sheet.getLastColumn()).clearContent();
+      sheet.getRange(2, 1, integratedData.length, integratedData[0].length).setValues(integratedData);
+    }
+    
+    endPerformanceTimer(startTime, 'プリンタ・その他系統合ビュー更新');
+    
+    return {
+      success: true,
+      rowsUpdated: integratedData.length
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, 'プリンタ・その他系統合ビュー更新エラー');
+    addLog('プリンタ・その他系統合ビュー更新エラー', { error: error.toString() });
     return {
       success: false,
       error: error.toString()

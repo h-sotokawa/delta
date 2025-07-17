@@ -12,12 +12,31 @@ function rebuildSearchIndex() {
   addLog('検索インデックス再構築開始');
   
   try {
-    // 統合ビューシートからデータを取得
-    const viewSheet = getIntegratedViewSheet();
+    // 両方の統合ビューシートからデータを取得
+    const terminalSheet = getIntegratedViewTerminalSheet();
+    const printerOtherSheet = getIntegratedViewPrinterOtherSheet();
     const searchSheet = getSearchIndexSheet();
     
-    const lastRow = viewSheet.getLastRow();
-    if (lastRow <= 1) {
+    // 端末系データを取得
+    const terminalLastRow = terminalSheet.getLastRow();
+    let terminalRows = [];
+    if (terminalLastRow > 1) {
+      const terminalData = terminalSheet.getRange(1, 1, terminalLastRow, terminalSheet.getLastColumn()).getValues();
+      terminalRows = terminalData.slice(1); // ヘッダーを除外
+    }
+    
+    // プリンタ・その他系データを取得
+    const printerOtherLastRow = printerOtherSheet.getLastRow();
+    let printerOtherRows = [];
+    if (printerOtherLastRow > 1) {
+      const printerOtherData = printerOtherSheet.getRange(1, 1, printerOtherLastRow, printerOtherSheet.getLastColumn()).getValues();
+      printerOtherRows = printerOtherData.slice(1); // ヘッダーを除外
+    }
+    
+    // データを結合
+    const rows = [...terminalRows, ...printerOtherRows];
+    
+    if (rows.length === 0) {
       addLog('統合ビューにデータがありません');
       return {
         success: true,
@@ -26,10 +45,8 @@ function rebuildSearchIndex() {
       };
     }
     
-    // 統合ビューのデータを取得
-    const viewData = viewSheet.getRange(1, 1, lastRow, viewSheet.getLastColumn()).getValues();
-    const headers = viewData[0];
-    const rows = viewData.slice(1);
+    // ヘッダーはどちらのシートも同じ構造なので、端末系から取得
+    const headers = terminalSheet.getRange(1, 1, 1, terminalSheet.getLastColumn()).getValues()[0];
     
     // 必要な列のインデックスを取得
     const columnIndices = {
@@ -214,15 +231,126 @@ function searchWithIndex(keyword, filters = {}) {
 
 /**
  * 統合ビューデータを構築（マスタシートから）
+ * @deprecated 両方の統合ビューを構築するためのbuildAllIntegratedViewsを使用
  * @return {Object} 構築結果
  */
 function buildIntegratedViewData() {
+  return buildAllIntegratedViews();
+}
+
+/**
+ * すべての統合ビューデータを構築
+ * @return {Object} 構築結果
+ */
+function buildAllIntegratedViews() {
   const startTime = startPerformanceTimer();
-  addLog('統合ビューデータ構築開始');
+  addLog('すべての統合ビューデータ構築開始');
   
   try {
-    // 各マスタシートからデータを取得
+    // 端末系統合ビューを構築
+    const terminalResult = buildIntegratedViewTerminal();
+    if (!terminalResult.success) {
+      throw new Error('端末系統合ビュー構築失敗: ' + terminalResult.error);
+    }
+    
+    // プリンタ・その他系統合ビューを構築
+    const printerOtherResult = buildIntegratedViewPrinterOther();
+    if (!printerOtherResult.success) {
+      throw new Error('プリンタ・その他系統合ビュー構築失敗: ' + printerOtherResult.error);
+    }
+    
+    endPerformanceTimer(startTime, 'すべての統合ビューデータ構築');
+    
+    const result = {
+      success: true,
+      terminal: terminalResult,
+      printerOther: printerOtherResult,
+      totalRowsCreated: terminalResult.rowsCreated + printerOtherResult.rowsCreated,
+      timestamp: new Date()
+    };
+    
+    addLog('すべての統合ビューデータ構築完了', result);
+    return result;
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, 'すべての統合ビューデータ構築エラー');
+    addLog('すべての統合ビューデータ構築エラー', { error: error.toString() });
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * 端末系統合ビューデータを構築
+ * @return {Object} 構築結果
+ */
+function buildIntegratedViewTerminal() {
+  const startTime = startPerformanceTimer();
+  addLog('端末系統合ビューデータ構築開始');
+  
+  try {
+    // 端末マスタシートからデータを取得
     const terminalData = getTerminalMasterData();
+    
+    // ステータス収集シートから最新データを取得
+    const statusData = getLatestStatusCollectionData();
+    
+    // 拠点マスタデータを取得
+    const locationMaster = getLocationMaster();
+    const locationMap = {};
+    locationMaster.forEach(loc => {
+      locationMap[loc.locationId] = loc;
+    });
+    
+    // 端末データを統合
+    const integratedData = integrateDeviceData(terminalData, statusData, locationMap, 'terminal');
+    
+    // 端末系統合ビューシートに書き込み
+    const viewSheet = getIntegratedViewTerminalSheet();
+    
+    // 既存データをクリア
+    if (viewSheet.getLastRow() > 1) {
+      viewSheet.getRange(2, 1, viewSheet.getLastRow() - 1, viewSheet.getLastColumn()).clearContent();
+    }
+    
+    // 新しいデータを書き込み
+    if (integratedData.length > 0) {
+      viewSheet.getRange(2, 1, integratedData.length, integratedData[0].length).setValues(integratedData);
+    }
+    
+    endPerformanceTimer(startTime, '端末系統合ビューデータ構築');
+    
+    const result = {
+      success: true,
+      rowsCreated: integratedData.length,
+      timestamp: new Date()
+    };
+    
+    addLog('端末系統合ビューデータ構築完了', result);
+    return result;
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, '端末系統合ビューデータ構築エラー');
+    addLog('端末系統合ビューデータ構築エラー', { error: error.toString() });
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * プリンタ・その他系統合ビューデータを構築
+ * @return {Object} 構築結果
+ */
+function buildIntegratedViewPrinterOther() {
+  const startTime = startPerformanceTimer();
+  addLog('プリンタ・その他系統合ビューデータ構築開始');
+  
+  try {
+    // プリンタとその他マスタシートからデータを取得
     const printerData = getPrinterMasterData();
     const otherData = getOtherMasterData();
     
@@ -236,20 +364,13 @@ function buildIntegratedViewData() {
       locationMap[loc.locationId] = loc;
     });
     
-    // データを統合
-    const integratedData = [];
+    // プリンタとその他データを統合
+    const printerIntegratedData = integrateDeviceData(printerData, statusData, locationMap, 'printer');
+    const otherIntegratedData = integrateDeviceData(otherData, statusData, locationMap, 'other');
+    const integratedData = [...printerIntegratedData, ...otherIntegratedData];
     
-    // 端末データの統合
-    integratedData.push(...integrateDeviceData(terminalData, statusData, locationMap, 'terminal'));
-    
-    // プリンタデータの統合
-    integratedData.push(...integrateDeviceData(printerData, statusData, locationMap, 'printer'));
-    
-    // その他データの統合
-    integratedData.push(...integrateDeviceData(otherData, statusData, locationMap, 'other'));
-    
-    // 統合ビューシートに書き込み
-    const viewSheet = getIntegratedViewSheet();
+    // プリンタ・その他系統合ビューシートに書き込み
+    const viewSheet = getIntegratedViewPrinterOtherSheet();
     
     // 既存データをクリア
     if (viewSheet.getLastRow() > 1) {
@@ -261,7 +382,7 @@ function buildIntegratedViewData() {
       viewSheet.getRange(2, 1, integratedData.length, integratedData[0].length).setValues(integratedData);
     }
     
-    endPerformanceTimer(startTime, '統合ビューデータ構築');
+    endPerformanceTimer(startTime, 'プリンタ・その他系統合ビューデータ構築');
     
     const result = {
       success: true,
@@ -269,12 +390,12 @@ function buildIntegratedViewData() {
       timestamp: new Date()
     };
     
-    addLog('統合ビューデータ構築完了', result);
+    addLog('プリンタ・その他系統合ビューデータ構築完了', result);
     return result;
     
   } catch (error) {
-    endPerformanceTimer(startTime, '統合ビューデータ構築エラー');
-    addLog('統合ビューデータ構築エラー', { error: error.toString() });
+    endPerformanceTimer(startTime, 'プリンタ・その他系統合ビューデータ構築エラー');
+    addLog('プリンタ・その他系統合ビューデータ構築エラー', { error: error.toString() });
     return {
       success: false,
       error: error.toString()
@@ -392,8 +513,8 @@ function determineCautionFlag(statusData, loanDays) {
  */
 function updateSearchIndexTrigger() {
   try {
-    // 統合ビューを更新
-    const viewResult = buildIntegratedViewData();
+    // すべての統合ビューを更新
+    const viewResult = buildAllIntegratedViews();
     if (!viewResult.success) {
       console.error('統合ビュー更新失敗:', viewResult.error);
       return;
@@ -407,7 +528,9 @@ function updateSearchIndexTrigger() {
     }
     
     console.log('検索インデックス更新完了:', {
-      viewRows: viewResult.rowsCreated,
+      terminalRows: viewResult.terminal.rowsCreated,
+      printerOtherRows: viewResult.printerOther.rowsCreated,
+      totalViewRows: viewResult.totalRowsCreated,
       indexRows: indexResult.rowsIndexed,
       timestamp: new Date()
     });
@@ -423,8 +546,8 @@ function updateSearchIndexTrigger() {
 function testSearchIndex() {
   console.log('=== 検索インデックステスト開始 ===');
   
-  // 統合ビューデータ構築
-  const viewResult = buildIntegratedViewData();
+  // すべての統合ビューデータ構築
+  const viewResult = buildAllIntegratedViews();
   console.log('統合ビュー構築結果:', viewResult);
   
   // 検索インデックス再構築
