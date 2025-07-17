@@ -180,7 +180,7 @@
         handleDataTypeChange();
       }
     }
-  };
+  }
 
   // デバイスタイプ変更時の処理
   window.handleDeviceTypeChange = function handleDeviceTypeChange() {
@@ -4155,55 +4155,12 @@
   window.initSpreadsheetPage = function() {
     console.log('initSpreadsheetPage called from spreadsheet-functions.html');
     
-    // データタイプマスタを読み込む
-    if (typeof google !== 'undefined' && google.script && google.script.run) {
-      console.log('Loading data types via Google Apps Script');
-      google.script.run
-        .withSuccessHandler(function(response) {
-          console.log('Data type response:', response);
-          if (response.success && response.dataTypes) {
-            dataTypeMasterData = response.dataTypes;
-            console.log('データタイプマスタ読み込み成功:', dataTypeMasterData.length + '件');
-            
-            // データタイプドロップダウンを更新
-            const dataTypeSelect = document.getElementById('dataType');
-            if (dataTypeSelect) {
-              dataTypeSelect.innerHTML = '<option value="">データタイプを選択してください</option>';
-              
-              dataTypeMasterData.forEach(dataType => {
-                const option = document.createElement('option');
-                option.value = dataType.dataTypeId;
-                option.textContent = dataType.dataTypeName;
-                if (dataType.description) {
-                  option.title = dataType.description;
-                }
-                dataTypeSelect.appendChild(option);
-              });
-              
-              // デフォルトで最初のデータタイプが選択されている場合、UIを更新
-              if (dataTypeSelect.value && dataTypeSelect.selectedIndex > 0) {
-                handleDataTypeChange();
-              }
-            }
-          }
-        })
-        .withFailureHandler(function(error) {
-          console.error('データタイプマスタ読み込み失敗:', error);
-          dataTypeMasterData = [];
-          
-          // エラー時のフォールバック
-          const dataTypeSelect = document.getElementById('dataType');
-          if (dataTypeSelect) {
-            dataTypeSelect.innerHTML = '<option value="">データタイプの読み込みに失敗しました</option>';
-          }
-        })
-        .getDataTypeMaster(true); // アクティブなデータタイプのみ取得
-    }
+    // 固定データタイプを直接読み込む
+    console.log('Loading fixed data types');
+    loadDataTypeMaster();
     
-    // 拠点マスタも同時に読み込む
-    if (typeof initializeLocations === 'function') {
-      initializeLocations();
-    }
+    // 拠点データを読み込む
+    initializeLocations();
   };
 
 </script> 
