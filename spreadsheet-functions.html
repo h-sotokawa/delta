@@ -121,52 +121,65 @@
       .getLocations();
   }
   
-  // データタイプマスタを読み込み
+  // 固定データタイプを設定
   window.loadDataTypeMaster = function loadDataTypeMaster() {
-    google.script.run
-      .withSuccessHandler(function(response) {
-        if (response.success) {
-          dataTypeMasterData = response.dataTypes || [];
-          window.dataTypeMasterData = dataTypeMasterData;  // グローバルにも設定
-          console.log('データタイプマスタ読み込み完了:', dataTypeMasterData);
-          
-          // データタイプドロップダウンを更新
-          const dataTypeSelect = document.getElementById('dataType');
-          if (dataTypeSelect) {
-            dataTypeSelect.innerHTML = '<option value="">データタイプを選択してください</option>';
-            
-            dataTypeMasterData.forEach((dataType, index) => {
-              const option = document.createElement('option');
-              option.value = dataType.dataTypeId;
-              option.textContent = dataType.dataTypeName;
-              if (dataType.description) {
-                option.title = dataType.description;
-              }
-              // デフォルトで最初のデータタイプを選択
-              if (index === 0) {
-                option.selected = true;
-              }
-              dataTypeSelect.appendChild(option);
-            });
-            
-            // デフォルトで最初のデータタイプが選択されている場合、UIを更新
-            if (dataTypeSelect.value && dataTypeSelect.selectedIndex > 0) {
-              handleDataTypeChange();
-            }
-          }
+    // 固定データタイプ定義
+    const fixedDataTypes = [
+      {
+        dataTypeId: 'AUDIT',
+        dataTypeName: '監査データ',
+        description: '機器の監査用データ表示'
+      },
+      {
+        dataTypeId: 'SUMMARY',
+        dataTypeName: 'サマリーデータ',
+        description: '拠点別サマリー表示'
+      },
+      {
+        dataTypeId: 'INTEGRATED_VIEW_TERMINAL',
+        dataTypeName: '統合ビュー（端末系）',
+        description: 'Server、Desktop、Laptop、Tabletの統合表示'
+      },
+      {
+        dataTypeId: 'INTEGRATED_VIEW_PRINTER_OTHER',
+        dataTypeName: '統合ビュー（プリンタ・その他系）',
+        description: 'Printer、Router、Hub、Otherの統合表示'
+      },
+      {
+        dataTypeId: 'INTEGRATED_VIEW',
+        dataTypeName: '統合ビュー（旧）',
+        description: '全機器の統合表示（非推奨）'
+      }
+    ];
+    
+    dataTypeMasterData = fixedDataTypes;
+    window.dataTypeMasterData = dataTypeMasterData;  // グローバルにも設定
+    console.log('固定データタイプ読み込み完了:', dataTypeMasterData);
+    
+    // データタイプドロップダウンを更新
+    const dataTypeSelect = document.getElementById('dataType');
+    if (dataTypeSelect) {
+      dataTypeSelect.innerHTML = '<option value="">データタイプを選択してください</option>';
+      
+      dataTypeMasterData.forEach((dataType, index) => {
+        const option = document.createElement('option');
+        option.value = dataType.dataTypeId;
+        option.textContent = dataType.dataTypeName;
+        if (dataType.description) {
+          option.title = dataType.description;
         }
-      })
-      .withFailureHandler(function(error) {
-        console.error('データタイプマスタ読み込み失敗:', error);
-        dataTypeMasterData = [];
-        
-        // エラー時のフォールバック
-        const dataTypeSelect = document.getElementById('dataType');
-        if (dataTypeSelect) {
-          dataTypeSelect.innerHTML = '<option value="">データタイプの読み込みに失敗しました</option>';
+        // デフォルトで最初のデータタイプを選択
+        if (index === 0) {
+          option.selected = true;
         }
-      })
-      .getDataTypeMaster(true); // アクティブなデータタイプのみ取得
+        dataTypeSelect.appendChild(option);
+      });
+      
+      // デフォルトで最初のデータタイプが選択されている場合、UIを更新
+      if (dataTypeSelect.value && dataTypeSelect.selectedIndex > 0) {
+        handleDataTypeChange();
+      }
+    }
   };
 
   // デバイスタイプ変更時の処理

@@ -85,11 +85,6 @@ function createAllRequiredSheets() {
       frozen: { rows: 1, columns: 2 }
     },
     {
-      name: 'データタイプマスタ',
-      headers: ['データタイプID', 'データタイプ名', '説明', 'ソート順', 'アクティブ', '作成日時', '更新日時'],
-      frozen: { rows: 1, columns: 2 }
-    },
-    {
       name: '端末マスタ',
       headers: ['拠点管理番号', '拠点', 'カテゴリ', '機種名', '資産管理番号', '製造番号', '作成日時'],
       frozen: { rows: 1, columns: 1 }
@@ -163,9 +158,6 @@ function createAllRequiredSheets() {
     }
   });
   
-  // データタイプマスタの初期データ投入
-  initializeDataTypeMaster();
-  
   console.log('必要なシートの作成完了');
 }
 
@@ -208,35 +200,6 @@ function generateIntegratedViewHeaders(type) {
   }
 }
 
-/**
- * データタイプマスタの初期データを投入
- */
-function initializeDataTypeMaster() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('データタイプマスタ');
-  if (!sheet) return;
-  
-  // 既存データチェック
-  const lastRow = sheet.getLastRow();
-  if (lastRow > 1) {
-    console.log('データタイプマスタには既にデータが存在します');
-    return;
-  }
-  
-  const now = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
-  const initialData = [
-    ['AUDIT', '監査データ', '機器の監査用データ表示', 1, '', '{}', '{}', 'active', now, now],
-    ['SUMMARY', 'サマリーデータ', '拠点別サマリー表示', 2, '', '{}', '{}', 'active', now, now],
-    ['INTEGRATED_VIEW_TERMINAL', '統合ビュー（端末系）', 'Server、Desktop、Laptop、Tabletの統合表示', 3, '', '{}', '{}', 'active', now, now],
-    ['INTEGRATED_VIEW_PRINTER_OTHER', '統合ビュー（プリンタ・その他系）', 'Printer、Router、Hub、Otherの統合表示', 4, '', '{}', '{}', 'active', now, now],
-    ['INTEGRATED_VIEW', '統合ビュー（旧）', '全機器の統合表示（非推奨）', 5, '', '{}', '{}', 'active', now, now]
-  ];
-  
-  if (initialData.length > 0) {
-    const range = sheet.getRange(2, 1, initialData.length, initialData[0].length);
-    range.setValues(initialData);
-    console.log('データタイプマスタの初期データ投入完了');
-  }
-}
 
 /**
  * 統合ビューの設定

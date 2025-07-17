@@ -27,7 +27,6 @@ const MASTER_SHEET_NAMES = {
   other: 'その他マスタ',
   model: '機種マスタ',
   location: '拠点マスタ',
-  dataType: 'データタイプマスタ',
   settings: '設定'
 };
 

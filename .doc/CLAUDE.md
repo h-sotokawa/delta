@@ -46,7 +46,6 @@ GAS上でテストファイルを直接実行：
 - error-handling.gs - エラー処理
 - date-utils.gs - 日付ユーティリティ
 - custody-status-manager.gs - 預り機ステータス管理
-- data-type-master.gs - データタイプマスタ
 - url-generation.gs - URL生成
 - qr-*.gs - QRコード関連
 
@@ -204,9 +203,8 @@ if (DEBUG) {
 - アポストロフィなしの標準テキスト形式に統一
 
 #### 2. データ構造の変更による影響
-- **データタイプマスタの実装**: 2025年7月11日のリファクタリング
 - **列インデックスの変更**: マスタシートの構造変更時
-- **関連性の破綻**: 拠点マスタとデータタイプマスタの不整合
+- **関連性の破綻**: 拠点マスタとの不整合
 
 #### 3. Google Apps Script環境の問題
 ```javascript
@@ -226,7 +224,6 @@ const DEBUG_MODE = true; // config.gsで設定
 
 1. **スプレッドシートの書式設定**
    - 日時列が「書式なしテキスト」になっているか
-   - データタイプマスタシートが正しく作成されているか
 
 2. **Google Apps Scriptの権限**
    - スクリプト実行権限の確認
@@ -245,7 +242,7 @@ const DEBUG_MODE = true; // config.gsで設定
 ```javascript
 // フォールバック処理の例
 if (masterData.length === 0) {
-  console.log('データタイプマスタが空のため、簡易的な処理を実行');
+  console.log('マスタデータが空のため、簡易的な処理を実行');
   // 緊急時の代替処理
 }
 ```
@@ -332,8 +329,9 @@ function include(filename) {
    - onChangeトリガー：マスタシート変更時の自動反映
    - timeBasedトリガー：深夜2:00の日次全体再構築
 
-3. **データタイプマスタとの連携**
-   - INTEGRATED_VIEW_TERMINAL、INTEGRATED_VIEW_PRINTER_OTHER追加
+3. **統合ビューの表示制御**
+   - 端末系統合ビュー（INTEGRATED_VIEW_TERMINAL）
+   - プリンタ・その他系統合ビュー（INTEGRATED_VIEW_PRINTER_OTHER）
    - デバイスタイプ選択の不要化
    - 拠点選択のみでの効率的フィルタリング
 
