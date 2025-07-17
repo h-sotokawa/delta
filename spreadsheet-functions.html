@@ -142,15 +142,15 @@
               if (dataType.description) {
                 option.title = dataType.description;
               }
-              // デフォルトでNORMALを選択
-              if (dataType.dataTypeId === 'NORMAL') {
+              // デフォルトで最初のデータタイプを選択
+              if (index === 0) {
                 option.selected = true;
               }
               dataTypeSelect.appendChild(option);
             });
             
-            // デフォルトでNORMALが選択されている場合、UIを更新
-            if (dataTypeSelect.value === 'NORMAL') {
+            // デフォルトで最初のデータタイプが選択されている場合、UIを更新
+            if (dataTypeSelect.value && dataTypeSelect.selectedIndex > 0) {
               handleDataTypeChange();
             }
           }
@@ -1975,8 +1975,8 @@
     // データタイプを取得
     const dataTypeId = document.getElementById('dataType') ? document.getElementById('dataType').value : '';
     
-    // 通常データの場合は列を並び替え
-    if (dataTypeId === 'NORMAL' && displayMode === 'main') {
+    // 統合ビューの場合は列を並び替え
+    if (dataTypeId && dataTypeId.includes('INTEGRATED_VIEW') && displayMode === 'main') {
       data = reorderColumnsForNormalData(data);
     }
     
@@ -1987,8 +1987,8 @@
     let statusPrefixFilter = null;
     let nestedStatusFilter = null;
     
-    // 通常データ（NORMAL）の場合のみステータス駆動型フィルタリングを適用
-    if (dataTypeId === 'NORMAL' && displayMode === 'main') {
+    // 統合ビューの場合のみステータス駆動型フィルタリングを適用
+    if (dataTypeId && dataTypeId.includes('INTEGRATED_VIEW') && displayMode === 'main') {
       // 0-4.ステータス列を探す
       const statusColumnIndex = data[0].findIndex(header => header && header.includes('0-4.ステータス'));
       
@@ -3363,9 +3363,9 @@
       // データタイプIDから簡易的なオブジェクトを作成
       const selectedDataType = {
         dataTypeId: dataTypeId,
-        dataTypeName: dataTypeId === 'NORMAL' ? '通常データ' : 
-                      dataTypeId === 'AUDIT' ? '監査データ' : 
-                      dataTypeId === 'SUMMARY' ? 'サマリーデータ' : dataTypeId
+        dataTypeName: dataTypeId === 'AUDIT' ? '監査データ' : 
+                      dataTypeId === 'SUMMARY' ? 'サマリーデータ' : 
+                      dataTypeId.includes('INTEGRATED_VIEW') ? '統合ビュー' : dataTypeId
       };
       updateUIForDataType(selectedDataType);
       loadDataBasedOnDataType();
@@ -3399,12 +3399,18 @@
     const dataTypeId = dataType.dataTypeId;
     
     // 各セクションの表示/非表示を制御
-    if (dataTypeId === 'NORMAL') {
-      // 通常データの場合
+    if (dataTypeId && dataTypeId.includes('INTEGRATED_VIEW')) {
+      // 統合ビューの場合
       document.querySelector('.location-selector').style.display = 'block';
       document.querySelector('.audit-sheet-selector').style.display = 'none';
       document.querySelector('.summary-refresh-selector').style.display = 'none';
       document.querySelector('.query-selector').style.display = 'block';
+      
+      // 機器種別選択は不要（事前に分離済み）
+      const deviceTypeSelector = document.querySelector('.device-type-selector');
+      if (deviceTypeSelector) {
+        deviceTypeSelector.style.display = 'none';
+      }
     } else if (dataTypeId === 'AUDIT') {
       // 監査データの場合
       document.querySelector('.location-selector').style.display = 'none';
@@ -3633,8 +3639,8 @@
       }
     }
     
-    if (dataTypeId === 'NORMAL') {
-      // 通常データ：拠点選択が必要
+    if (dataTypeId && dataTypeId.includes('INTEGRATED_VIEW')) {
+      // 統合ビューの場合：拠点選択が必要
       const location = locationSelect ? locationSelect.value : '';
       if (!location) {
         // 初期表示時は案内メッセージを表示（エラーとしてではなく）
@@ -3652,8 +3658,15 @@
         }
         return;
       }
-      const deviceTypeSelect = document.getElementById('deviceType');
-      const selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
+      
+      // 統合ビューでは機器種別は事前に分離済みのため、データタイプから判定
+      const deviceTypeMapping = {
+        'INTEGRATED_VIEW_TERMINAL': 'terminal',
+        'INTEGRATED_VIEW_PRINTER_OTHER': 'printer_other',
+        'INTEGRATED_VIEW': 'terminal' // 旧版のデフォルト
+      };
+      const selectedDeviceType = deviceTypeMapping[dataTypeId] || 'terminal';
+      
       console.log('Calling loadSpreadsheet with:', { location, queryType, selectedDeviceType });
       loadSpreadsheet(location, queryType, selectedDeviceType);
       
@@ -3858,8 +3871,8 @@
   handleLocationChange = function() {
     const dataTypeId = document.getElementById('dataType').value;
     
-    if (dataTypeId === 'NORMAL' || !dataTypeId || (dataTypeId && dataTypeId !== 'AUDIT' && dataTypeId !== 'SUMMARY')) {
-      // 通常データまたはカスタムデータタイプの場合のみ既存のロジックを実行
+    if (dataTypeId && dataTypeId.includes('INTEGRATED_VIEW')) {
+      // 統合ビューの場合のみ既存のロジックを実行
       originalHandleLocationChange();
       
       // 拠点が選択されたらデータを読み込み
@@ -3870,7 +3883,7 @@
     } else {
       // 監査データやサマリーデータの場合は何もしない
       if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
-        showDebugInfo('拠点変更（通常データ以外のため無視）', { dataTypeId });
+        showDebugInfo('拠点変更（統合ビュー以外のため無視）', { dataTypeId });
       }
     }
   };

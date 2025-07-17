@@ -173,6 +173,12 @@ function onFormSubmit(e) {
 
 データタイプマスタは、フロントエンドでのデータ表示形式（ビューモード）を定義するマスタです。実際のデータレコードにはデータタイプ ID は含まれず、表示時にユーザーが選択する表示形式を管理します。
 
+**重要な設計方針**:
+- 統合ビューでは機器種別は事前に分離されているため、データ種別の選択は不要
+- 端末系統合ビューとプリンタ・その他系統合ビューは独立したデータタイプとして管理
+- 各統合ビューは拠点選択のみで完結し、追加のフィルタリングは不要
+- 通常データ（NORMAL）は廃止し、統合ビュー、監査データ、サマリーデータのみで構成
+
 #### 2.3.2 テーブル構造
 
 | 列名             | データ型 | 必須 | 説明                          | 例                                                                                      |
@@ -199,108 +205,6 @@ function onFormSubmit(e) {
 
 #### 2.3.4 初期データ
 
-**通常データ（NORMAL）**:
-
-```json
-{
-  "データタイプID": "NORMAL",
-  "データタイプ名": "通常データ",
-  "説明": "日常的な機器管理データ表示（ステータス連動型）",
-  "表示順序": 1,
-  "フィルタ条件": null,
-  "データソース設定": {
-    "sourceType": "dynamic",
-    "description": "端末・プリンタ・その他マスタから動的取得",
-    "sourceSheets": ["端末マスタ", "プリンタマスタ", "その他マスタ"],
-    "columnMappings": {
-      "拠点管理番号": "拠点管理番号",
-      "機器種別": "dynamic_device_type",
-      "機種名": "機種名",
-      "製造番号": "製造番号",
-      "タイムスタンプ": "更新日",
-      "0-1.担当者": "dynamic_from_forms",
-      "0-4.ステータス": "dynamic_from_forms",
-      "預かり機のステータス": "預かり機のステータス"
-    },
-    "dynamicFields": {
-      "機器種別": {
-        "logic": "categoryToDeviceType",
-        "mapping": {
-          "Server": "端末",
-          "Desktop": "端末",
-          "Laptop": "端末",
-          "Tablet": "端末",
-          "Printer": "プリンタ",
-          "Router": "その他",
-          "Hub": "その他",
-          "Other": "その他"
-        }
-      },
-      "dynamic_from_forms": {
-        "description": "Googleフォームから投稿されたデータは動的に列として追加される"
-      }
-    }
-  },
-  "表示列設定": {
-    "statusDriven": true,
-    "statusColumnKey": "0-4.ステータス",
-    "prefixBasedFiltering": true,
-    "nestedStatusFiltering": true,
-    "baseColumns": [
-      "拠点管理番号",
-      "機器種別",
-      "機種名",
-      "製造番号",
-      "タイムスタンプ",
-      "0-1.担当者"
-    ],
-    "columnFilterRules": {
-      "description": "ステータスの接頭辞数字に基づくフィルタリング（動的2段階ネスト対応）",
-      "filterLogic": "showOnlyMatchingPrefix",
-      "dynamicNestedFiltering": true,
-      "nestedStatusRules": {
-        "3.社内にて保管中": {
-          "nestedStatusColumnKey": "3-0.社内ステータス",
-          "description": "社内ステータスによる動的2段階フィルタリング（事前定義なし）",
-          "dynamicDetection": {
-            "enabled": true,
-            "detectionLogic": "extractNestedPrefixesFromAvailableColumns",
-            "basePattern": "3-*",
-            "nestedPattern": "3-{X}-*",
-            "description": "利用可能な列から3-X-*パターンを動的検出し、3-0.社内ステータスの値に応じてフィルタリング"
-          }
-        }
-      },
-      "fallbackColumns": [
-        "拠点管理番号",
-        "機器種別",
-        "機種名",
-        "製造番号",
-        "タイムスタンプ",
-        "0-1.担当者",
-        "0-4.ステータス",
-        "更新日時"
-      ]
-    },
-    "displayColumnOrder": {
-      "enabled": true,
-      "description": "通常データ表示時の固定列順序",
-      "fixedOrder": [
-        { "columnId": "#", "label": "項番", "type": "rowNumber" },
-        { "columnId": "locationNumber", "label": "拠点管理番号", "type": "data" },
-        { "columnId": "category", "label": "カテゴリ", "type": "data" },
-        { "columnId": "modelName", "label": "機種名", "type": "data" },
-        { "columnId": "status", "label": "ステータス", "type": "data" },
-        { "columnId": "statusRelated", "label": "ステータス連動列", "type": "dynamic" }
-      ],
-      "implementation": "spreadsheet-functions.html:reorderColumnsForNormalData()",
-      "note": "ステータス連動列は0-4.ステータスの値に基づいて動的に表示される列"
-    }
-  },
-  "ステータス": "active"
-}
-```
-
 **監査データ（AUDIT）**:
 
 ```json
@@ -308,7 +212,7 @@ function onFormSubmit(e) {
   "データタイプID": "AUDIT",
   "データタイプ名": "監査データ",
   "説明": "監査・検査用データ表示",
-  "表示順序": 2,
+  "表示順序": 1,
   "フィルタ条件": null,
   "データソース設定": {
     "sourceType": "specific_sheets",
@@ -383,7 +287,7 @@ function onFormSubmit(e) {
   "データタイプID": "SUMMARY",
   "データタイプ名": "サマリー",
   "説明": "集計・要約データ表示（カード形式のカテゴリ別サマリー）",
-  "表示順序": 3,
+  "表示順序": 2,
   "フィルタ条件": null,
   "データソース設定": {
     "sourceType": "aggregated",
@@ -451,6 +355,120 @@ function onFormSubmit(e) {
 }
 ```
 
+**統合ビュー（端末系）**:
+
+```json
+{
+  "データタイプID": "INTEGRATED_VIEW_TERMINAL",
+  "データタイプ名": "統合ビュー（端末系）",
+  "説明": "端末系機器（Server、Desktop、Laptop、Tablet）の統合表示",
+  "表示順序": 3,
+  "フィルタ条件": null,
+  "データソース設定": {
+    "sourceType": "integrated_view",
+    "description": "端末系統合ビューシートから直接取得",
+    "sourceSheets": ["integrated_view_terminal"],
+    "deviceTypes": ["Server", "Desktop", "Laptop", "Tablet"],
+    "viewType": "integrated",
+    "noDeviceTypeSelection": true,
+    "locationSelectionOnly": true
+  },
+  "表示列設定": {
+    "displayMode": "integrated",
+    "locationFilterRequired": true,
+    "deviceTypeFilterDisabled": true,
+    "description": "拠点選択のみでフィルタリング、機器種別は事前に分離済み",
+    "columns": [
+      "拠点管理番号",
+      "カテゴリ",
+      "機種名",
+      "製造番号",
+      "資産管理番号",
+      "ソフトウェア",
+      "OS",
+      "現在ステータス",
+      "最終更新日時",
+      "貸出日数",
+      "要注意フラグ"
+    ]
+  },
+  "ステータス": "active"
+}
+```
+
+**統合ビュー（プリンタ・その他系）**:
+
+```json
+{
+  "データタイプID": "INTEGRATED_VIEW_PRINTER_OTHER",
+  "データタイプ名": "統合ビュー（プリンタ・その他系）",
+  "説明": "プリンタ・その他系機器（Printer、Router、Hub、Other）の統合表示",
+  "表示順序": 4,
+  "フィルタ条件": null,
+  "データソース設定": {
+    "sourceType": "integrated_view",
+    "description": "プリンタ・その他系統合ビューシートから直接取得",
+    "sourceSheets": ["integrated_view_printer_other"],
+    "deviceTypes": ["Printer", "Router", "Hub", "Other"],
+    "viewType": "integrated",
+    "noDeviceTypeSelection": true,
+    "locationSelectionOnly": true
+  },
+  "表示列設定": {
+    "displayMode": "integrated",
+    "locationFilterRequired": true,
+    "deviceTypeFilterDisabled": true,
+    "description": "拠点選択のみでフィルタリング、機器種別は事前に分離済み",
+    "columns": [
+      "拠点管理番号",
+      "カテゴリ",
+      "機種名",
+      "製造番号",
+      "現在ステータス",
+      "最終更新日時",
+      "貸出日数",
+      "要注意フラグ"
+    ]
+  },
+  "ステータス": "active"
+}
+```
+
+**統合ビュー（旧・非推奨）**:
+
+```json
+{
+  "データタイプID": "INTEGRATED_VIEW",
+  "データタイプ名": "統合ビュー（旧・非推奨）",
+  "説明": "全機器種別混在の統合ビュー（端末系/プリンタ・その他系への分離を推奨）",
+  "表示順序": 5,
+  "フィルタ条件": null,
+  "データソース設定": {
+    "sourceType": "integrated_view",
+    "description": "旧統合ビューシートから取得（非推奨）",
+    "sourceSheets": ["integrated_view"],
+    "deprecated": true,
+    "migrateTo": ["INTEGRATED_VIEW_TERMINAL", "INTEGRATED_VIEW_PRINTER_OTHER"],
+    "deviceTypeSelectionRequired": true
+  },
+  "表示列設定": {
+    "displayMode": "integrated",
+    "locationFilterRequired": true,
+    "deviceTypeFilterRequired": true,
+    "description": "機器種別選択が必要な従来方式（非推奨）",
+    "columns": [
+      "拠点管理番号",
+      "カテゴリ",
+      "機種名",
+      "製造番号",
+      "現在ステータス",
+      "最終更新日時"
+    ]
+  },
+  "ステータス": "active"
+}
+```
+
 #### 2.3.5 データソース設定の詳細
 
 **データソース設定の種類**:
@@ -471,6 +489,12 @@ function onFormSubmit(e) {
    - 各マスタの「預かり機のステータス」を基にリアルタイム集計
    - 拠点・デバイスタイプ別の集計
    - 外部シート不要で動的生成
+
+4. **integrated_view (統合ビュー)**
+   - 事前に構築された統合ビューシートから直接取得
+   - 機器種別による分離済みデータ
+   - 拠点選択のみでフィルタリング完了
+   - 高速表示とシンプルなUI操作を実現
 
 ### 2.4 端末マスタ
 
@@ -814,7 +838,7 @@ graph TD
 graph LR
     A[マスタシート] -->|基本情報| D[DataRepository]
     B[収集シート] -->|最新状態| D
-    C[ビューシート] -->|統合済み| D
+    C[統合ビューシート] -->|分離済み統合データ| D
     D --> E[キャッシュ層]
     E --> F[フロントエンド]
 ```
@@ -828,8 +852,33 @@ graph LR
 | 基本情報 | マスタシート | 低頻度 | 機種名、カテゴリ、製造番号等 |
 | 動的情報 | 収集シート | 高頻度 | ステータス、担当者、貸出情報等 |
 | 計算情報 | 実行時計算 | リアルタイム | 経過日数、アラート判定等 |
+| 統合情報 | 統合ビューシート | 定期更新 | 機器種別分離済みの統合データ |
 
-#### 4.1.3 データ結合ロジック
+#### 4.1.3 統合ビューシート方式
+
+**統合ビュー分離の利点**:
+
+1. **パフォーマンス向上**
+   - 機器種別による事前分離により表示データ量を削減
+   - 拠点選択のみでフィルタリング完了
+
+2. **UI/UX改善**
+   - 機器種別選択UIが不要
+   - ワンクリックでの機器種別切り替え
+
+3. **保守性向上**
+   - 端末系とプリンタ・その他系の独立管理
+   - 機器種別固有のロジック分離
+
+**統合ビューシート構成**:
+
+| シート名 | 対象機器 | 特徴 |
+| -------- | -------- | ---- |
+| integrated_view_terminal | Server, Desktop, Laptop, Tablet | 端末系機器統合データ |
+| integrated_view_printer_other | Printer, Router, Hub, Other | プリンタ・その他系機器統合データ |
+| integrated_view (旧) | 全機器種別 | 非推奨・互換性維持 |
+
+#### 4.1.4 データ結合ロジック
 
 ```sql
 -- ビューシート用QUERY例

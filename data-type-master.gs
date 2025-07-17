@@ -128,27 +128,10 @@ function getInitialDataTypes() {
   
   return [
     [
-      'NORMAL',
-      '通常データ',
-      '日常的な機器管理データ表示',
-      1,
-      '',
-      JSON.stringify({
-        sourceSheets: ['端末マスタ', 'プリンタマスタ', 'その他マスタ'],
-        includeAllColumns: true
-      }),
-      JSON.stringify({
-        columns: ['拠点管理番号', '機器種別', '機種名', '製造番号', 'ステータス', '更新日時']
-      }),
-      'active',
-      now,
-      now
-    ],
-    [
       'AUDIT',
       '監査データ',
       '監査用の詳細データ表示',
-      2,
+      1,
       '',
       JSON.stringify({
         sourceSheets: ['端末ステータス収集', 'プリンタステータス収集', 'その他ステータス収集'],
@@ -165,7 +148,7 @@ function getInitialDataTypes() {
       'SUMMARY',
       'サマリーデータ',
       '集計・統計データ表示',
-      3,
+      2,
       '',
       JSON.stringify({
         sourceSheets: ['端末マスタ', 'プリンタマスタ', 'その他マスタ'],
@@ -179,33 +162,17 @@ function getInitialDataTypes() {
       now
     ],
     [
-      'INTEGRATED_VIEW',
-      '統合ビュー（旧）',
-      '全機器の統合ビュー表示（非推奨）',
-      4,
-      '',
-      JSON.stringify({
-        sourceSheets: ['integrated_view'],
-        deprecated: true,
-        migrateTo: ['INTEGRATED_VIEW_TERMINAL', 'INTEGRATED_VIEW_PRINTER_OTHER']
-      }),
-      JSON.stringify({
-        columns: ['拠点管理番号', 'カテゴリ', '機種名', '製造番号', '現在ステータス', '最終更新日時']
-      }),
-      'active',
-      now,
-      now
-    ],
-    [
       'INTEGRATED_VIEW_TERMINAL',
       '統合ビュー（端末系）',
       '端末系機器（サーバー、デスクトップ、ラップトップ、タブレット）の統合ビュー表示',
-      5,
+      3,
       '',
       JSON.stringify({
         sourceSheets: ['integrated_view_terminal'],
         deviceTypes: ['Server', 'Desktop', 'Laptop', 'Tablet'],
-        viewType: 'integrated'
+        viewType: 'integrated',
+        noDeviceTypeSelection: true,
+        locationSelectionOnly: true
       }),
       JSON.stringify({
         columns: ['拠点管理番号', 'カテゴリ', '機種名', '製造番号', '資産管理番号', 'ソフトウェア', 'OS', '現在ステータス', '最終更新日時', '貸出日数', '要注意フラグ']
@@ -218,15 +185,35 @@ function getInitialDataTypes() {
       'INTEGRATED_VIEW_PRINTER_OTHER',
       '統合ビュー（プリンタ・その他系）',
       'プリンタ・その他系機器（プリンタ、ルーター、ハブ、その他）の統合ビュー表示',
-      6,
+      4,
       '',
       JSON.stringify({
         sourceSheets: ['integrated_view_printer_other'],
         deviceTypes: ['Printer', 'Router', 'Hub', 'Other'],
-        viewType: 'integrated'
+        viewType: 'integrated',
+        noDeviceTypeSelection: true,
+        locationSelectionOnly: true
       }),
       JSON.stringify({
         columns: ['拠点管理番号', 'カテゴリ', '機種名', '製造番号', '現在ステータス', '最終更新日時', '貸出日数', '要注意フラグ']
+      }),
+      'active',
+      now,
+      now
+    ],
+    [
+      'INTEGRATED_VIEW',
+      '統合ビュー（旧・非推奨）',
+      '全機器の統合ビュー表示（非推奨 - 端末系/プリンタ・その他系への分離を推奨）',
+      5,
+      '',
+      JSON.stringify({
+        sourceSheets: ['integrated_view'],
+        deprecated: true,
+        migrateTo: ['INTEGRATED_VIEW_TERMINAL', 'INTEGRATED_VIEW_PRINTER_OTHER']
+      }),
+      JSON.stringify({
+        columns: ['拠点管理番号', 'カテゴリ', '機種名', '製造番号', '現在ステータス', '最終更新日時']
       }),
       'active',
       now,
