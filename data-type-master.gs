@@ -41,10 +41,10 @@ function formatDateForDataType(dateValue) {
  */
 function getDataTypeMasterSheet() {
   // 統一スプレッドシートIDを取得
-  const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_DESTINATION');
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID_MAIN');
   
   if (!spreadsheetId) {
-    console.error('SPREADSHEET_ID_DESTINATION not found in script properties');
+    console.error('SPREADSHEET_ID_MAIN not found in script properties');
     throw new Error('スプレッドシートIDが設定されていません');
   }
   

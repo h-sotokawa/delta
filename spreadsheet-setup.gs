@@ -224,11 +224,11 @@ function initializeDataTypeMaster() {
   
   const now = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
   const initialData = [
-    ['AUDIT', '監査データ', '機器の監査用データ表示', 1, true, now, now],
-    ['SUMMARY', 'サマリーデータ', '拠点別サマリー表示', 2, true, now, now],
-    ['INTEGRATED_VIEW_TERMINAL', '統合ビュー（端末系）', 'Server、Desktop、Laptop、Tabletの統合表示', 3, true, now, now],
-    ['INTEGRATED_VIEW_PRINTER_OTHER', '統合ビュー（プリンタ・その他系）', 'Printer、Router、Hub、Otherの統合表示', 4, true, now, now],
-    ['INTEGRATED_VIEW', '統合ビュー（旧）', '全機器の統合表示（非推奨）', 5, true, now, now]
+    ['AUDIT', '監査データ', '機器の監査用データ表示', 1, '', '{}', '{}', 'active', now, now],
+    ['SUMMARY', 'サマリーデータ', '拠点別サマリー表示', 2, '', '{}', '{}', 'active', now, now],
+    ['INTEGRATED_VIEW_TERMINAL', '統合ビュー（端末系）', 'Server、Desktop、Laptop、Tabletの統合表示', 3, '', '{}', '{}', 'active', now, now],
+    ['INTEGRATED_VIEW_PRINTER_OTHER', '統合ビュー（プリンタ・その他系）', 'Printer、Router、Hub、Otherの統合表示', 4, '', '{}', '{}', 'active', now, now],
+    ['INTEGRATED_VIEW', '統合ビュー（旧）', '全機器の統合表示（非推奨）', 5, '', '{}', '{}', 'active', now, now]
   ];
   
   if (initialData.length > 0) {

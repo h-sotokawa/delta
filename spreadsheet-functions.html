@@ -135,7 +135,7 @@
           if (dataTypeSelect) {
             dataTypeSelect.innerHTML = '<option value="">データタイプを選択してください</option>';
             
-            dataTypeMasterData.forEach(dataType => {
+            dataTypeMasterData.forEach((dataType, index) => {
               const option = document.createElement('option');
               option.value = dataType.dataTypeId;
               option.textContent = dataType.dataTypeName;
