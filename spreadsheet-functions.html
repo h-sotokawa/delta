@@ -1801,7 +1801,6 @@
       '機種名',
       '製造番号',
       'タイムスタンプ',
-      '0-1.担当者',
       '0-4.ステータス',
       '更新日時',
       '更新日',
@@ -2137,12 +2136,8 @@
       }
     }
 
-    // メインモードの場合はデータステータス情報を追加
-    let statusInfoHtml = '';
+    // デバッグ情報を追加
     if (displayMode === 'main') {
-      statusInfoHtml = createDataStatusPanel(totalRows, displayedRows, lendingRows, userKeepingRows, queryType);
-      
-      // デバッグ情報を追加
       showDebugInfo('データ統計計算完了', {
         totalRows,
         displayedRows,
@@ -2308,7 +2303,7 @@
     }
 
     table += '</table>';
-    tableContainer.innerHTML = prependContent + statusInfoHtml + table;
+    tableContainer.innerHTML = prependContent + table;
     
     // 代替機フォーム回答シート表示時のみセルクリック編集機能を有効化
     // mainシートは数式でデータを取得するため編集不可
@@ -2336,61 +2331,6 @@
     });
   }
 
-  // データステータスパネルを作成（一覧画面用）
-  function createDataStatusPanel(totalRows, displayedRows, lendingRows, userKeepingRows, queryType) {
-    const locationName = currentLocation ? 
-      getLocationNameByIdSpreadsheet(currentLocation) : '未選択';
-    
-    const queryTypeLabel = queryType === 'all' ? '全データ' : '貸出中データ(ユーザー預り機有)';
-    const currentTime = new Date().toLocaleString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    
-    return `
-      <div class="data-status-panel">
-        <div class="status-panel-header">
-          <div class="status-panel-icon">
-            <i class="fas fa-chart-bar"></i>
-          </div>
-          <h4>データ状況</h4>
-        </div>
-        <div class="status-panel-content">
-          <div class="status-panel-item" title="現在選択中の拠点名">
-            <span class="status-panel-label">拠点</span>
-            <span class="status-panel-value location-value">${locationName}</span>
-          </div>
-          <div class="status-panel-item" title="現在の表示フィルタ設定">
-            <span class="status-panel-label">表示モード</span>
-            <span class="status-panel-value mode-value">${queryTypeLabel}</span>
-          </div>
-          <div class="status-panel-item" title="現在のフィルタ条件で表示されている件数">
-            <span class="status-panel-label">表示中</span>
-            <span class="status-panel-value count-value">${displayedRows}件</span>
-          </div>
-          <div class="status-panel-item" title="拠点の全データ件数（フィルタ前）">
-            <span class="status-panel-label">全体</span>
-            <span class="status-panel-value total-value">${totalRows}件</span>
-          </div>
-          <div class="status-panel-item" title="ステータス列に「貸出」が含まれている件数">
-            <span class="status-panel-label">貸出中</span>
-            <span class="status-panel-value lending-value">${lendingRows}件</span>
-          </div>
-          <div class="status-panel-item" title="預り台数（ユーザー預り機有）：「預りユーザー機のシリアルNo.」に内容がある件数">
-            <span class="status-panel-label">預り台数</span>
-            <span class="status-panel-value user-keeping-value">${userKeepingRows}台</span>
-          </div>
-          <div class="status-panel-item" title="データが最後に取得された時刻">
-            <span class="status-panel-label">最終更新</span>
-            <span class="status-panel-value time-value">${currentTime}</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }
 
   // セルクリック編集機能を有効化（代替機フォーム回答シート専用）
   function enableCellEditing(data) {

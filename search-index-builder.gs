@@ -320,23 +320,22 @@ function integrateDeviceData(deviceData, statusData, locationMap, deviceType) {
       device.os || device['OS'] || '',           // G: OS
       latestStatus.timestamp || '',               // H: 最終更新日時
       latestStatus.status || '',                  // I: 現在ステータス
-      latestStatus.assignee || '',                // J: 担当者
-      latestStatus.customerName || '',            // K: 顧客名
-      latestStatus.customerNumber || '',          // L: 顧客番号
-      latestStatus.address || '',                 // M: 住所
-      latestStatus.userMachineFlag || '',         // N: ユーザー機預り有無
-      latestStatus.userMachineSerial || '',       // O: 預りユーザー機シリアル
-      latestStatus.receiptNumber || '',           // P: お預かり証No
-      latestStatus.internalStatus || '',          // Q: 社内ステータス
-      latestStatus.inventoryFlag || '',           // R: 棚卸フラグ
-      latestStatus.currentLocation || locationCode, // S: 現在拠点
-      latestStatus.remarks || '',                 // T: 備考
-      loanDays,                                   // U: 貸出日数
-      cautionFlag,                                // V: 要注意フラグ
-      locationInfo.locationName || locationCode,  // W: 拠点名
-      locationInfo.jurisdiction || '',            // X: 管轄
-      device.formURL || '',                       // Y: formURL
-      device.qrCodeURL || ''                      // Z: QRコードURL
+      latestStatus.customerName || '',            // J: 顧客名
+      latestStatus.customerNumber || '',          // K: 顧客番号
+      latestStatus.address || '',                 // L: 住所
+      latestStatus.userMachineFlag || '',         // M: ユーザー機預り有無
+      latestStatus.userMachineSerial || '',       // N: 預りユーザー機シリアル
+      latestStatus.receiptNumber || '',           // O: お預かり証No
+      latestStatus.internalStatus || '',          // P: 社内ステータス
+      latestStatus.inventoryFlag || '',           // Q: 棚卸フラグ
+      latestStatus.currentLocation || locationCode, // R: 現在拠点
+      latestStatus.remarks || '',                 // S: 備考
+      loanDays,                                   // T: 貸出日数
+      cautionFlag,                                // U: 要注意フラグ
+      locationInfo.locationName || locationCode,  // V: 拠点名
+      locationInfo.jurisdiction || '',            // W: 管轄
+      device.formURL || '',                       // X: formURL
+      device.qrCodeURL || ''                      // Y: QRコードURL
     ]);
   }
   

@@ -17,14 +17,15 @@
 | A      | 拠点管理番号     | String   | ✓    | 機器固有識別子                           | OSAKA_SV_ThinkPad_ABC123_001  |
 | B      | カテゴリ         | String   | ✓    | 機器分類（Server/Desktop/Laptop/Tablet） | Server                        |
 | C      | 機種名           | String   | ✓    | 機種マスタから選択                       | ThinkPad X1 Carbon            |
-| D      | 担当者           | String   |      | 管理担当者名                             | 山田太郎                      |
-| E      | 資産管理番号     | String   |      | 会社の資産番号                           | ASSET_001                     |
-| F      | 製造番号         | String   | ✓    | シリアルナンバー                         | ABC123456                     |
-| G      | ソフトウェア     | String   |      | インストールソフト                       | Office 2021                   |
-| H      | OS               | String   |      | オペレーティングシステム                 | Windows 11                    |
-| I      | formURL          | String   |      | 個別フォーム URL                         | https://forms.google.com/...  |
-| J      | 共通フォーム URL | String   |      | 共通フォーム URL                         | https://forms.google.com/...  |
-| K      | QR コード URL    | String   |      | QR コード用 URL                          | https://script.google.com/... |
+| D      | 資産管理番号     | String   |      | 会社の資産番号                           | ASSET_001                     |
+| E      | 製造番号         | String   | ✓    | シリアルナンバー                         | ABC123456                     |
+| F      | ソフトウェア     | String   |      | インストールソフト                       | Office 2021                   |
+| G      | OS               | String   |      | オペレーティングシステム                 | Windows 11                    |
+| H      | 登録日           | String   | ✓    | レコード登録日                           | 2024/07/15                    |
+| I      | 更新日           | String   |      | 最終更新日                               | 2024/07/20                    |
+| J      | formURL          | String   |      | 個別フォーム URL                         | https://forms.google.com/...  |
+| K      | 共通フォーム URL | String   |      | 共通フォーム URL                         | https://forms.google.com/...  |
+| L      | QR コード URL    | String   |      | QR コード用 URL                          | https://script.google.com/... |
 
 #### 制約・ルール
 
@@ -49,9 +50,11 @@
 | C      | 機種名           | String   | ✓    | 機種マスタから選択       | imageCLASS MF644Cdw           |
 | D      | 製造番号         | String   | ✓    | シリアルナンバー         | XYZ123456                     |
 | E      | 代替機種別       | String   |      | 代替機のカテゴリ分類     | プリンタ                      |
-| F      | formURL          | String   |      | 個別フォーム URL         | https://forms.google.com/...  |
-| G      | 共通フォーム URL | String   |      | 共通フォーム URL         | https://forms.google.com/...  |
-| H      | QR コード URL    | String   |      | QR コード用 URL          | https://script.google.com/... |
+| F      | 登録日           | String   | ✓    | レコード登録日           | 2024/07/15                    |
+| G      | 更新日           | String   |      | 最終更新日               | 2024/07/20                    |
+| H      | formURL          | String   |      | 個別フォーム URL         | https://forms.google.com/...  |
+| I      | 共通フォーム URL | String   |      | 共通フォーム URL         | https://forms.google.com/...  |
+| J      | QR コード URL    | String   |      | QR コード用 URL          | https://script.google.com/... |
 
 #### 制約・ルール
 
@@ -76,9 +79,11 @@ Router、Hub、その他機器の管理情報を格納するマスタシート�
 | C      | 機種名           | String   | ✓    | 機種マスタから選択           | WXR-6000AX12S                 |
 | D      | 製造番号         | String   | ✓    | シリアルナンバー             | DEF789456                     |
 | E      | 代替機種別       | String   |      | 代替機のカテゴリ分類         | その他                        |
-| F      | formURL          | String   |      | 個別フォーム URL             | https://forms.google.com/...  |
-| G      | 共通フォーム URL | String   |      | 共通フォーム URL             | https://forms.google.com/...  |
-| H      | QR コード URL    | String   |      | QR コード用 URL              | https://script.google.com/... |
+| F      | 登録日           | String   | ✓    | レコード登録日               | 2024/07/15                    |
+| G      | 更新日           | String   |      | 最終更新日                   | 2024/07/20                    |
+| H      | formURL          | String   |      | 個別フォーム URL             | https://forms.google.com/...  |
+| I      | 共通フォーム URL | String   |      | 共通フォーム URL             | https://forms.google.com/...  |
+| J      | QR コード URL    | String   |      | QR コード用 URL              | https://script.google.com/... |
 
 #### 制約・ルール
 
@@ -126,15 +131,15 @@ Router、Hub、その他機器の管理情報を格納するマスタシート�
 
 #### 列構造
 
-| 列番号 | 列名     | データ型 | 必須 | 説明                               | 例                  |
-| ------ | -------- | -------- | ---- | ---------------------------------- | ------------------- |
-| A      | 機種 ID  | String   | ✓    | 自動生成 ID                        | MODEL_001           |
-| B      | 機種名   | String   | ✓    | 機種の正式名称（ハイフン使用推奨） | ThinkPad-X1-Carbon  |
-| C      | メーカー | String   | ✓    | 製造メーカー名                     | Lenovo              |
-| D      | カテゴリ | String   | ✓    | 機器カテゴリ（頭文字大文字）       | Desktop             |
-| E      | 作成日   | DateTime | ✓    | レコード作成日時                   | 2024/07/02 14:30:00 |
-| F      | 更新日   | DateTime | ✓    | 最終更新日時                       | 2024/07/02 14:30:00 |
-| G      | 備考     | String   |      | 補足情報                           | 第 10 世代          |
+| 列番号 | 列名     | データ型 | 必須 | 説明                               | 例                |
+| ------ | -------- | -------- | ---- | ---------------------------------- | ----------------- |
+| A      | 機種 ID  | String   | ✓    | 自動生成 ID                        | MODEL_001         |
+| B      | 機種名   | String   | ✓    | 機種の正式名称（ハイフン使用推奨） | ThinkPad-X1-Carbon|
+| C      | メーカー | String   | ✓    | 製造メーカー名                     | Lenovo            |
+| D      | カテゴリ | String   | ✓    | 機器カテゴリ（頭文字大文字）       | Desktop           |
+| E      | 登録日   | String   | ✓    | レコード登録日                     | 2024/07/15        |
+| F      | 更新日   | String   |      | 最終更新日                         | 2024/07/20        |
+| G      | 備考     | String   |      | 補足情報                           | 第 10 世代        |
 
 #### 制約・ルール
 
@@ -321,23 +326,22 @@ Google Forms からプリンタに関する回答を直接受信するシート�
 | G      | OS                     | String   | マスタ         | オペレーティングシステム         | Windows 11                    |
 | H      | 最終更新日時           | DateTime | 収集シート     | 最新ステータスのタイムスタンプ   | 2024/07/02 14:30:00           |
 | I      | 現在ステータス         | String   | 収集シート     | 0-4.ステータスの最新値           | 1.貸出中                      |
-| J      | 担当者                 | String   | 収集シート     | 0-1.担当者の最新値               | 山田太郎                      |
-| K      | 顧客名                 | String   | 収集シート     | 1-1.顧客名または貸出先           | ○○ 商事株式会社               |
-| L      | 顧客番号               | String   | 収集シート     | 1-2.顧客番号                     | CUST_001                      |
-| M      | 住所                   | String   | 収集シート     | 1-3.住所                         | 大阪市北区...                 |
-| N      | ユーザー機預り有無     | String   | 収集シート     | 1-4.ユーザー機の預り有無         | 有り                          |
-| O      | 預りユーザー機シリアル | String   | 収集シート     | 1-7.預りユーザー機のシリアル No. | USER_ABC123                   |
-| P      | お預かり証 No          | String   | 収集シート     | 1-8.お預かり証 No.               | RECEIPT_001                   |
-| Q      | 社内ステータス         | String   | 収集シート     | 3-0.社内ステータス               | 1.修理中                      |
-| R      | 棚卸フラグ             | String   | 収集シート     | 3-0-1.棚卸しフラグ               | 対象                          |
-| S      | 現在拠点               | String   | 収集シート     | 3-0-2.拠点                       | 大阪                          |
-| T      | 備考                   | String   | 収集シート     | 各種備考の結合                   | 修理期間中の代替機            |
-| U      | 貸出日数               | Number   | 計算フィールド | 貸出中の場合の経過日数           | 90                            |
-| V      | 要注意フラグ           | Boolean  | 計算フィールド | 長期貸出等の注意が必要な状態     | TRUE                          |
-| W      | 拠点名                 | String   | 拠点マスタ参照 | 拠点コードから拠点名を取得       | 大阪営業所                    |
-| X      | 管轄                   | String   | 拠点マスタ参照 | 拠点の管轄エリア                 | 関西                          |
-| Y      | formURL                | String   | マスタ         | 個別フォーム URL                 | https://forms.google.com/...  |
-| Z      | QR コード URL          | String   | マスタ         | QR コード用 URL                  | https://script.google.com/... |
+| J      | 顧客名                 | String   | 収集シート     | 1-1.顧客名または貸出先           | ○○ 商事株式会社               |
+| K      | 顧客番号               | String   | 収集シート     | 1-2.顧客番号                     | CUST_001                      |
+| L      | 住所                   | String   | 収集シート     | 1-3.住所                         | 大阪市北区...                 |
+| M      | ユーザー機預り有無     | String   | 収集シート     | 1-4.ユーザー機の預り有無         | 有り                          |
+| N      | 預りユーザー機シリアル | String   | 収集シート     | 1-7.預りユーザー機のシリアル No. | USER_ABC123                   |
+| O      | お預かり証 No          | String   | 収集シート     | 1-8.お預かり証 No.               | RECEIPT_001                   |
+| P      | 社内ステータス         | String   | 収集シート     | 3-0.社内ステータス               | 1.修理中                      |
+| Q      | 棚卸フラグ             | String   | 収集シート     | 3-0-1.棚卸しフラグ               | 対象                          |
+| R      | 現在拠点               | String   | 収集シート     | 3-0-2.拠点                       | 大阪                          |
+| S      | 備考                   | String   | 収集シート     | 各種備考の結合                   | 修理期間中の代替機            |
+| T      | 貸出日数               | Number   | 計算フィールド | 貸出中の場合の経過日数           | 90                            |
+| U      | 要注意フラグ           | Boolean  | 計算フィールド | 長期貸出等の注意が必要な状態     | TRUE                          |
+| V      | 拠点名                 | String   | 拠点マスタ参照 | 拠点コードから拠点名を取得       | 大阪営業所                    |
+| W      | 管轄                   | String   | 拠点マスタ参照 | 拠点の管轄エリア                 | 関西                          |
+| X      | formURL                | String   | マスタ         | 個別フォーム URL                 | https://forms.google.com/...  |
+| Y      | QR コード URL          | String   | マスタ         | QR コード用 URL                  | https://script.google.com/... |
 
 #### 作成方法（QUERY 関数例）
 
