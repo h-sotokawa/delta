@@ -319,6 +319,29 @@ function include(filename) {
    - spreadsheet.html: 管轄選択UI追加
    - spreadsheet-functions.html: フィルタリング機能実装
 
+## 2025年1月: 統合ビュー分離・リアルタイム更新システム実装
+
+### 実装内容
+1. **統合ビューの分離**
+   - 端末系統合ビュー（integrated_view_terminal）：Server、Desktop、Laptop、Tablet
+   - プリンタ・その他系統合ビュー（integrated_view_printer_other）：Printer、Router、Hub、Other
+   - 旧統合ビュー（integrated_view）：非推奨として存続
+
+2. **リアルタイム更新システム**
+   - onFormSubmitトリガー：フォーム送信時の即時更新
+   - onChangeトリガー：マスタシート変更時の自動反映
+   - timeBasedトリガー：深夜2:00の日次全体再構築
+
+3. **データタイプマスタとの連携**
+   - INTEGRATED_VIEW_TERMINAL、INTEGRATED_VIEW_PRINTER_OTHER追加
+   - デバイスタイプ選択の不要化
+   - 拠点選択のみでの効率的フィルタリング
+
+4. **パフォーマンス最適化**
+   - 部分更新による処理時間短縮
+   - 並列処理での端末系・プリンタ系同時更新
+   - インデックス活用による高速検索
+
 ## 2025年1月: サマリー表示の動的化
 
 ### 問題点
