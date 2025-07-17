@@ -44,13 +44,26 @@ function initializeSpreadsheet() {
 function setupPropertiesService() {
   console.log('PropertiesService設定開始...');
   
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  const spreadsheetId = spreadsheet.getId();
-  
-  // 必須設定項目
   const properties = PropertiesService.getScriptProperties();
   
-  // スプレッドシートID
+  // 既存のSPREADSHEET_ID_DESTINATIONを使用、または新しく設定
+  let spreadsheetId = properties.getProperty('SPREADSHEET_ID_DESTINATION');
+  
+  if (!spreadsheetId) {
+    // SPREADSHEET_ID_DESTINATIONが未設定の場合、アクティブスプレッドシートから取得を試行
+    try {
+      const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+      if (spreadsheet) {
+        spreadsheetId = spreadsheet.getId();
+        properties.setProperty('SPREADSHEET_ID_DESTINATION', spreadsheetId);
+        console.log('アクティブスプレッドシートからIDを設定:', spreadsheetId);
+      }
+    } catch (error) {
+      throw new Error('スプレッドシートIDが設定されておらず、アクティブスプレッドシートも取得できません。SPREADSHEET_ID_DESTINATIONを手動で設定してください。');
+    }
+  }
+  
+  // SPREADSHEET_ID_MAINにも同じIDを設定
   properties.setProperty('SPREADSHEET_ID_MAIN', spreadsheetId);
   
   // デフォルト設定値（後で管理画面から変更可能）
@@ -70,7 +83,15 @@ function setupPropertiesService() {
 function createAllRequiredSheets() {
   console.log('必要なシートの作成開始...');
   
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  // PropertiesServiceからスプレッドシートIDを取得
+  const properties = PropertiesService.getScriptProperties();
+  const spreadsheetId = properties.getProperty('SPREADSHEET_ID_DESTINATION') || properties.getProperty('SPREADSHEET_ID_MAIN');
+  
+  if (!spreadsheetId) {
+    throw new Error('スプレッドシートIDが設定されていません。先にsetupPropertiesService()を実行してください。');
+  }
+  
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   
   // 作成するシートの定義
   const sheetsToCreate = [
@@ -207,7 +228,15 @@ function generateIntegratedViewHeaders(type) {
 function setupIntegratedViews() {
   console.log('統合ビューの設定開始...');
   
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  // PropertiesServiceからスプレッドシートIDを取得
+  const properties = PropertiesService.getScriptProperties();
+  const spreadsheetId = properties.getProperty('SPREADSHEET_ID_DESTINATION') || properties.getProperty('SPREADSHEET_ID_MAIN');
+  
+  if (!spreadsheetId) {
+    throw new Error('スプレッドシートIDが設定されていません。先にsetupPropertiesService()を実行してください。');
+  }
+  
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   
   // 端末系統合ビューの設定
   const terminalSheet = spreadsheet.getSheetByName('integrated_view_terminal');
