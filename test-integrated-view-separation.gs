@@ -117,6 +117,12 @@ function testIntegratedViewSeparation() {
     
     console.log('\n===== 統合ビュー分離テスト完了 =====');
     
+    // terminalViewとprinterOtherViewの定義をテスト結果で使用するため、スコープを修正
+    const terminalView = dataTypeMaster.success ? 
+      dataTypeMaster.dataTypes.find(dt => dt.dataTypeId === 'INTEGRATED_VIEW_TERMINAL') : null;
+    const printerOtherView = dataTypeMaster.success ? 
+      dataTypeMaster.dataTypes.find(dt => dt.dataTypeId === 'INTEGRATED_VIEW_PRINTER_OTHER') : null;
+    
     return {
       success: true,
       terminalViewExists: !!terminalView,
