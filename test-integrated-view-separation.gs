@@ -3,6 +3,88 @@
  * 端末系とプリンタ・その他系の統合ビューが正しく動作するかを確認
  */
 
+/**
+ * データタイプマスタのデバッグ
+ */
+function debugDataTypeMaster() {
+  console.log('\n===== データタイプマスタデバッグ =====\n');
+  
+  const sheet = getDataTypeMasterSheet();
+  const lastRow = sheet.getLastRow();
+  console.log('データタイプマスタシート行数:', lastRow);
+  
+  if (lastRow < 2) {
+    console.log('データタイプマスタが空です');
+    return;
+  }
+  
+  const allData = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
+  console.log('\n=== 全データ（未フィルタ） ===');
+  allData.forEach((row, index) => {
+    if (row[0]) { // データタイプIDが存在する行のみ
+      console.log(`${index + 1}. ID: ${row[0]}, Name: ${row[1]}, Status: ${row[7]}, Order: ${row[3]}`);
+    }
+  });
+  
+  // アクティブなデータタイプのみ取得
+  const activeResult = getDataTypeMaster(true);
+  console.log('\n=== アクティブなデータタイプ ===');
+  console.log('取得結果:', activeResult);
+  console.log('データタイプ数:', activeResult.dataTypes.length);
+  
+  if (activeResult.success) {
+    activeResult.dataTypes.forEach((dt, index) => {
+      console.log(`${index + 1}. ${dt.dataTypeId} - ${dt.dataTypeName} (表示順: ${dt.displayOrder})`);
+    });
+  }
+  
+  // 初期データタイプと比較
+  console.log('\n=== 初期データタイプとの比較 ===');
+  const initialDataTypes = getInitialDataTypes();
+  console.log('初期データタイプ数:', initialDataTypes.length);
+  initialDataTypes.forEach((dt, index) => {
+    console.log(`${index + 1}. ${dt[0]} - ${dt[1]}`);
+  });
+}
+
+/**
+ * データタイプマスタを再初期化
+ */
+function reinitializeDataTypeMaster() {
+  console.log('\n===== データタイプマスタ再初期化 =====\n');
+  
+  try {
+    const sheet = getDataTypeMasterSheet();
+    
+    // 既存データをクリア（ヘッダー以外）
+    if (sheet.getLastRow() > 1) {
+      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+    }
+    
+    // 初期データを再設定
+    const initialData = getInitialDataTypes();
+    if (initialData.length > 0) {
+      sheet.getRange(2, 1, initialData.length, initialData[0].length).setValues(initialData);
+      console.log(`✅ ${initialData.length}件のデータタイプを再設定しました`);
+    }
+    
+    // 確認
+    const result = getDataTypeMaster(true);
+    console.log(`確認: ${result.dataTypes.length}件のアクティブなデータタイプ`);
+    
+    return {
+      success: true,
+      dataTypes: result.dataTypes.length
+    };
+  } catch (error) {
+    console.error('再初期化エラー:', error);
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
 function testIntegratedViewSeparation() {
   console.log('\n===== 統合ビュー分離テスト開始 =====\n');
   
