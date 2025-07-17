@@ -271,31 +271,56 @@ function setupIntegratedViews() {
 function setupTriggers() {
   console.log('トリガーの設定開始...');
   
+  // PropertiesServiceからスプレッドシートIDを取得
+  const properties = PropertiesService.getScriptProperties();
+  const spreadsheetId = properties.getProperty('SPREADSHEET_ID_DESTINATION') || properties.getProperty('SPREADSHEET_ID_MAIN');
+  
+  if (!spreadsheetId) {
+    throw new Error('スプレッドシートIDが設定されていません。先にsetupPropertiesService()を実行してください。');
+  }
+  
+  let spreadsheet;
+  try {
+    spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  } catch (error) {
+    throw new Error(`スプレッドシートを開けませんでした。ID: ${spreadsheetId}, エラー: ${error.toString()}`);
+  }
+  
+  if (!spreadsheet) {
+    throw new Error(`スプレッドシートがnullです。ID: ${spreadsheetId}`);
+  }
+  
   // 既存トリガーを削除
   const triggers = ScriptApp.getProjectTriggers();
   triggers.forEach(trigger => {
     ScriptApp.deleteTrigger(trigger);
   });
+  console.log('既存トリガーを削除しました');
   
-  // onFormSubmitトリガー（端末ステータス収集）
-  const terminalSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('端末ステータス収集');
-  if (terminalSheet) {
-    ScriptApp.newTrigger('updateIntegratedViewOnSubmit')
-      .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
+  // onFormSubmitトリガー（フォーム送信時）
+  // 端末ステータス収集シートやプリンタステータス収集シートが存在する場合に設定
+  const terminalSheet = spreadsheet.getSheetByName('端末ステータス収集');
+  const printerSheet = spreadsheet.getSheetByName('プリンタステータス収集');
+  
+  if (terminalSheet || printerSheet) {
+    ScriptApp.newTrigger('autoUpdateIntegratedViewOnSubmit')
+      .forSpreadsheet(spreadsheet)
       .onFormSubmit()
       .create();
-    console.log('端末ステータス収集のonFormSubmitトリガー設定完了');
+    console.log('フォーム送信のonFormSubmitトリガー設定完了');
+  } else {
+    console.log('収集シートが見つからないため、onFormSubmitトリガーはスキップしました');
   }
   
   // onChangeトリガー（マスタシート変更監視）
-  ScriptApp.newTrigger('updateIntegratedViewOnChange')
-    .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
+  ScriptApp.newTrigger('autoUpdateIntegratedViewOnChange')
+    .forSpreadsheet(spreadsheet)
     .onChange()
     .create();
   console.log('マスタシート変更監視のonChangeトリガー設定完了');
   
   // timeBasedトリガー（深夜2:00の日次再構築）
-  ScriptApp.newTrigger('rebuildAllIntegratedViews')
+  ScriptApp.newTrigger('autoRebuildAllIntegratedViews')
     .timeBased()
     .everyDays(1)
     .atHour(2)
