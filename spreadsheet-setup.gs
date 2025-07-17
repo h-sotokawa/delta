@@ -121,16 +121,6 @@ function createAllRequiredSheets() {
       frozen: { rows: 1, columns: 1 }
     },
     {
-      name: '端末ステータス収集',
-      headers: ['タイムスタンプ', '拠点管理番号', '拠点', 'ステータス', '貸出開始日時', '貸出予定終了日時', '利用者', '利用部署'],
-      frozen: { rows: 1, columns: 2 }
-    },
-    {
-      name: 'プリンタステータス収集',
-      headers: ['タイムスタンプ', '拠点管理番号', '拠点', 'ステータス', '設置場所', '利用部署'],
-      frozen: { rows: 1, columns: 2 }
-    },
-    {
       name: 'integrated_view_terminal',
       headers: generateIntegratedViewHeaders('terminal'),
       frozen: { rows: 1, columns: 3 }
@@ -232,24 +222,44 @@ function setupIntegratedViews() {
   const properties = PropertiesService.getScriptProperties();
   const spreadsheetId = properties.getProperty('SPREADSHEET_ID_DESTINATION') || properties.getProperty('SPREADSHEET_ID_MAIN');
   
+  console.log('取得したスプレッドシートID:', spreadsheetId);
+  
   if (!spreadsheetId) {
     throw new Error('スプレッドシートIDが設定されていません。先にsetupPropertiesService()を実行してください。');
   }
   
-  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  let spreadsheet;
+  try {
+    spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    console.log('スプレッドシート取得成功:', spreadsheet ? spreadsheet.getName() : 'null');
+  } catch (error) {
+    throw new Error(`スプレッドシートを開けませんでした。ID: ${spreadsheetId}, エラー: ${error.toString()}`);
+  }
+  
+  if (!spreadsheet) {
+    throw new Error(`スプレッドシートがnullです。ID: ${spreadsheetId}`);
+  }
   
   // 端末系統合ビューの設定
   const terminalSheet = spreadsheet.getSheetByName('integrated_view_terminal');
   if (terminalSheet) {
-    setupIntegratedViewFormulas(terminalSheet, 'terminal');
-    console.log('端末系統合ビュー設定完了');
+    if (typeof setupIntegratedViewFormulas === 'function') {
+      setupIntegratedViewFormulas(terminalSheet, 'terminal');
+      console.log('端末系統合ビュー設定完了');
+    } else {
+      console.log('setupIntegratedViewFormulas関数が見つかりません。統合ビューの設定をスキップします。');
+    }
   }
   
   // プリンタ・その他系統合ビューの設定
   const printerSheet = spreadsheet.getSheetByName('integrated_view_printer_other');
   if (printerSheet) {
-    setupIntegratedViewFormulas(printerSheet, 'printer_other');
-    console.log('プリンタ・その他系統合ビュー設定完了');
+    if (typeof setupIntegratedViewFormulas === 'function') {
+      setupIntegratedViewFormulas(printerSheet, 'printer_other');
+      console.log('プリンタ・その他系統合ビュー設定完了');
+    } else {
+      console.log('setupIntegratedViewFormulas関数が見つかりません。統合ビューの設定をスキップします。');
+    }
   }
   
   console.log('統合ビューの設定完了');
