@@ -97,27 +97,27 @@ function createAllRequiredSheets() {
   const sheetsToCreate = [
     {
       name: '拠点マスタ',
-      headers: ['拠点ID', '拠点コード', '拠点名', 'グループメールアドレス', 'ステータス', '管轄', 'ステータス変更通知', '作成日時', '更新日時'],
+      headers: ['拠点ID', '拠点名', '拠点コード', '管轄', 'グループメールアドレス', 'ステータス変更通知', 'ステータス', '作成日', '更新日'],
       frozen: { rows: 1, columns: 2 }
     },
     {
       name: '機種マスタ',
-      headers: ['機種名', 'カテゴリ', 'メーカー', 'モデル名', '仕様', 'ステータス', '作成日時', '更新日時'],
+      headers: ['機種名', 'カテゴリ', 'メーカー', 'モデル名', '仕様', 'ステータス', '登録日', '更新日', '備考'],
       frozen: { rows: 1, columns: 2 }
     },
     {
       name: '端末マスタ',
-      headers: ['拠点管理番号', '拠点', 'カテゴリ', '機種名', '資産管理番号', '製造番号', '作成日時'],
+      headers: ['拠点管理番号', 'カテゴリ', '機種名', '資産管理番号', '製造番号', 'ソフトウェア', 'OS', '登録日', '更新日', 'formURL', '共通フォームURL', 'QRコードURL'],
       frozen: { rows: 1, columns: 1 }
     },
     {
       name: 'プリンタマスタ',
-      headers: ['拠点管理番号', '拠点', '機種名', '作成日時'],
+      headers: ['拠点管理番号', 'カテゴリ', '機種名', '製造番号', '登録日', '更新日', 'formURL', '共通フォームURL', 'QRコードURL'],
       frozen: { rows: 1, columns: 1 }
     },
     {
       name: 'その他マスタ',
-      headers: ['拠点管理番号', '拠点', 'カテゴリ', '機種名', '作成日時'],
+      headers: ['拠点管理番号', 'カテゴリ', '機種名', '製造番号', '登録日', '更新日', 'formURL', '共通フォームURL', 'QRコードURL'],
       frozen: { rows: 1, columns: 1 }
     },
     {
@@ -142,30 +142,30 @@ function createAllRequiredSheets() {
     let sheet = spreadsheet.getSheetByName(sheetConfig.name);
     
     if (!sheet) {
-      // シートが存在しない場合は作成
+      // シートが存在しない場合のみ作成
       sheet = spreadsheet.insertSheet(sheetConfig.name);
       console.log(`シート作成: ${sheetConfig.name}`);
+      
+      // 新規作成したシートのみにヘッダー設定
+      if (sheetConfig.headers && sheetConfig.headers.length > 0) {
+        const headerRange = sheet.getRange(1, 1, 1, sheetConfig.headers.length);
+        headerRange.setValues([sheetConfig.headers]);
+        headerRange.setBackground('#4285F4');
+        headerRange.setFontColor('#FFFFFF');
+        headerRange.setFontWeight('bold');
+      }
+      
+      // 新規作成したシートのみに固定行・列の設定
+      if (sheetConfig.frozen) {
+        if (sheetConfig.frozen.rows > 0) {
+          sheet.setFrozenRows(sheetConfig.frozen.rows);
+        }
+        if (sheetConfig.frozen.columns > 0) {
+          sheet.setFrozenColumns(sheetConfig.frozen.columns);
+        }
+      }
     } else {
-      console.log(`シート既存: ${sheetConfig.name}`);
-    }
-    
-    // ヘッダー設定
-    if (sheetConfig.headers && sheetConfig.headers.length > 0) {
-      const headerRange = sheet.getRange(1, 1, 1, sheetConfig.headers.length);
-      headerRange.setValues([sheetConfig.headers]);
-      headerRange.setBackground('#4285F4');
-      headerRange.setFontColor('#FFFFFF');
-      headerRange.setFontWeight('bold');
-    }
-    
-    // 固定行・列の設定
-    if (sheetConfig.frozen) {
-      if (sheetConfig.frozen.rows > 0) {
-        sheet.setFrozenRows(sheetConfig.frozen.rows);
-      }
-      if (sheetConfig.frozen.columns > 0) {
-        sheet.setFrozenColumns(sheetConfig.frozen.columns);
-      }
+      console.log(`シート既存: ${sheetConfig.name} - 既存シートには変更を加えません`);
     }
   });
   
