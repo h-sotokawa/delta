@@ -115,21 +115,28 @@ function getSpreadsheetData(location, queryType, deviceType = 'terminal') {
     
     const responseTime = endPerformanceTimer(startTime, 'スプレッドシート取得');
     
+    // メタデータの準備（統合ビューの場合はlastRow/lastColumnが未定義の可能性）
+    const metadata = {
+      location: getLocationNameById(location),
+      queryType: queryType,
+      spreadsheetName: spreadsheet.getName(),
+      sheetName: sheet.getName(),
+      responseTime: responseTime,
+      dateProcessingTime: dateProcessingTime,
+      dataSize: data.length
+    };
+    
+    // 通常のマスタシートの場合のみlastRow/lastColumnを含める
+    if (!targetSheetName.includes('integrated_view')) {
+      metadata.lastRow = sheet.getLastRow();
+      metadata.lastColumn = sheet.getLastColumn();
+    }
+    
     const response = {
       success: true,
       data: data,
       logs: DEBUG ? serverLogs : [],
-      metadata: {
-        location: getLocationNameById(location),
-        queryType: queryType,
-        spreadsheetName: spreadsheet.getName(),
-        sheetName: sheet.getName(),
-        lastRow: lastRow,
-        lastColumn: lastColumn,
-        responseTime: responseTime,
-        dateProcessingTime: dateProcessingTime,
-        dataSize: data.length
-      }
+      metadata: metadata
     };
     
     addLog('返却するレスポンス準備完了');
