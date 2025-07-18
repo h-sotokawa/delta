@@ -2029,8 +2029,9 @@
     // データタイプを取得
     const dataTypeId = document.getElementById('dataType') ? document.getElementById('dataType').value : '';
     
-    // 統合ビューの場合は列を並び替え
-    if (dataTypeId && dataTypeId.includes('INTEGRATED_VIEW') && displayMode === 'main') {
+    // 統合ビューの場合は列の並び替えをスキップ（すでに正しい順序）
+    // 通常のマスタシートデータの場合のみ並び替えを行う
+    if (dataTypeId && !dataTypeId.includes('INTEGRATED_VIEW') && !dataTypeId.includes('SUMMARY') && displayMode === 'main') {
       data = reorderColumnsForNormalData(data);
     }
     
