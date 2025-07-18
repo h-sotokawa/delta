@@ -491,3 +491,32 @@ const managementNumber = getValueByColumnName(row, headers, '拠点管理番号'
 - 効率を最大化するために、**複数の独立したプロセスを実行する必要がある場合は、ツールを順次ではなく並行して呼び出してください**。
 - **思考は英語のみで行ってください**。ただし、**応答は日本語で行う必要があります**。
 - ライブラリの使用方法を理解するには、**常にContext MCPを使用して最新情報を取得してください**。
+
+## 関数実行時の注意事項
+
+### 関数指定時のファイル名明示
+関数を実行する際は、必ずファイル名を明示してください。複数のファイルに同名の関数が存在する場合があります。
+
+**正しい指定方法**:
+```javascript
+// debug-sheet-names.gs
+debugStatusCollectionData();
+
+// debug-integration-process.gs  
+debugIntegrationProcess();
+
+// test-integrated-view-columns.gs
+testUpdateIntegratedViews();
+```
+
+**避けるべき指定方法**:
+```javascript
+// ファイル名なし（どのファイルの関数か不明）
+debugStatusCollectionData();
+```
+
+### 主要なテスト関数とファイル
+- **debug-sheet-names.gs**: `debugSheetNames()`, `debugStatusCollectionData()`
+- **debug-integration-process.gs**: `debugIntegrationProcess()`, `testSingleDeviceIntegration()`
+- **test-integrated-view-columns.gs**: `testIntegratedViewColumns()`, `testUpdateIntegratedViews()`, `testValidateIntegratedViewData()`
+- **setup-test-master-data.gs**: `createAllTestData()`, `setupAllTestMasterData()`
