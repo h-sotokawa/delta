@@ -106,6 +106,18 @@ function formatDateFast(date) {
  * @return {string} シート名
  */
 function getTargetSheetName(deviceType) {
+  // 統合ビューシートのチェック
+  if (deviceType === 'INTEGRATED_VIEW_TERMINAL') {
+    return VIEW_SHEET_TYPES.INTEGRATED_TERMINAL;
+  } else if (deviceType === 'INTEGRATED_VIEW_PRINTER_OTHER') {
+    return VIEW_SHEET_TYPES.INTEGRATED_PRINTER_OTHER;
+  } else if (deviceType === 'INTEGRATED_VIEW') {
+    return VIEW_SHEET_TYPES.INTEGRATED; // 旧統合ビュー
+  } else if (deviceType === 'SUMMARY_VIEW') {
+    return VIEW_SHEET_TYPES.SUMMARY;
+  }
+  
+  // 通常のマスタシート
   if (deviceType === 'terminal' || deviceType === 'desktop' || deviceType === 'notebook') {
     return MASTER_SHEET_NAMES.terminal;
   } else if (deviceType === 'printer') {
