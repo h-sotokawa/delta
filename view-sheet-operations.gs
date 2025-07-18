@@ -667,16 +667,25 @@ function applyFiltersToData(data, filters) {
         // 拠点名と拠点コードの対応を確認
         if (!locationMatch) {
           const locationMapping = {
-            'osaka': ['OSAKA', '大阪本社'],
-            'kobe': ['KOBE', '神戸支社'],
-            'himeji': ['HIMEJI', '姫路営業所'],
-            'kyoto': ['KYOTO', '京都支店']
+            'osaka': ['OSAKA', 'Osaka', '大阪本社', '大阪'],
+            'kobe': ['KOBE', 'Kobe', '神戸支社', '神戸'],
+            'himeji': ['HIMEJI', 'Himeji', '姫路営業所', '姫路'],
+            'kyoto': ['KYOTO', 'Kyoto', '京都支店', '京都'],
+            'tokyo': ['TOKYO', 'Tokyo', '東京支店', '東京']
           };
           
           const locationKey = filters.location.toLowerCase();
           if (locationMapping[locationKey]) {
             locationMatch = locationMapping[locationKey].includes(locationCode) || 
+                          locationMapping[locationKey].includes(filters.location) || // 元の値でも比較
                           (locationNameIndex >= 0 && locationMapping[locationKey].includes(row[locationNameIndex]));
+          }
+          
+          // さらに、フィルター値自体が拠点コードと一致するかチェック（大文字小文字を区別しない）
+          if (!locationMatch && locationCode && 
+              (locationCode.toLowerCase() === filters.location.toLowerCase() ||
+               locationCode === filters.location)) {
+            locationMatch = true;
           }
         }
       }
