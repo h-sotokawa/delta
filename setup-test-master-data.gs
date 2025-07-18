@@ -44,104 +44,129 @@ function setupTerminalMasterTestData() {
     return;
   }
   
-  // ヘッダー行を設定
+  // ヘッダー行を設定（設計書通り）
   const headers = [
-    '拠点管理番号', 'カテゴリ', '機種名', '製造番号', '資産管理番号',
-    'ソフトウェア', 'OS', 'formURL', 'QRコードURL'
+    '拠点管理番号', 'カテゴリ', '機種名', '資産管理番号', '製造番号',
+    'ソフトウェア', 'OS', '登録日', '更新日', 'formURL', '共通フォームURL', 'QRコードURL'
   ];
   
   // 既存データをクリア
   sheet.clear();
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   
-  // テストデータ
+  // テストデータ（設計書通りの列順序）
+  const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
   const testData = [
     [
       'OSAKA_desktop_ThinkPad_ABC123_001',
       'desktop',
       'ThinkPad X1 Carbon',
-      'ABC123',
       'ASSET001',
+      'ABC123',
       'Windows 11 Pro',
       'Windows',
+      today,
+      today,
       'https://forms.gle/terminal001',
+      'https://forms.gle/common',
       'https://qr.codes/terminal001'
     ],
     [
       'OSAKA_desktop_ThinkPad_DEF456_002',
       'desktop',
       'ThinkPad T14',
-      'DEF456',
       'ASSET002',
+      'DEF456',
       'Windows 11 Pro',
       'Windows',
+      today,
+      today,
       'https://forms.gle/terminal002',
+      'https://forms.gle/common',
       'https://qr.codes/terminal002'
     ],
     [
       'KOBE_laptop_MacBook_GHI789_001',
       'laptop',
       'MacBook Pro 14',
-      'GHI789',
       'ASSET003',
+      'GHI789',
       'macOS Sonoma',
       'macOS',
+      today,
+      today,
       'https://forms.gle/terminal003',
+      'https://forms.gle/common',
       'https://qr.codes/terminal003'
     ],
     [
       'KOBE_laptop_MacBook_JKL012_002',
       'laptop',
       'MacBook Air 13',
-      'JKL012',
       'ASSET004',
+      'JKL012',
       'macOS Sonoma',
       'macOS',
+      today,
+      today,
       'https://forms.gle/terminal004',
+      'https://forms.gle/common',
       'https://qr.codes/terminal004'
     ],
     [
       'HIMEJI_server_PowerEdge_MNO345_001',
       'server',
       'Dell PowerEdge R750',
-      'MNO345',
       'ASSET005',
+      'MNO345',
       'Windows Server 2022',
       'Windows Server',
+      today,
+      today,
       'https://forms.gle/terminal005',
+      'https://forms.gle/common',
       'https://qr.codes/terminal005'
     ],
     [
       'HIMEJI_server_PowerEdge_PQR678_002',
       'server',
       'Dell PowerEdge R730',
-      'PQR678',
       'ASSET006',
+      'PQR678',
       'Windows Server 2019',
       'Windows Server',
+      today,
+      today,
       'https://forms.gle/terminal006',
+      'https://forms.gle/common',
       'https://qr.codes/terminal006'
     ],
     [
       'OSAKA_tablet_iPad_STU901_001',
       'tablet',
       'iPad Pro 11',
-      'STU901',
       'ASSET007',
+      'STU901',
       'iPadOS 17',
       'iPadOS',
+      today,
+      today,
       'https://forms.gle/terminal007',
+      'https://forms.gle/common',
       'https://qr.codes/terminal007'
     ],
     [
       'KOBE_tablet_Surface_VWX234_001',
       'tablet',
       'Surface Pro 9',
-      'VWX234',
       'ASSET008',
+      'VWX234',
       'Windows 11 Pro',
       'Windows',
+      today,
+      today,
       'https://forms.gle/terminal008',
+      'https://forms.gle/common',
       'https://qr.codes/terminal008'
     ]
   ];
@@ -167,24 +192,28 @@ function setupPrinterMasterTestData() {
     return;
   }
   
-  // ヘッダー行を設定（プリンタは資産管理番号なし）
+  // ヘッダー行を設定（設計書通り）
   const headers = [
     '拠点管理番号', 'カテゴリ', '機種名', '製造番号',
-    'formURL', 'QRコードURL'
+    '登録日', '更新日', 'formURL', '共通フォームURL', 'QRコードURL'
   ];
   
   // 既存データをクリア
   sheet.clear();
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   
-  // テストデータ
+  // テストデータ（設計書通り）
+  const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
   const testData = [
     [
       'OSAKA_printer_LaserJet_PRT001_001',
       'printer',
       'HP LaserJet Pro 4025n',
       'PRT001',
+      today,
+      today,
       'https://forms.gle/printer001',
+      'https://forms.gle/common',
       'https://qr.codes/printer001'
     ],
     [
@@ -192,7 +221,10 @@ function setupPrinterMasterTestData() {
       'printer',
       'HP LaserJet Pro 4035n',
       'PRT002',
+      today,
+      today,
       'https://forms.gle/printer002',
+      'https://forms.gle/common',
       'https://qr.codes/printer002'
     ],
     [
@@ -200,7 +232,10 @@ function setupPrinterMasterTestData() {
       'printer',
       'Canon Color imageCLASS',
       'PRT003',
+      today,
+      today,
       'https://forms.gle/printer003',
+      'https://forms.gle/common',
       'https://qr.codes/printer003'
     ],
     [
@@ -208,7 +243,10 @@ function setupPrinterMasterTestData() {
       'printer',
       'Epson WorkForce Pro',
       'PRT004',
+      today,
+      today,
       'https://forms.gle/printer004',
+      'https://forms.gle/common',
       'https://qr.codes/printer004'
     ],
     [
@@ -216,7 +254,10 @@ function setupPrinterMasterTestData() {
       'printer',
       'Brother MFC-L8900CDW',
       'PRT005',
+      today,
+      today,
       'https://forms.gle/printer005',
+      'https://forms.gle/common',
       'https://qr.codes/printer005'
     ]
   ];
@@ -242,24 +283,28 @@ function setupOtherMasterTestData() {
     return;
   }
   
-  // ヘッダー行を設定（その他も資産管理番号なし）
+  // ヘッダー行を設定（設計書通り）
   const headers = [
     '拠点管理番号', 'カテゴリ', '機種名', '製造番号',
-    'formURL', 'QRコードURL'
+    '登録日', '更新日', 'formURL', '共通フォームURL', 'QRコードURL'
   ];
   
   // 既存データをクリア
   sheet.clear();
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   
-  // テストデータ
+  // テストデータ（設計書通り）
+  const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
   const testData = [
     [
       'OSAKA_router_Cisco_RTR001_001',
       'router',
       'Cisco ISR 4331',
       'RTR001',
+      today,
+      today,
       'https://forms.gle/router001',
+      'https://forms.gle/common',
       'https://qr.codes/router001'
     ],
     [
@@ -267,7 +312,10 @@ function setupOtherMasterTestData() {
       'router',
       'Cisco ISR 4321',
       'RTR002',
+      today,
+      today,
       'https://forms.gle/router002',
+      'https://forms.gle/common',
       'https://qr.codes/router002'
     ],
     [
@@ -275,7 +323,10 @@ function setupOtherMasterTestData() {
       'hub',
       'NetGear ProSafe 24-Port',
       'HUB001',
+      today,
+      today,
       'https://forms.gle/hub001',
+      'https://forms.gle/common',
       'https://qr.codes/hub001'
     ],
     [
@@ -283,7 +334,10 @@ function setupOtherMasterTestData() {
       'hub',
       'HPE OfficeConnect 1420',
       'HUB002',
+      today,
+      today,
       'https://forms.gle/hub002',
+      'https://forms.gle/common',
       'https://qr.codes/hub002'
     ],
     [
@@ -291,7 +345,10 @@ function setupOtherMasterTestData() {
       'other',
       'Dell UltraSharp 27" 4K',
       'MON001',
+      today,
+      today,
       'https://forms.gle/other001',
+      'https://forms.gle/common',
       'https://qr.codes/other001'
     ],
     [
@@ -299,7 +356,10 @@ function setupOtherMasterTestData() {
       'other',
       'APC Smart-UPS 1500VA',
       'UPS001',
+      today,
+      today,
       'https://forms.gle/other002',
+      'https://forms.gle/common',
       'https://qr.codes/other002'
     ]
   ];
@@ -325,21 +385,23 @@ function setupLocationMasterTestData() {
     return;
   }
   
-  // ヘッダー行を設定
+  // ヘッダー行を設定（設計書通り）
   const headers = [
-    '拠点コード', '拠点名', '管轄', 'ステータス変更通知'
+    '拠点ID', '拠点名', '拠点コード', '管轄', 'グループメールアドレス',
+    'ステータス変更通知', 'ステータス', '作成日', '更新日'
   ];
   
   // 既存データをクリア
   sheet.clear();
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   
-  // テストデータ
+  // テストデータ（設計書通り）
+  const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
   const testData = [
-    ['OSAKA', '大阪本社', '関西', 'TRUE'],
-    ['KOBE', '神戸支社', '関西', 'TRUE'],
-    ['HIMEJI', '姫路営業所', '関西', 'FALSE'],
-    ['TOKYO', '東京支社', '関東', 'TRUE']
+    ['osaka', '大阪本社', 'OSAKA', '関西', 'osaka-group@example.com', 'TRUE', 'active', today, today],
+    ['kobe', '神戸支社', 'KOBE', '関西', 'kobe-group@example.com', 'TRUE', 'active', today, today],
+    ['himeji', '姫路営業所', 'HIMEJI', '関西', 'himeji-group@example.com', 'FALSE', 'active', today, today],
+    ['tokyo', '東京支社', 'TOKYO', '関東', 'tokyo-group@example.com', 'TRUE', 'active', today, today]
   ];
   
   // データを書き込み
