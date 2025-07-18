@@ -1192,14 +1192,14 @@ function integrateDeviceData(deviceData, statusData, locationMap, deviceType) {
     
     // 貸出日数を計算
     let loanDays = 0;
-    if (latestStatus['0-4.ステータス'] === '1.貸出中' && latestStatus['タイムスタンプ']) {
+    if (latestStatus && latestStatus['0-4.ステータス'] === '1.貸出中' && latestStatus['タイムスタンプ']) {
       const loanDate = new Date(latestStatus['タイムスタンプ']);
       const today = new Date();
       loanDays = Math.floor((today - loanDate) / (1000 * 60 * 60 * 24));
     }
     
     // 要注意フラグを判定
-    const cautionFlag = loanDays >= 90 || latestStatus['3-0.社内ステータス'] === '1.修理中';
+    const cautionFlag = loanDays >= 90 || (latestStatus && latestStatus['3-0.社内ステータス'] === '1.修理中');
     
     if (deviceType === 'terminal') {
       // 端末系統合ビュー（46列）
@@ -1214,39 +1214,39 @@ function integrateDeviceData(deviceData, statusData, locationMap, deviceType) {
         device['OS'] || '',                           // G: OS
         
         // 収集シートデータ（H-AN列）- ステータスデータの列名をそのまま使用
-        latestStatus['タイムスタンプ'] || '',                           // H: タイムスタンプ
-        latestStatus['9999.管理ID'] || '',                              // I: 9999.管理ID
-        latestStatus['0-0.拠点管理番号'] || managementNumber,            // J: 0-0.拠点管理番号
-        latestStatus['0-1.担当者'] || '',                               // K: 0-1.担当者
-        latestStatus['0-2.EMシステムズの社員ですか？'] || '',           // L: 0-2.EMシステムズの社員ですか？
-        latestStatus['0-3.所属会社'] || '',                             // M: 0-3.所属会社
-        latestStatus['0-4.ステータス'] || '',                           // N: 0-4.ステータス
-        latestStatus['1-1.顧客名または貸出先'] || '',                   // O: 1-1.顧客名または貸出先
-        latestStatus['1-2.顧客番号'] || '',                             // P: 1-2.顧客番号
-        latestStatus['1-3.住所'] || '',                                 // Q: 1-3.住所
-        latestStatus['1-4.ユーザー機の預り有無'] || '',                 // R: 1-4.ユーザー機の預り有無
-        latestStatus['1-5.依頼者'] || '',                               // S: 1-5.依頼者
-        latestStatus['1-6.備考'] || '',                                 // T: 1-6.備考
-        latestStatus['1-7.預りユーザー機のシリアルNo.(製造番号)'] || '', // U: 1-7.預りユーザー機のシリアルNo.
-        latestStatus['1-8.お預かり証No.'] || '',                        // V: 1-8.お預かり証No.
-        latestStatus['2-1.預り機返却の有無'] || '',                     // W: 2-1.預り機返却の有無
-        latestStatus['2-2.依頼者'] || '',                               // X: 2-2.依頼者
-        latestStatus['2-3.備考'] || '',                                 // Y: 2-3.備考
-        latestStatus['3-0.社内ステータス'] || '',                       // Z: 3-0.社内ステータス
-        latestStatus['3-0-1.棚卸しフラグ'] || '',                       // AA: 3-0-1.棚卸しフラグ
-        latestStatus['3-0-2.拠点'] || locationCode,                     // AB: 3-0-2.拠点
-        latestStatus['3-1-1.ソフト'] || '',                             // AC: 3-1-1.ソフト
-        latestStatus['3-1-2.備考'] || '',                               // AD: 3-1-2.備考
-        latestStatus['3-2-1.端末初期化の引継ぎ'] || '',                 // AE: 3-2-1.端末初期化の引継ぎ
-        latestStatus['3-2-2.備考'] || '',                               // AF: 3-2-2.備考
-        latestStatus['3-2-3.引継ぎ担当者'] || '',                       // AG: 3-2-3.引継ぎ担当者
-        latestStatus['3-2-4.初期化作業の引継ぎ'] || '',                 // AH: 3-2-4.初期化作業の引継ぎ
-        latestStatus['4-1.所在'] || '',                                 // AI: 4-1.所在
-        latestStatus['4-2.持ち出し理由'] || '',                         // AJ: 4-2.持ち出し理由
-        latestStatus['4-3.備考'] || '',                                 // AK: 4-3.備考
-        latestStatus['5-1.内容'] || '',                                 // AL: 5-1.内容
-        latestStatus['5-2.所在'] || '',                                 // AM: 5-2.所在
-        latestStatus['5-3.備考'] || '',                                 // AN: 5-3.備考
+        (latestStatus && latestStatus['タイムスタンプ']) || '',                           // H: タイムスタンプ
+        (latestStatus && latestStatus['9999.管理ID']) || '',                              // I: 9999.管理ID
+        (latestStatus && latestStatus['0-0.拠点管理番号']) || managementNumber,            // J: 0-0.拠点管理番号
+        (latestStatus && latestStatus['0-1.担当者']) || '',                               // K: 0-1.担当者
+        (latestStatus && latestStatus['0-2.EMシステムズの社員ですか？']) || '',           // L: 0-2.EMシステムズの社員ですか？
+        (latestStatus && latestStatus['0-3.所属会社']) || '',                             // M: 0-3.所属会社
+        (latestStatus && latestStatus['0-4.ステータス']) || '',                           // N: 0-4.ステータス
+        (latestStatus && latestStatus['1-1.顧客名または貸出先']) || '',                   // O: 1-1.顧客名または貸出先
+        (latestStatus && latestStatus['1-2.顧客番号']) || '',                             // P: 1-2.顧客番号
+        (latestStatus && latestStatus['1-3.住所']) || '',                                 // Q: 1-3.住所
+        (latestStatus && latestStatus['1-4.ユーザー機の預り有無']) || '',                 // R: 1-4.ユーザー機の預り有無
+        (latestStatus && latestStatus['1-5.依頼者']) || '',                               // S: 1-5.依頼者
+        (latestStatus && latestStatus['1-6.備考']) || '',                                 // T: 1-6.備考
+        (latestStatus && latestStatus['1-7.預りユーザー機のシリアルNo.(製造番号)']) || '', // U: 1-7.預りユーザー機のシリアルNo.
+        (latestStatus && latestStatus['1-8.お預かり証No.']) || '',                        // V: 1-8.お預かり証No.
+        (latestStatus && latestStatus['2-1.預り機返却の有無']) || '',                     // W: 2-1.預り機返却の有無
+        (latestStatus && latestStatus['2-2.依頼者']) || '',                               // X: 2-2.依頼者
+        (latestStatus && latestStatus['2-3.備考']) || '',                                 // Y: 2-3.備考
+        (latestStatus && latestStatus['3-0.社内ステータス']) || '',                       // Z: 3-0.社内ステータス
+        (latestStatus && latestStatus['3-0-1.棚卸しフラグ']) || '',                       // AA: 3-0-1.棚卸しフラグ
+        (latestStatus && latestStatus['3-0-2.拠点']) || locationCode,                     // AB: 3-0-2.拠点
+        (latestStatus && latestStatus['3-1-1.ソフト']) || '',                             // AC: 3-1-1.ソフト
+        (latestStatus && latestStatus['3-1-2.備考']) || '',                               // AD: 3-1-2.備考
+        (latestStatus && latestStatus['3-2-1.端末初期化の引継ぎ']) || '',                 // AE: 3-2-1.端末初期化の引継ぎ
+        (latestStatus && latestStatus['3-2-2.備考']) || '',                               // AF: 3-2-2.備考
+        (latestStatus && latestStatus['3-2-3.引継ぎ担当者']) || '',                       // AG: 3-2-3.引継ぎ担当者
+        (latestStatus && latestStatus['3-2-4.初期化作業の引継ぎ']) || '',                 // AH: 3-2-4.初期化作業の引継ぎ
+        (latestStatus && latestStatus['4-1.所在']) || '',                                 // AI: 4-1.所在
+        (latestStatus && latestStatus['4-2.持ち出し理由']) || '',                         // AJ: 4-2.持ち出し理由
+        (latestStatus && latestStatus['4-3.備考']) || '',                                 // AK: 4-3.備考
+        (latestStatus && latestStatus['5-1.内容']) || '',                                 // AL: 5-1.内容
+        (latestStatus && latestStatus['5-2.所在']) || '',                                 // AM: 5-2.所在
+        (latestStatus && latestStatus['5-3.備考']) || '',                                 // AN: 5-3.備考
         
         // 計算フィールド（AO-AP列）
         loanDays,                                      // AO: 貸出日数
@@ -1268,43 +1268,43 @@ function integrateDeviceData(deviceData, statusData, locationMap, deviceType) {
         device['製造番号'] || '',                     // D: 製造番号
         
         // 収集シートデータ（E-AO列）- ステータスデータの列名をそのまま使用
-        latestStatus['タイムスタンプ'] || '',                           // E: タイムスタンプ
-        latestStatus['9999.管理ID'] || '',                              // F: 9999.管理ID
-        latestStatus['0-0.拠点管理番号'] || managementNumber,            // G: 0-0.拠点管理番号
-        latestStatus['0-1.担当者'] || '',                               // H: 0-1.担当者
-        latestStatus['0-2.EMシステムズの社員ですか？'] || '',           // I: 0-2.EMシステムズの社員ですか？
-        latestStatus['0-3.所属会社'] || '',                             // J: 0-3.所属会社
-        latestStatus['0-4.ステータス'] || '',                           // K: 0-4.ステータス
-        latestStatus['1-1.顧客名または貸出先'] || '',                   // L: 1-1.顧客名または貸出先
-        latestStatus['1-2.顧客番号'] || '',                             // M: 1-2.顧客番号
-        latestStatus['1-3.住所'] || '',                                 // N: 1-3.住所
-        latestStatus['1-4.ユーザー機の預り有無'] || '',                 // O: 1-4.ユーザー機の預り有無
-        latestStatus['1-5.依頼者'] || '',                               // P: 1-5.依頼者
-        latestStatus['1-6.備考'] || '',                                 // Q: 1-6.備考
-        latestStatus['1-7.預りユーザー機のシリアルNo.(製造番号)'] || '', // R: 1-7.預りユーザー機のシリアルNo.
-        latestStatus['2-1.預り機返却の有無'] || '',                     // S: 2-1.預り機返却の有無
-        latestStatus['2-2.備考'] || '',                                 // T: 2-2.備考
-        latestStatus['2-3.修理の必要性'] || '',                         // U: 2-3.修理の必要性
-        latestStatus['2-4.備考'] || '',                                 // V: 2-4.備考
-        latestStatus['3-0.社内ステータス'] || '',                       // W: 3-0.社内ステータス
-        latestStatus['3-0-1.棚卸しフラグ'] || '',                       // X: 3-0-1.棚卸しフラグ
-        latestStatus['3-0-2.拠点'] || locationCode,                     // Y: 3-0-2.拠点
-        latestStatus['3-1-1.備考'] || '',                               // Z: 3-1-1.備考
-        latestStatus['3-2-1.修理依頼の引継ぎ'] || '',                   // AA: 3-2-1.修理依頼の引継ぎ
-        latestStatus['3-2-2.症状'] || '',                               // AB: 3-2-2.症状
-        latestStatus['3-2-3.備考'] || '',                               // AC: 3-2-3.備考
-        latestStatus['4-1.所在'] || '',                                 // AD: 4-1.所在
-        latestStatus['4-2.修理内容'] || '',                             // AE: 4-2.修理内容
-        latestStatus['4-3.備考'] || '',                                 // AF: 4-3.備考
-        latestStatus['5-1.所在'] || '',                                 // AG: 5-1.所在
-        latestStatus['5-2.持ち出し理由'] || '',                         // AH: 5-2.持ち出し理由
-        latestStatus['5-3.備考'] || '',                                 // AI: 5-3.備考
-        latestStatus['6-1.所在'] || '',                                 // AJ: 6-1.所在
-        latestStatus['6-2.依頼者'] || '',                               // AK: 6-2.依頼者
-        latestStatus['6-3.備考'] || '',                                 // AL: 6-3.備考
-        latestStatus['7-1.内容'] || '',                                 // AM: 7-1.内容
-        latestStatus['7-2.所在'] || '',                                 // AN: 7-2.所在
-        latestStatus['7-3.備考'] || '',                                 // AO: 7-3.備考
+        (latestStatus && latestStatus['タイムスタンプ']) || '',                           // E: タイムスタンプ
+        (latestStatus && latestStatus['9999.管理ID']) || '',                              // F: 9999.管理ID
+        (latestStatus && latestStatus['0-0.拠点管理番号']) || managementNumber,            // G: 0-0.拠点管理番号
+        (latestStatus && latestStatus['0-1.担当者']) || '',                               // H: 0-1.担当者
+        (latestStatus && latestStatus['0-2.EMシステムズの社員ですか？']) || '',           // I: 0-2.EMシステムズの社員ですか？
+        (latestStatus && latestStatus['0-3.所属会社']) || '',                             // J: 0-3.所属会社
+        (latestStatus && latestStatus['0-4.ステータス']) || '',                           // K: 0-4.ステータス
+        (latestStatus && latestStatus['1-1.顧客名または貸出先']) || '',                   // L: 1-1.顧客名または貸出先
+        (latestStatus && latestStatus['1-2.顧客番号']) || '',                             // M: 1-2.顧客番号
+        (latestStatus && latestStatus['1-3.住所']) || '',                                 // N: 1-3.住所
+        (latestStatus && latestStatus['1-4.ユーザー機の預り有無']) || '',                 // O: 1-4.ユーザー機の預り有無
+        (latestStatus && latestStatus['1-5.依頼者']) || '',                               // P: 1-5.依頼者
+        (latestStatus && latestStatus['1-6.備考']) || '',                                 // Q: 1-6.備考
+        (latestStatus && latestStatus['1-7.預りユーザー機のシリアルNo.(製造番号)']) || '', // R: 1-7.預りユーザー機のシリアルNo.
+        (latestStatus && latestStatus['2-1.預り機返却の有無']) || '',                     // S: 2-1.預り機返却の有無
+        (latestStatus && latestStatus['2-2.備考']) || '',                                 // T: 2-2.備考
+        (latestStatus && latestStatus['2-3.修理の必要性']) || '',                         // U: 2-3.修理の必要性
+        (latestStatus && latestStatus['2-4.備考']) || '',                                 // V: 2-4.備考
+        (latestStatus && latestStatus['3-0.社内ステータス']) || '',                       // W: 3-0.社内ステータス
+        (latestStatus && latestStatus['3-0-1.棚卸しフラグ']) || '',                       // X: 3-0-1.棚卸しフラグ
+        (latestStatus && latestStatus['3-0-2.拠点']) || locationCode,                     // Y: 3-0-2.拠点
+        (latestStatus && latestStatus['3-1-1.備考']) || '',                               // Z: 3-1-1.備考
+        (latestStatus && latestStatus['3-2-1.修理依頼の引継ぎ']) || '',                   // AA: 3-2-1.修理依頼の引継ぎ
+        (latestStatus && latestStatus['3-2-2.症状']) || '',                               // AB: 3-2-2.症状
+        (latestStatus && latestStatus['3-2-3.備考']) || '',                               // AC: 3-2-3.備考
+        (latestStatus && latestStatus['4-1.所在']) || '',                                 // AD: 4-1.所在
+        (latestStatus && latestStatus['4-2.修理内容']) || '',                             // AE: 4-2.修理内容
+        (latestStatus && latestStatus['4-3.備考']) || '',                                 // AF: 4-3.備考
+        (latestStatus && latestStatus['5-1.所在']) || '',                                 // AG: 5-1.所在
+        (latestStatus && latestStatus['5-2.持ち出し理由']) || '',                         // AH: 5-2.持ち出し理由
+        (latestStatus && latestStatus['5-3.備考']) || '',                                 // AI: 5-3.備考
+        (latestStatus && latestStatus['6-1.所在']) || '',                                 // AJ: 6-1.所在
+        (latestStatus && latestStatus['6-2.依頼者']) || '',                               // AK: 6-2.依頼者
+        (latestStatus && latestStatus['6-3.備考']) || '',                                 // AL: 6-3.備考
+        (latestStatus && latestStatus['7-1.内容']) || '',                                 // AM: 7-1.内容
+        (latestStatus && latestStatus['7-2.所在']) || '',                                 // AN: 7-2.所在
+        (latestStatus && latestStatus['7-3.備考']) || '',                                 // AO: 7-3.備考
         
         // 計算フィールド（AP-AQ列）
         loanDays,                                      // AP: 貸出日数
