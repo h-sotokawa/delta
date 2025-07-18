@@ -28,7 +28,7 @@ function validateColumnCount() {
     'TEST_terminal_Device_TEST123_001': {}
   };
   
-  const result1 = integrateDeviceData([testDevice], emptyStatusData, testLocationData, 'terminal');
+  const result1 = integrateDeviceDataForView([testDevice], emptyStatusData, testLocationData, 'terminal');
   console.log('行数:', result1.length);
   console.log('列数:', result1.length > 0 ? result1[0].length : 0);
   console.log('期待値: 46列');
@@ -38,7 +38,7 @@ function validateColumnCount() {
   console.log('\\n2. ステータスデータなしでのテスト:');
   const noStatusData = {};
   
-  const result2 = integrateDeviceData([testDevice], noStatusData, testLocationData, 'terminal');
+  const result2 = integrateDeviceDataForView([testDevice], noStatusData, testLocationData, 'terminal');
   console.log('行数:', result2.length);
   console.log('列数:', result2.length > 0 ? result2[0].length : 0);
   console.log('期待値: 46列');
@@ -55,7 +55,7 @@ function validateColumnCount() {
     'QRコードURL': 'https://qr.test.com'
   };
   
-  const result3 = integrateDeviceData([printerDevice], {}, testLocationData, 'printer');
+  const result3 = integrateDeviceDataForView([printerDevice], {}, testLocationData, 'printer');
   console.log('行数:', result3.length);
   console.log('列数:', result3.length > 0 ? result3[0].length : 0);
   console.log('期待値: 47列');

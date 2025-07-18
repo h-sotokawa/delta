@@ -20,7 +20,7 @@ function testUpdateIntegratedViews() {
       console.log('\n対象デバイス:', managementNumber);
       
       // 修正された関数をテスト
-      const result = integrateDeviceData([testDevice], statusData, locationData, 'terminal');
+      const result = integrateDeviceDataForView([testDevice], statusData, locationData, 'terminal');
       
       console.log('\n統合結果:');
       console.log('  行数:', result.length);

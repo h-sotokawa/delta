@@ -754,7 +754,7 @@ function updateIntegratedViewTerminal() {
     const locationMasterData = getLocationMasterData();
     
     // データを統合
-    const integratedData = integrateDeviceData(terminalData, statusData, locationMasterData, 'terminal');
+    const integratedData = integrateDeviceDataForView(terminalData, statusData, locationMasterData, 'terminal');
     
     // シートに書き込み
     if (integratedData.length > 0) {
@@ -801,8 +801,8 @@ function updateIntegratedViewPrinterOther() {
     const locationMasterData = getLocationMasterData();
     
     // データを統合
-    const printerIntegratedData = integrateDeviceData(printerData, statusData, locationMasterData, 'printer');
-    const otherIntegratedData = integrateDeviceData(otherData, statusData, locationMasterData, 'other');
+    const printerIntegratedData = integrateDeviceDataForView(printerData, statusData, locationMasterData, 'printer');
+    const otherIntegratedData = integrateDeviceDataForView(otherData, statusData, locationMasterData, 'other');
     const integratedData = [...printerIntegratedData, ...otherIntegratedData];
     
     // シートに書き込み
@@ -1176,7 +1176,7 @@ function getIntegratedViewByIds(managementNumbers) {
  * @param {string} deviceType - デバイスタイプ（terminal/printer/other）
  * @return {Array} 統合されたデータ
  */
-function integrateDeviceData(deviceData, statusData, locationMap, deviceType) {
+function integrateDeviceDataForView(deviceData, statusData, locationMap, deviceType) {
   const integratedRows = [];
   
   for (const device of deviceData) {

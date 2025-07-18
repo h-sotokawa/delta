@@ -28,7 +28,7 @@ function testSaferNullChecking() {
     };
     
     console.log('\\n1. 空のステータスデータでのテスト:');
-    const result1 = integrateDeviceData([testDevice], emptyStatusData, testLocationData, 'terminal');
+    const result1 = integrateDeviceDataForView([testDevice], emptyStatusData, testLocationData, 'terminal');
     console.log('結果の行数:', result1.length);
     if (result1.length > 0) {
       console.log('結果の列数:', result1[0].length);
@@ -45,7 +45,7 @@ function testSaferNullChecking() {
     // 2. ステータスデータがない場合でテスト
     console.log('\\n2. ステータスデータがない場合でのテスト:');
     const noStatusData = {};
-    const result2 = integrateDeviceData([testDevice], noStatusData, testLocationData, 'terminal');
+    const result2 = integrateDeviceDataForView([testDevice], noStatusData, testLocationData, 'terminal');
     console.log('結果の行数:', result2.length);
     if (result2.length > 0) {
       console.log('結果の列数:', result2[0].length);
@@ -60,7 +60,7 @@ function testSaferNullChecking() {
     const locationData = getLocationMasterData();
     
     if (terminalData.length > 0) {
-      const result3 = integrateDeviceData([terminalData[0]], statusData, locationData, 'terminal');
+      const result3 = integrateDeviceDataForView([terminalData[0]], statusData, locationData, 'terminal');
       console.log('結果の行数:', result3.length);
       if (result3.length > 0) {
         console.log('結果の列数:', result3[0].length);
@@ -103,7 +103,7 @@ function testPrinterOtherSaferNullChecking() {
     };
     
     console.log('\\n1. 空のステータスデータでのテスト:');
-    const result1 = integrateDeviceData([testDevice], emptyStatusData, testLocationData, 'printer');
+    const result1 = integrateDeviceDataForView([testDevice], emptyStatusData, testLocationData, 'printer');
     console.log('結果の行数:', result1.length);
     if (result1.length > 0) {
       console.log('結果の列数:', result1[0].length);
