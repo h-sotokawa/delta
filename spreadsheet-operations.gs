@@ -2,6 +2,15 @@
 // スプレッドシート操作関連
 // ========================================
 
+// ビューシートタイプの定義（view-sheet-operations.gsから参照）
+const VIEW_SHEET_TYPES = {
+  INTEGRATED: 'integrated_view',
+  INTEGRATED_TERMINAL: 'integrated_view_terminal',
+  INTEGRATED_PRINTER_OTHER: 'integrated_view_printer_other',
+  SEARCH_INDEX: 'search_index',
+  SUMMARY: 'summary_view'
+};
+
 /**
  * 拠点ID変換関数（拠点マスタベース・互換性維持）
  * @param {string} location - 拠点ID
@@ -67,16 +76,38 @@ function getSpreadsheetData(location, queryType, deviceType = 'terminal') {
       throw new Error('シート「' + targetSheetName + '」が見つかりません。');
     }
 
-    // データを取得
-    const lastRow = sheet.getLastRow();
-    const lastColumn = sheet.getLastColumn();
-    
-    if (lastRow === 0) {
-      throw new Error('シートにデータがありません。');
+    // 統合ビューの場合は getViewSheetData を使用して拠点フィルタリングを適用
+    let data;
+    if (targetSheetName.includes('integrated_view')) {
+      // 統合ビューの場合
+      const viewType = targetSheetName === 'integrated_view_terminal' ? 
+                      VIEW_SHEET_TYPES.INTEGRATED_TERMINAL : 
+                      VIEW_SHEET_TYPES.INTEGRATED_PRINTER_OTHER;
+      
+      // フィルターを設定
+      const filters = {};
+      if (location !== 'all') {
+        filters.location = location; // 拠点IDでフィルタリング（osaka, kobe等）
+      }
+      
+      // ビューシートデータを取得（フィルタリング済み）
+      const viewResult = getViewSheetData(viewType, filters);
+      if (!viewResult.success) {
+        throw new Error(viewResult.error || 'ビューシートデータの取得に失敗しました');
+      }
+      data = viewResult.data;
+    } else {
+      // 通常のマスタシートの場合
+      const lastRow = sheet.getLastRow();
+      const lastColumn = sheet.getLastColumn();
+      
+      if (lastRow === 0) {
+        throw new Error('シートにデータがありません。');
+      }
+      
+      const range = sheet.getRange(1, 1, lastRow, lastColumn);
+      data = range.getValues();
     }
-    
-    const range = sheet.getRange(1, 1, lastRow, lastColumn);
-    const data = range.getValues();
     
     // 日付データの処理
     const dateProcessingStart = Date.now();
