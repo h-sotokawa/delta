@@ -50,4 +50,4 @@ function testUpdateIntegratedViews() {
 }
 
 // 実行
-testUpdateIntegratedViews();
+// testUpdateIntegratedViews(); // コメントアウト：手動実行時のみコメントを外してください

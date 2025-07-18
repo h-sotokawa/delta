@@ -4,6 +4,22 @@
  */
 
 /**
+ * エイリアス関数（後方互換性のため）
+ * autoUpdateIntegratedViewOnChangeトリガー用
+ */
+function autoUpdateIntegratedViewOnChange(e) {
+  return updateIntegratedViewOnChange(e);
+}
+
+/**
+ * エイリアス関数（後方互換性のため）
+ * autoUpdateIntegratedViewOnSubmitトリガー用
+ */
+function autoUpdateIntegratedViewOnSubmit(e) {
+  return updateIntegratedViewOnSubmit(e);
+}
+
+/**
  * フォーム送信時の統合ビュー更新
  * onFormSubmitトリガーで実行される
  */
