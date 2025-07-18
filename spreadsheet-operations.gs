@@ -2,15 +2,6 @@
 // スプレッドシート操作関連
 // ========================================
 
-// ビューシートタイプの定義（view-sheet-operations.gsから参照）
-const VIEW_SHEET_TYPES = {
-  INTEGRATED: 'integrated_view',
-  INTEGRATED_TERMINAL: 'integrated_view_terminal',
-  INTEGRATED_PRINTER_OTHER: 'integrated_view_printer_other',
-  SEARCH_INDEX: 'search_index',
-  SUMMARY: 'summary_view'
-};
-
 /**
  * 拠点ID変換関数（拠点マスタベース・互換性維持）
  * @param {string} location - 拠点ID
