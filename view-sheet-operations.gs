@@ -920,7 +920,7 @@ function getLatestStatusCollectionData() {
     const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
     
     // 各種ステータス収集シートを探す
-    const statusSheets = ['端末ステータス収集', 'プリンタステータス収集', 'その他ステータス収集'];
+    const statusSheets = ['端末ステータス収集', 'プリンタその他ステータス収集'];
     const statusMap = {};
     
     for (const sheetName of statusSheets) {
