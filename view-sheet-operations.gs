@@ -645,39 +645,45 @@ function applyFiltersToData(data, filters) {
     
     // 拠点フィルター
     if (filters.location) {
+      let locationMatch = false;
+      
       // 拠点名での比較
       const locationNameIndex = getColumnIndex(headers, '拠点名');
       if (locationNameIndex >= 0 && row[locationNameIndex] === filters.location) {
-        return true;
+        locationMatch = true;
       }
       
       // 拠点管理番号の拠点コード部分での比較
       const managementNumberIndex = getColumnIndex(headers, '拠点管理番号');
-      if (managementNumberIndex >= 0) {
+      if (!locationMatch && managementNumberIndex >= 0) {
         const managementNumber = row[managementNumberIndex] || '';
         const locationCode = managementNumber.split('_')[0];
         
         // 拠点コードと拠点IDを比較（例: 'OSAKA' === 'osaka' を考慮）
         if (locationCode && locationCode.toLowerCase() === filters.location.toLowerCase()) {
-          return true;
+          locationMatch = true;
         }
         
         // 拠点名と拠点コードの対応を確認
-        const locationMapping = {
-          'osaka': ['OSAKA', '大阪本社'],
-          'kobe': ['KOBE', '神戸支社'],
-          'himeji': ['HIMEJI', '姫路営業所'],
-          'kyoto': ['KYOTO', '京都支店']
-        };
-        
-        const locationKey = filters.location.toLowerCase();
-        if (locationMapping[locationKey]) {
-          return locationMapping[locationKey].includes(locationCode) || 
-                 locationMapping[locationKey].includes(row[locationNameIndex]);
+        if (!locationMatch) {
+          const locationMapping = {
+            'osaka': ['OSAKA', '大阪本社'],
+            'kobe': ['KOBE', '神戸支社'],
+            'himeji': ['HIMEJI', '姫路営業所'],
+            'kyoto': ['KYOTO', '京都支店']
+          };
+          
+          const locationKey = filters.location.toLowerCase();
+          if (locationMapping[locationKey]) {
+            locationMatch = locationMapping[locationKey].includes(locationCode) || 
+                          (locationNameIndex >= 0 && locationMapping[locationKey].includes(row[locationNameIndex]));
+          }
         }
       }
       
-      return false;
+      if (!locationMatch) {
+        return false;
+      }
     }
     
     // ステータスフィルター
