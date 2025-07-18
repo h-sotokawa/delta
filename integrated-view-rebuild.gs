@@ -31,9 +31,12 @@ function rebuildTerminalIntegratedView() {
     const masterData = terminalMaster.getDataRange().getValues();
     const allIntegratedData = [];
     
+    // ヘッダー行を取得
+    const terminalHeaders = masterData[0];
+    
     // 各端末のデータを収集（ヘッダー行をスキップ）
     for (let i = 1; i < masterData.length; i++) {
-      const locationNumber = masterData[i][0];
+      const locationNumber = getValueByColumnName(masterData[i], terminalHeaders, '拠点管理番号');
       if (!locationNumber) continue;
       
       const integratedData = collectIntegratedData(locationNumber, 'terminal');
@@ -86,8 +89,9 @@ function rebuildPrinterOtherIntegratedView() {
     const printerMaster = spreadsheet.getSheetByName('プリンタマスタ');
     if (printerMaster) {
       const printerData = printerMaster.getDataRange().getValues();
+      const printerHeaders = printerData[0];
       for (let i = 1; i < printerData.length; i++) {
-        const locationNumber = printerData[i][0];
+        const locationNumber = getValueByColumnName(printerData[i], printerHeaders, '拠点管理番号');
         if (!locationNumber) continue;
         
         const integratedData = collectIntegratedData(locationNumber, 'printer_other');
@@ -101,8 +105,9 @@ function rebuildPrinterOtherIntegratedView() {
     const otherMaster = spreadsheet.getSheetByName('その他マスタ');
     if (otherMaster) {
       const otherData = otherMaster.getDataRange().getValues();
+      const otherHeaders = otherData[0];
       for (let i = 1; i < otherData.length; i++) {
-        const locationNumber = otherData[i][0];
+        const locationNumber = getValueByColumnName(otherData[i], otherHeaders, '拠点管理番号');
         if (!locationNumber) continue;
         
         const integratedData = collectIntegratedData(locationNumber, 'printer_other');
@@ -156,17 +161,18 @@ function rebuildSearchIndex() {
     const terminalView = spreadsheet.getSheetByName('integrated_view_terminal');
     if (terminalView && terminalView.getLastRow() > 1) {
       const terminalData = terminalView.getDataRange().getValues();
+      const terminalHeaders = terminalData[0];
       for (let i = 1; i < terminalData.length; i++) {
-        const locationNumber = terminalData[i][0];
+        const locationNumber = getValueByColumnName(terminalData[i], terminalHeaders, '拠点管理番号');
         if (!locationNumber) continue;
         
         const searchKey = generateSearchKey(terminalData[i], locationNumber);
         allIndexData.push([
           locationNumber,
           searchKey,
-          terminalData[i][2] || '', // カテゴリ
-          terminalData[i][1] || '', // 拠点
-          terminalData[i][8] || '', // 状態
+          getValueByColumnName(terminalData[i], terminalHeaders, 'カテゴリ') || '', // カテゴリ
+          getValueByColumnName(terminalData[i], terminalHeaders, '拠点') || '', // 拠点
+          getValueByColumnName(terminalData[i], terminalHeaders, '状態') || '', // 状態
           new Date() // 最終更新日時
         ]);
       }
@@ -176,17 +182,18 @@ function rebuildSearchIndex() {
     const printerView = spreadsheet.getSheetByName('integrated_view_printer_other');
     if (printerView && printerView.getLastRow() > 1) {
       const printerData = printerView.getDataRange().getValues();
+      const printerHeaders = printerData[0];
       for (let i = 1; i < printerData.length; i++) {
-        const locationNumber = printerData[i][0];
+        const locationNumber = getValueByColumnName(printerData[i], printerHeaders, '拠点管理番号');
         if (!locationNumber) continue;
         
         const searchKey = generateSearchKey(printerData[i], locationNumber);
         allIndexData.push([
           locationNumber,
           searchKey,
-          printerData[i][2] || '', // カテゴリ
-          printerData[i][1] || '', // 拠点
-          printerData[i][6] || '', // 状態
+          getValueByColumnName(printerData[i], printerHeaders, 'カテゴリ') || '', // カテゴリ
+          getValueByColumnName(printerData[i], printerHeaders, '拠点') || '', // 拠点
+          getValueByColumnName(printerData[i], printerHeaders, '状態') || '', // 状態
           new Date() // 最終更新日時
         ]);
       }

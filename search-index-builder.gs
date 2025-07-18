@@ -48,15 +48,15 @@ function rebuildSearchIndex() {
     // ヘッダーはどちらのシートも同じ構造なので、端末系から取得
     const headers = terminalSheet.getRange(1, 1, 1, terminalSheet.getLastColumn()).getValues()[0];
     
-    // 必要な列のインデックスを取得
+    // 必要な列のインデックスを動的に取得
     const columnIndices = {
-      managementNumber: headers.indexOf('拠点管理番号'),
-      category: headers.indexOf('カテゴリ'),
-      modelName: headers.indexOf('機種名'),
-      status: headers.indexOf('現在ステータス'),
-      lastUpdate: headers.indexOf('最終更新日時'),
-      location: headers.indexOf('拠点名'),
-      jurisdiction: headers.indexOf('管轄')
+      managementNumber: getColumnIndex(headers, '拠点管理番号'),
+      category: getColumnIndex(headers, 'カテゴリ'),
+      modelName: getColumnIndex(headers, '機種名'),
+      status: getColumnIndex(headers, '現在ステータス') || getColumnIndex(headers, '0-4.ステータス'),
+      lastUpdate: getColumnIndex(headers, '最終更新日時') || getColumnIndex(headers, 'タイムスタンプ'),
+      location: getColumnIndex(headers, '拠点名'),
+      jurisdiction: getColumnIndex(headers, '管轄')
     };
     
     // インデックスデータを構築
@@ -180,8 +180,9 @@ function searchWithIndex(keyword, filters = {}) {
       };
     }
     
-    // 検索インデックスデータを取得
-    const indexData = searchSheet.getRange(2, 1, lastRow - 1, 8).getValues();
+    // 検索インデックスのヘッダーを取得
+    const headers = searchSheet.getRange(1, 1, 1, searchSheet.getLastColumn()).getValues()[0];
+    const indexData = searchSheet.getRange(2, 1, lastRow - 1, searchSheet.getLastColumn()).getValues();
     
     // キーワード検索
     const results = [];
@@ -189,25 +190,30 @@ function searchWithIndex(keyword, filters = {}) {
     
     for (const row of indexData) {
       // 検索キーでの検索
-      const searchKey = row[7] || ''; // H列: 検索キー
+      const searchKey = getValueByColumnName(row, headers, '検索キー');
       if (keywordLower && !searchKey.toLowerCase().includes(keywordLower)) {
         continue;
       }
       
       // 追加フィルターの適用
-      if (filters.category && row[1] !== filters.category) continue;
-      if (filters.status && row[3] !== filters.status) continue;
-      if (filters.jurisdiction && row[5] !== filters.jurisdiction) continue;
-      if (filters.locationCode && row[4] !== filters.locationCode) continue;
+      const category = getValueByColumnName(row, headers, 'カテゴリ');
+      const status = getValueByColumnName(row, headers, '状態');
+      const jurisdiction = getValueByColumnName(row, headers, '管轄');
+      const locationCode = getValueByColumnName(row, headers, '拠点コード');
+      
+      if (filters.category && category !== filters.category) continue;
+      if (filters.status && status !== filters.status) continue;
+      if (filters.jurisdiction && jurisdiction !== filters.jurisdiction) continue;
+      if (filters.locationCode && locationCode !== filters.locationCode) continue;
       
       results.push({
-        managementNumber: row[0],
-        category: row[1],
-        modelName: row[2],
-        status: row[3],
-        locationCode: row[4],
-        jurisdiction: row[5],
-        lastUpdate: row[6]
+        managementNumber: getValueByColumnName(row, headers, '拠点管理番号'),
+        category: category,
+        modelName: getValueByColumnName(row, headers, '機種名'),
+        status: status,
+        locationCode: locationCode,
+        jurisdiction: jurisdiction,
+        lastUpdate: getValueByColumnName(row, headers, '最終更新日時')
       });
     }
     

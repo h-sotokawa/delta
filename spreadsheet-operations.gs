@@ -290,10 +290,10 @@ function updateMachineStatus(rowIndex, newStatus, location, deviceType = 'termin
       throw new Error('シート「' + targetSheetName + '」が見つかりません。');
     }
     
-    // ステータス列と更新日時列を取得（ヘッダー行から）
+    // ステータス列と更新日時列を取得（ヘッダー行から動的に）
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const statusCol = headers.indexOf('ステータス') + 1;
-    const updateDateCol = headers.indexOf('更新日時') + 1;
+    const statusCol = getColumnNumber(headers, 'ステータス');
+    const updateDateCol = getColumnNumber(headers, '更新日時');
     
     if (statusCol === 0) {
       throw new Error('ステータス列が見つかりません。');
@@ -359,10 +359,10 @@ function updateMultipleStatuses(updates, location, deviceType = 'terminal') {
       throw new Error('シート「' + targetSheetName + '」が見つかりません。');
     }
     
-    // ステータス列と更新日時列を取得
+    // ステータス列と更新日時列を取得（動的に）
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const statusCol = headers.indexOf('ステータス') + 1;
-    const updateDateCol = headers.indexOf('更新日時') + 1;
+    const statusCol = getColumnNumber(headers, 'ステータス');
+    const updateDateCol = getColumnNumber(headers, '更新日時');
     
     if (statusCol === 0) {
       throw new Error('ステータス列が見つかりません。');
@@ -442,9 +442,9 @@ function checkDataConsistency(location, deviceType = 'terminal') {
       missingRequiredFields: []
     };
     
-    // 必須フィールドのインデックスを取得
-    const idCol = headers.indexOf('管理番号');
-    const statusCol = headers.indexOf('ステータス');
+    // 必須フィールドのインデックスを取得（動的に）
+    const idCol = getColumnIndex(headers, '管理番号') || getColumnIndex(headers, '拠点管理番号');
+    const statusCol = getColumnIndex(headers, 'ステータス');
     
     const idMap = new Map();
     
@@ -619,9 +619,9 @@ function updateLocationSheetCell(location, locationSheetName, rowIndex, columnIn
     // 値を更新
     sheet.getRange(rowIndex + 1, columnIndex + 1).setValue(newValue);
     
-    // 更新日時列があれば更新
+    // 更新日時列があれば更新（動的に）
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const updateDateCol = headers.indexOf('更新日時') + 1;
+    const updateDateCol = getColumnNumber(headers, '更新日時');
     
     if (updateDateCol > 0) {
       const now = new Date();

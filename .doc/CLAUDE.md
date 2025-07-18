@@ -413,6 +413,66 @@ if (!jurisdiction) {
 - **管轄フィルタリング**: 選択した管轄の拠点のみが表示される
 - **全管轄表示**: すべての拠点が正しく表示される
 
+## 2025年1月: 列名動的取得システムの全面実装
+
+### 実装理由
+Google Sheetsの列順序や列名の変更に対する柔軟性を高め、ハードコードされた列インデックスによる脆弱性を排除
+
+### 実装内容
+
+#### 1. ヘルパー関数の作成（column-helper.gs）
+```javascript
+// 基本ヘルパー関数
+getColumnIndex(headers, columnName)      // 0ベースのインデックス取得
+getColumnNumber(headers, columnName)     // 1ベースの列番号取得
+getValueByColumnName(row, headers, columnName) // 安全な値取得
+getColumnIndexMultiple(headers, columnNames)   // 複数候補から取得
+rowToObject(row, headers)               // 行をオブジェクトに変換
+getCachedHeaders(sheetName)            // ヘッダーのキャッシュ
+```
+
+#### 2. 全GSファイルの更新
+以下のファイルで列インデックスのハードコーディングを削除：
+- view-sheet-operations.gs
+- spreadsheet-setup.gs
+- search-index-builder.gs
+- spreadsheet-operations.gs
+- integrated-view-rebuild.gs
+- integrated-view-triggers.gs
+- location-master-operations.gs
+- model-master-operations.gs
+- custody-status-manager.gs
+
+#### 3. 実装パターン
+
+**変更前（ハードコード）**:
+```javascript
+const status = row[4];  // ステータスは5列目
+const managementNumber = row[0];  // 管理番号は1列目
+```
+
+**変更後（動的取得）**:
+```javascript
+const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+const status = getValueByColumnName(row, headers, 'ステータス');
+const managementNumber = getValueByColumnName(row, headers, '拠点管理番号');
+```
+
+#### 4. 設計ドキュメントの作成
+`/workspace/.doc/03_design/09_column_dynamic_access.md`に詳細な設計書を作成：
+- 設計原則と命名規則
+- ヘルパー関数の仕様
+- 実装パターン
+- 移行ガイドライン
+- パフォーマンス考慮事項
+- トラブルシューティング
+
+### 影響範囲
+- **全データ処理**: 列順序変更に自動対応
+- **保守性向上**: 列名変更時の修正箇所最小化
+- **エラー耐性**: 列が見つからない場合の安全な処理
+- **可読性向上**: 列名による自己文書化
+
 ## 未実装・改善予定
 
 ### 優先度：高

@@ -32,8 +32,17 @@ function generateNextModelId() {
       return 'M00001';
     }
     
+    // ヘッダーを取得
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const idCol = getColumnNumber(headers, '機種ID');
+    
+    if (idCol === 0) {
+      addLog('機種ID列が見つからないため、M00001から開始');
+      return 'M00001';
+    }
+    
     // 既存の機種IDを取得して最大値を見つける
-    const idRange = sheet.getRange(2, 1, lastRow - 1, 1); // A列の2行目以降
+    const idRange = sheet.getRange(2, idCol, lastRow - 1, 1);
     const idValues = idRange.getValues().flat();
     
     let maxNumber = 0;
@@ -341,17 +350,21 @@ function deleteModelMasterData(modelName, manufacturer) {
     // 機種IDで削除する場合の処理を追加
     const isModelId = modelName && modelName.match(/^M\d{5}$/);
     
+    // ヘッダーを取得
+    const headers = data[0];
+    
     // 該当する行を検索（ヘッダー行をスキップ）
     for (let i = 1; i < data.length; i++) {
+      const rowObj = rowToObject(data[i], headers);
       if (isModelId) {
         // 機種IDで検索
-        if (data[i][0] === modelName) {
+        if (rowObj['機種ID'] === modelName) {
           rowIndexToDelete = i + 1; // シート上の行番号（1ベース）
           break;
         }
       } else {
         // 機種名とメーカーで検索
-        if (data[i][1] === modelName && data[i][2] === manufacturer) {
+        if (rowObj['機種名'] === modelName && rowObj['メーカー'] === manufacturer) {
           rowIndexToDelete = i + 1; // シート上の行番号（1ベース）
           break;
         }
@@ -421,17 +434,20 @@ function getModelMasterForForm() {
     };
     
     // データを整形
-    const models = result.data.map((row, index) => ({
-      rowIndex: index,
-      modelId: row[0] || '',
-      modelName: row[1] || '',
-      manufacturer: row[2] || '',
-      category: row[3] || '',
-      categoryDisplay: categoryMap[row[3]] || row[3] || '',
-      createdDate: row[4] || '',
-      updatedDate: row[5] || '',
-      notes: row[6] || ''
-    }));
+    const models = result.data.map((row, index) => {
+      const rowObj = rowToObject(row, result.headers);
+      return {
+        rowIndex: index,
+        modelId: rowObj['機種ID'] || '',
+        modelName: rowObj['機種名'] || '',
+        manufacturer: rowObj['メーカー'] || '',
+        category: rowObj['カテゴリ'] || '',
+        categoryDisplay: categoryMap[rowObj['カテゴリ']] || rowObj['カテゴリ'] || '',
+        createdDate: rowObj['作成日'] || '',
+        updatedDate: rowObj['更新日'] || '',
+        notes: rowObj['備考'] || ''
+      };
+    });
     
     // カテゴリごとにグループ化
     const modelsByCategory = {};
@@ -576,7 +592,7 @@ function convertModelMasterCategoriesToEnglish() {
     const headerRow = data[0];
     
     // カテゴリ列のインデックスを取得
-    const categoryColIndex = headerRow.indexOf('カテゴリ');
+    const categoryColIndex = getColumnIndex(headerRow, 'カテゴリ');
     if (categoryColIndex === -1) {
       throw new Error('カテゴリ列が見つかりません');
     }
@@ -598,7 +614,7 @@ function convertModelMasterCategoriesToEnglish() {
     
     // データ行をチェック（1行目はヘッダーなのでスキップ）
     for (let i = 1; i < data.length; i++) {
-      const currentCategory = data[i][categoryColIndex];
+      const currentCategory = getValueByColumnName(data[i], headerRow, 'カテゴリ');
       const englishCategory = categoryMapping[currentCategory];
       
       if (englishCategory && currentCategory !== englishCategory) {
@@ -756,24 +772,30 @@ function diagnoseModelMaster() {
         return;
       }
       
+      const rowObj = rowToObject(row, headers);
+      
       // 機種IDチェック
-      if (!row[0] || !modelIdPattern.test(row[0])) {
-        dataQuality.invalidIds.push({ row: rowNum, value: row[0] });
+      const modelId = rowObj['機種ID'];
+      if (!modelId || !modelIdPattern.test(modelId)) {
+        dataQuality.invalidIds.push({ row: rowNum, value: modelId });
       }
       
       // 機種名チェック
-      if (!row[1] || row[1] === '') {
+      const modelName = rowObj['機種名'];
+      if (!modelName || modelName === '') {
         dataQuality.missingNames.push({ row: rowNum });
       }
       
       // メーカーチェック
-      if (!row[2] || row[2] === '') {
+      const manufacturer = rowObj['メーカー'];
+      if (!manufacturer || manufacturer === '') {
         dataQuality.missingManufacturers.push({ row: rowNum });
       }
       
       // カテゴリチェック
-      if (!validCategories.includes(row[3])) {
-        dataQuality.invalidCategories.push({ row: rowNum, value: row[3] });
+      const category = rowObj['カテゴリ'];
+      if (!validCategories.includes(category)) {
+        dataQuality.invalidCategories.push({ row: rowNum, value: category });
       }
     });
     
@@ -860,9 +882,21 @@ function fixExistingDateFormats() {
       };
     }
     
-    // 日付列のインデックス（0ベース）
-    const createdDateCol = 5; // E列
-    const updatedDateCol = 6; // F列
+    // ヘッダーを取得
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    // 日付列のインデックスを動的に取得
+    const createdDateCol = getColumnNumber(headers, '作成日');
+    const updatedDateCol = getColumnNumber(headers, '更新日');
+    
+    if (createdDateCol === 0 || updatedDateCol === 0) {
+      addLog('日付列が見つからないため修正をスキップ');
+      return {
+        success: true,
+        message: '日付列が見つからないため修正をスキップしました',
+        fixedCount: 0
+      };
+    }
     
     // 日付列の範囲を取得
     const dateRange1 = sheet.getRange(2, createdDateCol, lastRow - 1, 1);

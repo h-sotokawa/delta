@@ -242,9 +242,58 @@ onFormSubmitトリガー発火
 - **インデックス活用**: 高速検索による行特定
 - **キャッシュ活用**: マスタデータの一時保存
 
-### 3.3 日時処理仕様
+### 3.3 列名動的取得アーキテクチャ
 
-#### 3.3.1 基本仕様
+#### 3.3.1 概要
+
+Google Sheetsの列名を動的に取得することで、列順序の変更や列名の変更に柔軟に対応可能なシステムを実現。
+
+#### 3.3.2 ヘルパー関数
+
+```javascript
+// column-helper.gs で定義されるヘルパー関数
+
+// 列インデックスの取得（0ベース）
+getColumnIndex(headers, columnName)
+
+// 列番号の取得（1ベース）
+getColumnNumber(headers, columnName)
+
+// 値の安全な取得
+getValueByColumnName(row, headers, columnName)
+
+// 複数列名から最初に見つかった列の取得
+getColumnIndexMultiple(headers, columnNames)
+```
+
+#### 3.3.3 使用例
+
+```javascript
+// ヘッダー行の取得
+const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+// 列インデックスの動的取得
+const statusIndex = getColumnIndex(headers, 'ステータス');
+const managementNumberIndex = getColumnIndex(headers, '拠点管理番号');
+
+// 値の取得
+const statusValue = getValueByColumnName(row, headers, 'ステータス');
+
+// 複数の可能性がある列名の対応
+const statusCol = getColumnIndex(headers, '現在ステータス') || 
+                  getColumnIndex(headers, '0-4.ステータス');
+```
+
+#### 3.3.4 利点
+
+- **柔軟性**: 列順序の変更に自動対応
+- **保守性**: 列名変更時の修正箇所最小化
+- **再利用性**: 共通ヘルパー関数による処理統一
+- **エラー耐性**: 列が見つからない場合の安全な処理
+
+### 3.4 日時処理仕様
+
+#### 3.4.1 基本仕様
 
 - **タイムゾーン**: Asia/Tokyo (JST) で統一
 - **保存形式**: Google Apps Script のデフォルト形式で保存

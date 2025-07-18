@@ -35,8 +35,8 @@ const CUSTODY_STATUS_CONDITIONS = {
 function canEditCustodyStatus(rowData, headers) {
   try {
     // 必要な列のインデックスを取得
-    const statusIndex = findColumnIndex(headers, '0-4.ステータス');
-    const custodyIndex = findColumnIndex(headers, '1-4.ユーザー機の預り有無');
+    const statusIndex = getColumnIndex(headers, '0-4.ステータス');
+    const custodyIndex = getColumnIndex(headers, '1-4.ユーザー機の預り有無');
     
     if (statusIndex === -1 || custodyIndex === -1) {
       debugLog('必要な列が見つかりません', { statusIndex, custodyIndex });
@@ -44,8 +44,8 @@ function canEditCustodyStatus(rowData, headers) {
     }
     
     // 条件をチェック
-    const mainStatus = rowData[statusIndex];
-    const custodyStatus = rowData[custodyIndex];
+    const mainStatus = getValueByColumnName(rowData, headers, '0-4.ステータス');
+    const custodyStatus = getValueByColumnName(rowData, headers, '1-4.ユーザー機の預り有無');
     
     return mainStatus === CUSTODY_STATUS_CONDITIONS.mainStatus && 
            custodyStatus === CUSTODY_STATUS_CONDITIONS.custodyField;
@@ -75,7 +75,7 @@ function updateCustodyStatus(params) {
     
     // ヘッダー行を取得
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const custodyStatusIndex = findColumnIndex(headers, '1-5.預り機ステータス');
+    const custodyStatusIndex = getColumnIndex(headers, '1-5.預り機ステータス');
     
     if (custodyStatusIndex === -1) {
       throw new AppError(
@@ -101,8 +101,8 @@ function updateCustodyStatus(params) {
     recordCustodyStatusChange({
       sheetName: params.sheetName,
       rowIndex: params.rowIndex,
-      locationNumber: rowData[findColumnIndex(headers, '0-2.拠点管理番号')],
-      oldStatus: rowData[custodyStatusIndex],
+      locationNumber: getValueByColumnName(rowData, headers, '0-2.拠点管理番号'),
+      oldStatus: getValueByColumnName(rowData, headers, '1-5.預り機ステータス'),
       newStatus: params.custodyStatus,
       changeReason: params.changeReason || '',
       changedBy: Session.getActiveUser().getEmail()
@@ -146,9 +146,9 @@ function batchUpdateCustodyStatus(params) {
     }
     
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const custodyStatusIndex = findColumnIndex(headers, '1-5.預り機ステータス');
+    const custodyStatusCol = getColumnNumber(headers, '1-5.預り機ステータス');
     
-    if (custodyStatusIndex === -1) {
+    if (custodyStatusCol === 0) {
       throw new AppError(
         '預り機ステータス列が見つかりません',
         ErrorTypes.CONFIGURATION
@@ -156,7 +156,6 @@ function batchUpdateCustodyStatus(params) {
     }
     
     const results = [];
-    const actualColumn = custodyStatusIndex + 1;
     
     // 各更新を実行
     params.updates.forEach(update => {
@@ -173,14 +172,14 @@ function batchUpdateCustodyStatus(params) {
         }
         
         // ステータスを更新
-        sheet.getRange(update.rowIndex, actualColumn).setValue(update.custodyStatus);
+        sheet.getRange(update.rowIndex, custodyStatusCol).setValue(update.custodyStatus);
         
         // 変更履歴を記録
         recordCustodyStatusChange({
           sheetName: params.sheetName,
           rowIndex: update.rowIndex,
-          locationNumber: rowData[findColumnIndex(headers, '0-2.拠点管理番号')],
-          oldStatus: rowData[custodyStatusIndex],
+          locationNumber: getValueByColumnName(rowData, headers, '0-2.拠点管理番号'),
+          oldStatus: getValueByColumnName(rowData, headers, '1-5.預り機ステータス'),
           newStatus: update.custodyStatus,
           changeReason: params.changeReason || '',
           changedBy: Session.getActiveUser().getEmail()
@@ -335,10 +334,10 @@ function getCustodyStatusSummary(location = null) {
       if (lastRow < 2) return;
       
       const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-      const statusIndex = findColumnIndex(headers, '0-4.ステータス');
-      const custodyIndex = findColumnIndex(headers, '1-4.ユーザー機の預り有無');
-      const custodyStatusIndex = findColumnIndex(headers, '1-5.預り機ステータス');
-      const locationIndex = findColumnIndex(headers, '拠点');
+      const statusIndex = getColumnIndex(headers, '0-4.ステータス');
+      const custodyIndex = getColumnIndex(headers, '1-4.ユーザー機の預り有無');
+      const custodyStatusIndex = getColumnIndex(headers, '1-5.預り機ステータス');
+      const locationIndex = getColumnIndex(headers, '拠点');
       
       if (statusIndex === -1 || custodyIndex === -1 || custodyStatusIndex === -1) return;
       
@@ -346,25 +345,28 @@ function getCustodyStatusSummary(location = null) {
       
       data.forEach(row => {
         // 条件を満たすデータのみ集計
-        if (row[statusIndex] === CUSTODY_STATUS_CONDITIONS.mainStatus && 
-            row[custodyIndex] === CUSTODY_STATUS_CONDITIONS.custodyField) {
+        const mainStatus = getValueByColumnName(row, headers, '0-4.ステータス');
+        const custodyField = getValueByColumnName(row, headers, '1-4.ユーザー機の預り有無');
+        
+        if (mainStatus === CUSTODY_STATUS_CONDITIONS.mainStatus && 
+            custodyField === CUSTODY_STATUS_CONDITIONS.custodyField) {
           
           // 拠点フィルタ
-          if (location && locationIndex !== -1 && row[locationIndex] !== location) {
+          const locationValue = getValueByColumnName(row, headers, '拠点');
+          if (location && locationValue !== location) {
             return;
           }
           
           summary.total++;
           
-          const custodyStatus = row[custodyStatusIndex] || '未設定';
+          const custodyStatus = getValueByColumnName(row, headers, '1-5.預り機ステータス') || '未設定';
           summary.byStatus[custodyStatus] = (summary.byStatus[custodyStatus] || 0) + 1;
           
-          if (locationIndex !== -1) {
-            const loc = row[locationIndex];
-            if (!summary.byLocation[loc]) {
-              summary.byLocation[loc] = {};
+          if (locationValue) {
+            if (!summary.byLocation[locationValue]) {
+              summary.byLocation[locationValue] = {};
             }
-            summary.byLocation[loc][custodyStatus] = (summary.byLocation[loc][custodyStatus] || 0) + 1;
+            summary.byLocation[locationValue][custodyStatus] = (summary.byLocation[locationValue][custodyStatus] || 0) + 1;
           }
         }
       });
@@ -380,15 +382,7 @@ function getCustodyStatusSummary(location = null) {
   }
 }
 
-/**
- * ヘッダー配列から列インデックスを検索
- * @param {Array} headers - ヘッダー配列
- * @param {string} columnName - 列名
- * @returns {number} インデックス（見つからない場合は-1）
- */
-function findColumnIndex(headers, columnName) {
-  return headers.findIndex(header => header === columnName);
-}
+// 列インデックス取得関数はcolumn-helper.gsのgetColumnIndexを使用するため削除
 
 /**
  * シート名からシートを取得

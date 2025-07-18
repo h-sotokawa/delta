@@ -166,9 +166,18 @@ function updateIntegratedViewRow(sheet, locationNumber, viewType) {
     const values = dataRange.getValues();
     let targetRow = -1;
     
-    // 拠点管理番号で行を検索（A列）
+    // ヘッダーを取得
+    const viewHeaders = values[0];
+    const locationNumberIndex = getColumnIndex(viewHeaders, '拠点管理番号');
+    
+    if (locationNumberIndex < 0) {
+      console.error('拠点管理番号列が見つかりません');
+      return false;
+    }
+    
+    // 拠点管理番号で行を検索
     for (let i = 1; i < values.length; i++) {
-      if (values[i][0] === locationNumber) {
+      if (values[i][locationNumberIndex] === locationNumber) {
         targetRow = i + 1; // シートの行番号は1から始まる
         break;
       }
@@ -265,17 +274,34 @@ function collectIntegratedData(locationNumber, viewType) {
  * マスタシートからデータ取得
  */
 function getDataFromMaster(sheetName, locationNumber) {
+  const result = getDataFromMasterWithHeaders(sheetName, locationNumber);
+  return result ? result.data : null;
+}
+
+/**
+ * マスタシートからデータとヘッダーを取得
+ */
+function getDataFromMasterWithHeaders(sheetName, locationNumber) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) return null;
   
   const dataRange = sheet.getDataRange();
   const values = dataRange.getValues();
+  const headers = values[0];
   
-  // 拠点管理番号で検索（A列）
+  // 拠点管理番号の列を動的に取得
+  const locationNumberIndex = getColumnIndex(headers, '拠点管理番号');
+  if (locationNumberIndex < 0) return null;
+  
+  // 拠点管理番号で検索
   for (let i = 1; i < values.length; i++) {
-    if (values[i][0] === locationNumber) {
-      return values[i].slice(0, sheetName === '端末マスタ' ? 7 : 
-                                  sheetName === 'その他マスタ' ? 5 : 4);
+    if (values[i][locationNumberIndex] === locationNumber) {
+      const columnCount = sheetName === '端末マスタ' ? 7 : 
+                         sheetName === 'その他マスタ' ? 5 : 4;
+      return {
+        data: values[i].slice(0, columnCount),
+        headers: headers.slice(0, columnCount)
+      };
     }
   }
   
@@ -291,14 +317,21 @@ function getLatestStatusData(sheetName, locationNumber) {
   
   const dataRange = sheet.getDataRange();
   const values = dataRange.getValues();
+  const headers = values[0];
   
-  // 拠点管理番号で該当するすべての行を取得（B列）
+  // 拠点管理番号の列を動的に取得
+  const locationNumberIndex = getColumnIndex(headers, '拠点管理番号');
+  const timestampIndex = getColumnIndex(headers, 'タイムスタンプ');
+  
+  if (locationNumberIndex < 0) return null;
+  
+  // 拠点管理番号で該当するすべての行を取得
   const matchingRows = [];
   for (let i = 1; i < values.length; i++) {
-    if (values[i][1] === locationNumber) {
+    if (values[i][locationNumberIndex] === locationNumber) {
       matchingRows.push({
         row: values[i],
-        timestamp: new Date(values[i][0]) // タイムスタンプ
+        timestamp: timestampIndex >= 0 ? new Date(values[i][timestampIndex]) : new Date()
       });
     }
   }
@@ -328,13 +361,21 @@ function getLocationData(locationCode) {
   
   const dataRange = sheet.getDataRange();
   const values = dataRange.getValues();
+  const headers = values[0];
   
-  // 拠点コードで検索（B列）
+  // 列を動的に取得
+  const locationCodeIndex = getColumnIndex(headers, '拠点コード');
+  const locationNameIndex = getColumnIndex(headers, '拠点名');
+  const jurisdictionIndex = getColumnIndex(headers, '管轄');
+  
+  if (locationCodeIndex < 0) return { locationName: '', jurisdiction: '' };
+  
+  // 拠点コードで検索
   for (let i = 1; i < values.length; i++) {
-    if (values[i][1] === locationCode) {
+    if (values[i][locationCodeIndex] === locationCode) {
       return {
-        locationName: values[i][2] || '', // 拠点名
-        jurisdiction: values[i][5] || ''  // 管轄
+        locationName: locationNameIndex >= 0 ? (values[i][locationNameIndex] || '') : '',
+        jurisdiction: jurisdictionIndex >= 0 ? (values[i][jurisdictionIndex] || '') : ''
       };
     }
   }
@@ -379,9 +420,15 @@ function updateSearchIndex(locationNumber) {
     const values = dataRange.getValues();
     let targetRow = -1;
     
+    // ヘッダーを取得
+    const indexHeaders = values[0];
+    const indexLocationNumberIndex = getColumnIndex(indexHeaders, '拠点管理番号');
+    
+    if (indexLocationNumberIndex < 0) return;
+    
     // 既存エントリを検索
     for (let i = 1; i < values.length; i++) {
-      if (values[i][0] === locationNumber) {
+      if (values[i][indexLocationNumberIndex] === locationNumber) {
         targetRow = i + 1;
         break;
       }

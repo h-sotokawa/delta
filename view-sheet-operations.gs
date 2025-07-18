@@ -637,7 +637,7 @@ function applyFiltersToData(data, filters) {
   const filteredRows = rows.filter(row => {
     // 管轄フィルター
     if (filters.jurisdiction) {
-      const jurisdictionIndex = headers.indexOf('管轄');
+      const jurisdictionIndex = getColumnIndex(headers, '管轄');
       if (jurisdictionIndex >= 0 && row[jurisdictionIndex] !== filters.jurisdiction) {
         return false;
       }
@@ -645,7 +645,7 @@ function applyFiltersToData(data, filters) {
     
     // 拠点フィルター
     if (filters.location) {
-      const locationIndex = headers.indexOf('拠点名');
+      const locationIndex = getColumnIndex(headers, '拠点名');
       if (locationIndex >= 0 && row[locationIndex] !== filters.location) {
         return false;
       }
@@ -653,7 +653,7 @@ function applyFiltersToData(data, filters) {
     
     // ステータスフィルター
     if (filters.status) {
-      const statusIndex = headers.indexOf('現在ステータス');
+      const statusIndex = getColumnIndex(headers, '現在ステータス') || getColumnIndex(headers, '0-4.ステータス');
       if (statusIndex >= 0 && row[statusIndex] !== filters.status) {
         return false;
       }
@@ -661,7 +661,7 @@ function applyFiltersToData(data, filters) {
     
     // カテゴリフィルター
     if (filters.category) {
-      const categoryIndex = headers.indexOf('カテゴリ');
+      const categoryIndex = getColumnIndex(headers, 'カテゴリ');
       if (categoryIndex >= 0 && row[categoryIndex] !== filters.category) {
         return false;
       }
@@ -669,7 +669,7 @@ function applyFiltersToData(data, filters) {
     
     // 検索キーワードフィルター（検索インデックス用）
     if (filters.keyword) {
-      const searchKeyIndex = headers.indexOf('検索キー');
+      const searchKeyIndex = getColumnIndex(headers, '検索キー');
       if (searchKeyIndex >= 0) {
         const searchKey = row[searchKeyIndex] || '';
         if (!searchKey.toLowerCase().includes(filters.keyword.toLowerCase())) {
@@ -931,7 +931,7 @@ function getLatestStatusCollectionData() {
       const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
       
       // 拠点管理番号の列を特定
-      const managementNumberIndex = headers.indexOf('0-0.拠点管理番号');
+      const managementNumberIndex = getColumnIndex(headers, '0-0.拠点管理番号');
       if (managementNumberIndex < 0) continue;
       
       // 各行を処理
@@ -940,7 +940,7 @@ function getLatestStatusCollectionData() {
         if (!managementNumber) return;
         
         // 既存のデータより新しい場合のみ更新
-        const timestamp = row[0]; // タイムスタンプは通常A列
+        const timestamp = getValueByColumnName(row, headers, 'タイムスタンプ');
         if (!statusMap[managementNumber] || 
             (timestamp && statusMap[managementNumber].timestamp < timestamp)) {
           // 全ての収集データを保存（端末系とプリンタ系で異なる可能性があるため全列対象）
@@ -948,69 +948,69 @@ function getLatestStatusCollectionData() {
             timestamp: timestamp,
             rawData: row,
             headers: headers,
-            // 共通フィールド
-            managementId: row[headers.indexOf('9999.管理ID')] || '',
+            // 共通フィールド（動的に列名から取得）
+            managementId: getValueByColumnName(row, headers, '9999.管理ID'),
             managementNumber: managementNumber,
-            assignee: row[headers.indexOf('0-1.担当者')] || '',
-            isEmployee: row[headers.indexOf('0-2.EMシステムズの社員ですか？')] || '',
-            company: row[headers.indexOf('0-3.所属会社')] || '',
-            status: row[headers.indexOf('0-4.ステータス')] || '',
-            customerName: row[headers.indexOf('1-1.顧客名または貸出先')] || '',
-            customerNumber: row[headers.indexOf('1-2.顧客番号')] || '',
-            address: row[headers.indexOf('1-3.住所')] || '',
-            userMachineFlag: row[headers.indexOf('1-4.ユーザー機の預り有無')] || '',
-            userMachineSerial: row[headers.indexOf('1-7.預りユーザー機のシリアルNo.(製造番号)')] || '',
-            receiptNumber: row[headers.indexOf('1-8.お預かり証No.')] || '',
-            internalStatus: row[headers.indexOf('3-0.社内ステータス')] || '',
-            inventoryFlag: row[headers.indexOf('3-0-1.棚卸しフラグ')] || '',
-            currentLocation: row[headers.indexOf('3-0-2.拠点')] || ''
+            assignee: getValueByColumnName(row, headers, '0-1.担当者'),
+            isEmployee: getValueByColumnName(row, headers, '0-2.EMシステムズの社員ですか？'),
+            company: getValueByColumnName(row, headers, '0-3.所属会社'),
+            status: getValueByColumnName(row, headers, '0-4.ステータス'),
+            customerName: getValueByColumnName(row, headers, '1-1.顧客名または貸出先'),
+            customerNumber: getValueByColumnName(row, headers, '1-2.顧客番号'),
+            address: getValueByColumnName(row, headers, '1-3.住所'),
+            userMachineFlag: getValueByColumnName(row, headers, '1-4.ユーザー機の預り有無'),
+            userMachineSerial: getValueByColumnName(row, headers, '1-7.預りユーザー機のシリアルNo.(製造番号)'),
+            receiptNumber: getValueByColumnName(row, headers, '1-8.お預かり証No.'),
+            internalStatus: getValueByColumnName(row, headers, '3-0.社内ステータス'),
+            inventoryFlag: getValueByColumnName(row, headers, '3-0-1.棚卸しフラグ'),
+            currentLocation: getValueByColumnName(row, headers, '3-0-2.拠点')
           };
           
           // 端末系特有のフィールド
           if (sheetName === '端末ステータス収集') {
-            statusRecord.loanRequestor = row[headers.indexOf('1-5.依頼者')] || '';
-            statusRecord.loanRemarks = row[headers.indexOf('1-6.備考')] || '';
-            statusRecord.returnFlag = row[headers.indexOf('2-1.預り機返却の有無')] || '';
-            statusRecord.returnRequestor = row[headers.indexOf('2-2.依頼者')] || '';
-            statusRecord.returnRemarks = row[headers.indexOf('2-3.備考')] || '';
-            statusRecord.software = row[headers.indexOf('3-1-1.ソフト')] || '';
-            statusRecord.softwareRemarks = row[headers.indexOf('3-1-2.備考')] || '';
-            statusRecord.initHandover = row[headers.indexOf('3-2-1.端末初期化の引継ぎ')] || '';
-            statusRecord.initRemarks = row[headers.indexOf('3-2-2.備考')] || '';
-            statusRecord.handoverPerson = row[headers.indexOf('3-2-3.引継ぎ担当者')] || '';
-            statusRecord.initWorkHandover = row[headers.indexOf('3-2-4.初期化作業の引継ぎ')] || '';
-            statusRecord.location41 = row[headers.indexOf('4-1.所在')] || '';
-            statusRecord.takeoutReason = row[headers.indexOf('4-2.持ち出し理由')] || '';
-            statusRecord.takeoutRemarks = row[headers.indexOf('4-3.備考')] || '';
-            statusRecord.otherContent = row[headers.indexOf('5-1.内容')] || '';
-            statusRecord.otherLocation = row[headers.indexOf('5-2.所在')] || '';
-            statusRecord.otherRemarks = row[headers.indexOf('5-3.備考')] || '';
+            statusRecord.loanRequestor = getValueByColumnName(row, headers, '1-5.依頼者');
+            statusRecord.loanRemarks = getValueByColumnName(row, headers, '1-6.備考');
+            statusRecord.returnFlag = getValueByColumnName(row, headers, '2-1.預り機返却の有無');
+            statusRecord.returnRequestor = getValueByColumnName(row, headers, '2-2.依頼者');
+            statusRecord.returnRemarks = getValueByColumnName(row, headers, '2-3.備考');
+            statusRecord.software = getValueByColumnName(row, headers, '3-1-1.ソフト');
+            statusRecord.softwareRemarks = getValueByColumnName(row, headers, '3-1-2.備考');
+            statusRecord.initHandover = getValueByColumnName(row, headers, '3-2-1.端末初期化の引継ぎ');
+            statusRecord.initRemarks = getValueByColumnName(row, headers, '3-2-2.備考');
+            statusRecord.handoverPerson = getValueByColumnName(row, headers, '3-2-3.引継ぎ担当者');
+            statusRecord.initWorkHandover = getValueByColumnName(row, headers, '3-2-4.初期化作業の引継ぎ');
+            statusRecord.location41 = getValueByColumnName(row, headers, '4-1.所在');
+            statusRecord.takeoutReason = getValueByColumnName(row, headers, '4-2.持ち出し理由');
+            statusRecord.takeoutRemarks = getValueByColumnName(row, headers, '4-3.備考');
+            statusRecord.otherContent = getValueByColumnName(row, headers, '5-1.内容');
+            statusRecord.otherLocation = getValueByColumnName(row, headers, '5-2.所在');
+            statusRecord.otherRemarks = getValueByColumnName(row, headers, '5-3.備考');
           }
           
           // プリンタ・その他系特有のフィールド
           if (sheetName === 'プリンタステータス収集' || sheetName === 'その他ステータス収集') {
-            statusRecord.loanRequestor = row[headers.indexOf('1-5.依頼者')] || '';
-            statusRecord.loanRemarks = row[headers.indexOf('1-6.備考')] || '';
-            statusRecord.returnFlag = row[headers.indexOf('2-1.預り機返却の有無')] || '';
-            statusRecord.returnRemarks = row[headers.indexOf('2-2.備考')] || '';
-            statusRecord.repairNeed = row[headers.indexOf('2-3.修理の必要性')] || '';
-            statusRecord.repairRemarks = row[headers.indexOf('2-4.備考')] || '';
-            statusRecord.internalRemarks = row[headers.indexOf('3-1-1.備考')] || '';
-            statusRecord.repairHandover = row[headers.indexOf('3-2-1.修理依頼の引継ぎ')] || '';
-            statusRecord.symptom = row[headers.indexOf('3-2-2.症状')] || '';
-            statusRecord.repairHandoverRemarks = row[headers.indexOf('3-2-3.備考')] || '';
-            statusRecord.repairLocation = row[headers.indexOf('4-1.所在')] || '';
-            statusRecord.repairContent = row[headers.indexOf('4-2.修理内容')] || '';
-            statusRecord.repairWorkRemarks = row[headers.indexOf('4-3.備考')] || '';
-            statusRecord.takeoutLocation = row[headers.indexOf('5-1.所在')] || '';
-            statusRecord.takeoutReason = row[headers.indexOf('5-2.持ち出し理由')] || '';
-            statusRecord.takeoutRemarks = row[headers.indexOf('5-3.備考')] || '';
-            statusRecord.disposalLocation = row[headers.indexOf('6-1.所在')] || '';
-            statusRecord.disposalRequestor = row[headers.indexOf('6-2.依頼者')] || '';
-            statusRecord.disposalRemarks = row[headers.indexOf('6-3.備考')] || '';
-            statusRecord.otherContent = row[headers.indexOf('7-1.内容')] || '';
-            statusRecord.otherLocation = row[headers.indexOf('7-2.所在')] || '';
-            statusRecord.otherRemarks = row[headers.indexOf('7-3.備考')] || '';
+            statusRecord.loanRequestor = getValueByColumnName(row, headers, '1-5.依頼者');
+            statusRecord.loanRemarks = getValueByColumnName(row, headers, '1-6.備考');
+            statusRecord.returnFlag = getValueByColumnName(row, headers, '2-1.預り機返却の有無');
+            statusRecord.returnRemarks = getValueByColumnName(row, headers, '2-2.備考');
+            statusRecord.repairNeed = getValueByColumnName(row, headers, '2-3.修理の必要性');
+            statusRecord.repairRemarks = getValueByColumnName(row, headers, '2-4.備考');
+            statusRecord.internalRemarks = getValueByColumnName(row, headers, '3-1-1.備考');
+            statusRecord.repairHandover = getValueByColumnName(row, headers, '3-2-1.修理依頼の引継ぎ');
+            statusRecord.symptom = getValueByColumnName(row, headers, '3-2-2.症状');
+            statusRecord.repairHandoverRemarks = getValueByColumnName(row, headers, '3-2-3.備考');
+            statusRecord.repairLocation = getValueByColumnName(row, headers, '4-1.所在');
+            statusRecord.repairContent = getValueByColumnName(row, headers, '4-2.修理内容');
+            statusRecord.repairWorkRemarks = getValueByColumnName(row, headers, '4-3.備考');
+            statusRecord.takeoutLocation = getValueByColumnName(row, headers, '5-1.所在');
+            statusRecord.takeoutReason = getValueByColumnName(row, headers, '5-2.持ち出し理由');
+            statusRecord.takeoutRemarks = getValueByColumnName(row, headers, '5-3.備考');
+            statusRecord.disposalLocation = getValueByColumnName(row, headers, '6-1.所在');
+            statusRecord.disposalRequestor = getValueByColumnName(row, headers, '6-2.依頼者');
+            statusRecord.disposalRemarks = getValueByColumnName(row, headers, '6-3.備考');
+            statusRecord.otherContent = getValueByColumnName(row, headers, '7-1.内容');
+            statusRecord.otherLocation = getValueByColumnName(row, headers, '7-2.所在');
+            statusRecord.otherRemarks = getValueByColumnName(row, headers, '7-3.備考');
           }
           
           statusMap[managementNumber] = statusRecord;
@@ -1050,14 +1050,14 @@ function buildSummaryViewData() {
     const headers = data[0];
     const rows = data.slice(1);
     
-    // 必要な列のインデックスを取得
+    // 必要な列のインデックスを動的に取得
     const columnIndices = {
-      jurisdiction: headers.indexOf('管轄'),
-      locationName: headers.indexOf('拠点名'),
-      category: headers.indexOf('カテゴリ'),
-      status: headers.indexOf('現在ステータス'),
-      internalStatus: headers.indexOf('社内ステータス'),
-      cautionFlag: headers.indexOf('要注意フラグ')
+      jurisdiction: getColumnIndex(headers, '管轄'),
+      locationName: getColumnIndex(headers, '拠点名'),
+      category: getColumnIndex(headers, 'カテゴリ'),
+      status: getColumnIndex(headers, '現在ステータス'),
+      internalStatus: getColumnIndex(headers, '社内ステータス'),
+      cautionFlag: getColumnIndex(headers, '要注意フラグ')
     };
     
     // 集計用のマップを作成
@@ -1200,8 +1200,8 @@ function getIntegratedViewByIds(managementNumbers) {
     const headers = data[0];
     const rows = data.slice(1);
     
-    // 拠点管理番号の列インデックスを取得
-    const managementNumberIndex = headers.indexOf('拠点管理番号');
+    // 拠点管理番号の列インデックスを動的に取得
+    const managementNumberIndex = getColumnIndex(headers, '拠点管理番号');
     if (managementNumberIndex < 0) {
       throw new Error('拠点管理番号列が見つかりません');
     }
