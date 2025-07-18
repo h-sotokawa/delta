@@ -942,76 +942,9 @@ function getLatestStatusCollectionData() {
         // 既存のデータより新しい場合のみ更新
         const timestamp = getValueByColumnName(row, headers, 'タイムスタンプ');
         if (!statusMap[managementNumber] || 
-            (timestamp && statusMap[managementNumber].timestamp < timestamp)) {
-          // 全ての収集データを保存（端末系とプリンタ系で異なる可能性があるため全列対象）
-          const statusRecord = {
-            timestamp: timestamp,
-            rawData: row,
-            headers: headers,
-            // 共通フィールド（動的に列名から取得）
-            managementId: getValueByColumnName(row, headers, '9999.管理ID'),
-            managementNumber: managementNumber,
-            assignee: getValueByColumnName(row, headers, '0-1.担当者'),
-            isEmployee: getValueByColumnName(row, headers, '0-2.EMシステムズの社員ですか？'),
-            company: getValueByColumnName(row, headers, '0-3.所属会社'),
-            status: getValueByColumnName(row, headers, '0-4.ステータス'),
-            customerName: getValueByColumnName(row, headers, '1-1.顧客名または貸出先'),
-            customerNumber: getValueByColumnName(row, headers, '1-2.顧客番号'),
-            address: getValueByColumnName(row, headers, '1-3.住所'),
-            userMachineFlag: getValueByColumnName(row, headers, '1-4.ユーザー機の預り有無'),
-            userMachineSerial: getValueByColumnName(row, headers, '1-7.預りユーザー機のシリアルNo.(製造番号)'),
-            receiptNumber: getValueByColumnName(row, headers, '1-8.お預かり証No.'),
-            internalStatus: getValueByColumnName(row, headers, '3-0.社内ステータス'),
-            inventoryFlag: getValueByColumnName(row, headers, '3-0-1.棚卸しフラグ'),
-            currentLocation: getValueByColumnName(row, headers, '3-0-2.拠点')
-          };
-          
-          // 端末系特有のフィールド
-          if (sheetName === '端末ステータス収集') {
-            statusRecord.loanRequestor = getValueByColumnName(row, headers, '1-5.依頼者');
-            statusRecord.loanRemarks = getValueByColumnName(row, headers, '1-6.備考');
-            statusRecord.returnFlag = getValueByColumnName(row, headers, '2-1.預り機返却の有無');
-            statusRecord.returnRequestor = getValueByColumnName(row, headers, '2-2.依頼者');
-            statusRecord.returnRemarks = getValueByColumnName(row, headers, '2-3.備考');
-            statusRecord.software = getValueByColumnName(row, headers, '3-1-1.ソフト');
-            statusRecord.softwareRemarks = getValueByColumnName(row, headers, '3-1-2.備考');
-            statusRecord.initHandover = getValueByColumnName(row, headers, '3-2-1.端末初期化の引継ぎ');
-            statusRecord.initRemarks = getValueByColumnName(row, headers, '3-2-2.備考');
-            statusRecord.handoverPerson = getValueByColumnName(row, headers, '3-2-3.引継ぎ担当者');
-            statusRecord.initWorkHandover = getValueByColumnName(row, headers, '3-2-4.初期化作業の引継ぎ');
-            statusRecord.location41 = getValueByColumnName(row, headers, '4-1.所在');
-            statusRecord.takeoutReason = getValueByColumnName(row, headers, '4-2.持ち出し理由');
-            statusRecord.takeoutRemarks = getValueByColumnName(row, headers, '4-3.備考');
-            statusRecord.otherContent = getValueByColumnName(row, headers, '5-1.内容');
-            statusRecord.otherLocation = getValueByColumnName(row, headers, '5-2.所在');
-            statusRecord.otherRemarks = getValueByColumnName(row, headers, '5-3.備考');
-          }
-          
-          // プリンタ・その他系特有のフィールド
-          if (sheetName === 'プリンタステータス収集' || sheetName === 'その他ステータス収集') {
-            statusRecord.loanRequestor = getValueByColumnName(row, headers, '1-5.依頼者');
-            statusRecord.loanRemarks = getValueByColumnName(row, headers, '1-6.備考');
-            statusRecord.returnFlag = getValueByColumnName(row, headers, '2-1.預り機返却の有無');
-            statusRecord.returnRemarks = getValueByColumnName(row, headers, '2-2.備考');
-            statusRecord.repairNeed = getValueByColumnName(row, headers, '2-3.修理の必要性');
-            statusRecord.repairRemarks = getValueByColumnName(row, headers, '2-4.備考');
-            statusRecord.internalRemarks = getValueByColumnName(row, headers, '3-1-1.備考');
-            statusRecord.repairHandover = getValueByColumnName(row, headers, '3-2-1.修理依頼の引継ぎ');
-            statusRecord.symptom = getValueByColumnName(row, headers, '3-2-2.症状');
-            statusRecord.repairHandoverRemarks = getValueByColumnName(row, headers, '3-2-3.備考');
-            statusRecord.repairLocation = getValueByColumnName(row, headers, '4-1.所在');
-            statusRecord.repairContent = getValueByColumnName(row, headers, '4-2.修理内容');
-            statusRecord.repairWorkRemarks = getValueByColumnName(row, headers, '4-3.備考');
-            statusRecord.takeoutLocation = getValueByColumnName(row, headers, '5-1.所在');
-            statusRecord.takeoutReason = getValueByColumnName(row, headers, '5-2.持ち出し理由');
-            statusRecord.takeoutRemarks = getValueByColumnName(row, headers, '5-3.備考');
-            statusRecord.disposalLocation = getValueByColumnName(row, headers, '6-1.所在');
-            statusRecord.disposalRequestor = getValueByColumnName(row, headers, '6-2.依頼者');
-            statusRecord.disposalRemarks = getValueByColumnName(row, headers, '6-3.備考');
-            statusRecord.otherContent = getValueByColumnName(row, headers, '7-1.内容');
-            statusRecord.otherLocation = getValueByColumnName(row, headers, '7-2.所在');
-            statusRecord.otherRemarks = getValueByColumnName(row, headers, '7-3.備考');
-          }
+            (timestamp && statusMap[managementNumber]['タイムスタンプ'] < timestamp)) {
+          // 行データをオブジェクトに変換（ヘッダーをキーとして使用）
+          const statusRecord = rowToObject(row, headers);
           
           statusMap[managementNumber] = statusRecord;
         }
@@ -1259,14 +1192,14 @@ function integrateDeviceData(deviceData, statusData, locationMap, deviceType) {
     
     // 貸出日数を計算
     let loanDays = 0;
-    if (latestStatus.status === '1.貸出中' && latestStatus.timestamp) {
-      const loanDate = new Date(latestStatus.timestamp);
+    if (latestStatus['0-4.ステータス'] === '1.貸出中' && latestStatus['タイムスタンプ']) {
+      const loanDate = new Date(latestStatus['タイムスタンプ']);
       const today = new Date();
       loanDays = Math.floor((today - loanDate) / (1000 * 60 * 60 * 24));
     }
     
     // 要注意フラグを判定
-    const cautionFlag = loanDays >= 90 || latestStatus.internalStatus === '1.修理中';
+    const cautionFlag = loanDays >= 90 || latestStatus['3-0.社内ステータス'] === '1.修理中';
     
     if (deviceType === 'terminal') {
       // 端末系統合ビュー（46列）
@@ -1280,40 +1213,40 @@ function integrateDeviceData(deviceData, statusData, locationMap, deviceType) {
         device['ソフトウェア'] || '',                 // F: ソフトウェア
         device['OS'] || '',                           // G: OS
         
-        // 収集シートデータ（H-AN列）
-        latestStatus.timestamp || '',                  // H: タイムスタンプ
-        latestStatus.managementId || '',               // I: 9999.管理ID
-        managementNumber,                              // J: 0-0.拠点管理番号
-        latestStatus.assignee || '',                   // K: 0-1.担当者
-        latestStatus.isEmployee || '',                 // L: 0-2.EMシステムズの社員ですか？
-        latestStatus.company || '',                    // M: 0-3.所属会社
-        latestStatus.status || '',                     // N: 0-4.ステータス
-        latestStatus.customerName || '',               // O: 1-1.顧客名または貸出先
-        latestStatus.customerNumber || '',             // P: 1-2.顧客番号
-        latestStatus.address || '',                    // Q: 1-3.住所
-        latestStatus.userMachineFlag || '',            // R: 1-4.ユーザー機の預り有無
-        latestStatus.loanRequestor || '',              // S: 1-5.依頼者
-        latestStatus.loanRemarks || '',                // T: 1-6.備考
-        latestStatus.userMachineSerial || '',          // U: 1-7.預りユーザー機のシリアルNo.
-        latestStatus.receiptNumber || '',              // V: 1-8.お預かり証No.
-        latestStatus.returnFlag || '',                 // W: 2-1.預り機返却の有無
-        latestStatus.returnRequestor || '',            // X: 2-2.依頼者
-        latestStatus.returnRemarks || '',              // Y: 2-3.備考
-        latestStatus.internalStatus || '',             // Z: 3-0.社内ステータス
-        latestStatus.inventoryFlag || '',              // AA: 3-0-1.棚卸しフラグ
-        latestStatus.currentLocation || locationCode,  // AB: 3-0-2.拠点
-        latestStatus.software || '',                   // AC: 3-1-1.ソフト
-        latestStatus.softwareRemarks || '',            // AD: 3-1-2.備考
-        latestStatus.initHandover || '',               // AE: 3-2-1.端末初期化の引継ぎ
-        latestStatus.initRemarks || '',                // AF: 3-2-2.備考
-        latestStatus.handoverPerson || '',             // AG: 3-2-3.引継ぎ担当者
-        latestStatus.initWorkHandover || '',           // AH: 3-2-4.初期化作業の引継ぎ
-        latestStatus.location41 || '',                 // AI: 4-1.所在
-        latestStatus.takeoutReason || '',              // AJ: 4-2.持ち出し理由
-        latestStatus.takeoutRemarks || '',             // AK: 4-3.備考
-        latestStatus.otherContent || '',               // AL: 5-1.内容
-        latestStatus.otherLocation || '',              // AM: 5-2.所在
-        latestStatus.otherRemarks || '',               // AN: 5-3.備考
+        // 収集シートデータ（H-AN列）- ステータスデータの列名をそのまま使用
+        latestStatus['タイムスタンプ'] || '',                           // H: タイムスタンプ
+        latestStatus['9999.管理ID'] || '',                              // I: 9999.管理ID
+        latestStatus['0-0.拠点管理番号'] || managementNumber,            // J: 0-0.拠点管理番号
+        latestStatus['0-1.担当者'] || '',                               // K: 0-1.担当者
+        latestStatus['0-2.EMシステムズの社員ですか？'] || '',           // L: 0-2.EMシステムズの社員ですか？
+        latestStatus['0-3.所属会社'] || '',                             // M: 0-3.所属会社
+        latestStatus['0-4.ステータス'] || '',                           // N: 0-4.ステータス
+        latestStatus['1-1.顧客名または貸出先'] || '',                   // O: 1-1.顧客名または貸出先
+        latestStatus['1-2.顧客番号'] || '',                             // P: 1-2.顧客番号
+        latestStatus['1-3.住所'] || '',                                 // Q: 1-3.住所
+        latestStatus['1-4.ユーザー機の預り有無'] || '',                 // R: 1-4.ユーザー機の預り有無
+        latestStatus['1-5.依頼者'] || '',                               // S: 1-5.依頼者
+        latestStatus['1-6.備考'] || '',                                 // T: 1-6.備考
+        latestStatus['1-7.預りユーザー機のシリアルNo.(製造番号)'] || '', // U: 1-7.預りユーザー機のシリアルNo.
+        latestStatus['1-8.お預かり証No.'] || '',                        // V: 1-8.お預かり証No.
+        latestStatus['2-1.預り機返却の有無'] || '',                     // W: 2-1.預り機返却の有無
+        latestStatus['2-2.依頼者'] || '',                               // X: 2-2.依頼者
+        latestStatus['2-3.備考'] || '',                                 // Y: 2-3.備考
+        latestStatus['3-0.社内ステータス'] || '',                       // Z: 3-0.社内ステータス
+        latestStatus['3-0-1.棚卸しフラグ'] || '',                       // AA: 3-0-1.棚卸しフラグ
+        latestStatus['3-0-2.拠点'] || locationCode,                     // AB: 3-0-2.拠点
+        latestStatus['3-1-1.ソフト'] || '',                             // AC: 3-1-1.ソフト
+        latestStatus['3-1-2.備考'] || '',                               // AD: 3-1-2.備考
+        latestStatus['3-2-1.端末初期化の引継ぎ'] || '',                 // AE: 3-2-1.端末初期化の引継ぎ
+        latestStatus['3-2-2.備考'] || '',                               // AF: 3-2-2.備考
+        latestStatus['3-2-3.引継ぎ担当者'] || '',                       // AG: 3-2-3.引継ぎ担当者
+        latestStatus['3-2-4.初期化作業の引継ぎ'] || '',                 // AH: 3-2-4.初期化作業の引継ぎ
+        latestStatus['4-1.所在'] || '',                                 // AI: 4-1.所在
+        latestStatus['4-2.持ち出し理由'] || '',                         // AJ: 4-2.持ち出し理由
+        latestStatus['4-3.備考'] || '',                                 // AK: 4-3.備考
+        latestStatus['5-1.内容'] || '',                                 // AL: 5-1.内容
+        latestStatus['5-2.所在'] || '',                                 // AM: 5-2.所在
+        latestStatus['5-3.備考'] || '',                                 // AN: 5-3.備考
         
         // 計算フィールド（AO-AP列）
         loanDays,                                      // AO: 貸出日数
@@ -1334,44 +1267,44 @@ function integrateDeviceData(deviceData, statusData, locationMap, deviceType) {
         device['機種名'] || '',                       // C: 機種名
         device['製造番号'] || '',                     // D: 製造番号
         
-        // 収集シートデータ（E-AO列）
-        latestStatus.timestamp || '',                  // E: タイムスタンプ
-        latestStatus.managementId || '',               // F: 9999.管理ID
-        managementNumber,                              // G: 0-0.拠点管理番号
-        latestStatus.assignee || '',                   // H: 0-1.担当者
-        latestStatus.isEmployee || '',                 // I: 0-2.EMシステムズの社員ですか？
-        latestStatus.company || '',                    // J: 0-3.所属会社
-        latestStatus.status || '',                     // K: 0-4.ステータス
-        latestStatus.customerName || '',               // L: 1-1.顧客名または貸出先
-        latestStatus.customerNumber || '',             // M: 1-2.顧客番号
-        latestStatus.address || '',                    // N: 1-3.住所
-        latestStatus.userMachineFlag || '',            // O: 1-4.ユーザー機の預り有無
-        latestStatus.loanRequestor || '',              // P: 1-5.依頼者
-        latestStatus.loanRemarks || '',                // Q: 1-6.備考
-        latestStatus.userMachineSerial || '',          // R: 1-7.預りユーザー機のシリアルNo.
-        latestStatus.returnFlag || '',                 // S: 2-1.預り機返却の有無
-        latestStatus.returnRemarks || '',              // T: 2-2.備考
-        latestStatus.repairNeed || '',                 // U: 2-3.修理の必要性
-        latestStatus.repairRemarks || '',              // V: 2-4.備考
-        latestStatus.internalStatus || '',             // W: 3-0.社内ステータス
-        latestStatus.inventoryFlag || '',              // X: 3-0-1.棚卸フラグ
-        latestStatus.currentLocation || locationCode,  // Y: 3-0-2.拠点
-        latestStatus.internalRemarks || '',            // Z: 3-1-1.備考
-        latestStatus.repairHandover || '',             // AA: 3-2-1.修理依頼の引継ぎ
-        latestStatus.symptom || '',                    // AB: 3-2-2.症状
-        latestStatus.repairHandoverRemarks || '',      // AC: 3-2-3.備考
-        latestStatus.repairLocation || '',             // AD: 4-1.所在
-        latestStatus.repairContent || '',              // AE: 4-2.修理内容
-        latestStatus.repairWorkRemarks || '',          // AF: 4-3.備考
-        latestStatus.takeoutLocation || '',            // AG: 5-1.所在
-        latestStatus.takeoutReason || '',              // AH: 5-2.持ち出し理由
-        latestStatus.takeoutRemarks || '',             // AI: 5-3.備考
-        latestStatus.disposalLocation || '',           // AJ: 6-1.所在
-        latestStatus.disposalRequestor || '',          // AK: 6-2.依頼者
-        latestStatus.disposalRemarks || '',            // AL: 6-3.備考
-        latestStatus.otherContent || '',               // AM: 7-1.内容
-        latestStatus.otherLocation || '',              // AN: 7-2.所在
-        latestStatus.otherRemarks || '',               // AO: 7-3.備考
+        // 収集シートデータ（E-AO列）- ステータスデータの列名をそのまま使用
+        latestStatus['タイムスタンプ'] || '',                           // E: タイムスタンプ
+        latestStatus['9999.管理ID'] || '',                              // F: 9999.管理ID
+        latestStatus['0-0.拠点管理番号'] || managementNumber,            // G: 0-0.拠点管理番号
+        latestStatus['0-1.担当者'] || '',                               // H: 0-1.担当者
+        latestStatus['0-2.EMシステムズの社員ですか？'] || '',           // I: 0-2.EMシステムズの社員ですか？
+        latestStatus['0-3.所属会社'] || '',                             // J: 0-3.所属会社
+        latestStatus['0-4.ステータス'] || '',                           // K: 0-4.ステータス
+        latestStatus['1-1.顧客名または貸出先'] || '',                   // L: 1-1.顧客名または貸出先
+        latestStatus['1-2.顧客番号'] || '',                             // M: 1-2.顧客番号
+        latestStatus['1-3.住所'] || '',                                 // N: 1-3.住所
+        latestStatus['1-4.ユーザー機の預り有無'] || '',                 // O: 1-4.ユーザー機の預り有無
+        latestStatus['1-5.依頼者'] || '',                               // P: 1-5.依頼者
+        latestStatus['1-6.備考'] || '',                                 // Q: 1-6.備考
+        latestStatus['1-7.預りユーザー機のシリアルNo.(製造番号)'] || '', // R: 1-7.預りユーザー機のシリアルNo.
+        latestStatus['2-1.預り機返却の有無'] || '',                     // S: 2-1.預り機返却の有無
+        latestStatus['2-2.備考'] || '',                                 // T: 2-2.備考
+        latestStatus['2-3.修理の必要性'] || '',                         // U: 2-3.修理の必要性
+        latestStatus['2-4.備考'] || '',                                 // V: 2-4.備考
+        latestStatus['3-0.社内ステータス'] || '',                       // W: 3-0.社内ステータス
+        latestStatus['3-0-1.棚卸しフラグ'] || '',                       // X: 3-0-1.棚卸しフラグ
+        latestStatus['3-0-2.拠点'] || locationCode,                     // Y: 3-0-2.拠点
+        latestStatus['3-1-1.備考'] || '',                               // Z: 3-1-1.備考
+        latestStatus['3-2-1.修理依頼の引継ぎ'] || '',                   // AA: 3-2-1.修理依頼の引継ぎ
+        latestStatus['3-2-2.症状'] || '',                               // AB: 3-2-2.症状
+        latestStatus['3-2-3.備考'] || '',                               // AC: 3-2-3.備考
+        latestStatus['4-1.所在'] || '',                                 // AD: 4-1.所在
+        latestStatus['4-2.修理内容'] || '',                             // AE: 4-2.修理内容
+        latestStatus['4-3.備考'] || '',                                 // AF: 4-3.備考
+        latestStatus['5-1.所在'] || '',                                 // AG: 5-1.所在
+        latestStatus['5-2.持ち出し理由'] || '',                         // AH: 5-2.持ち出し理由
+        latestStatus['5-3.備考'] || '',                                 // AI: 5-3.備考
+        latestStatus['6-1.所在'] || '',                                 // AJ: 6-1.所在
+        latestStatus['6-2.依頼者'] || '',                               // AK: 6-2.依頼者
+        latestStatus['6-3.備考'] || '',                                 // AL: 6-3.備考
+        latestStatus['7-1.内容'] || '',                                 // AM: 7-1.内容
+        latestStatus['7-2.所在'] || '',                                 // AN: 7-2.所在
+        latestStatus['7-3.備考'] || '',                                 // AO: 7-3.備考
         
         // 計算フィールド（AP-AQ列）
         loanDays,                                      // AP: 貸出日数
