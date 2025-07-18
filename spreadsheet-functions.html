@@ -196,7 +196,21 @@
     const locationSelect = document.getElementById('location');
     const selectedLocation = locationSelect.value;
     const deviceTypeSelect = document.getElementById('deviceType');
-    const selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
+    const dataTypeSelect = document.getElementById('dataType');
+    
+    // データタイプIDから適切なdeviceTypeを決定
+    let selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
+    if (dataTypeSelect && dataTypeSelect.value) {
+      const dataTypeId = dataTypeSelect.value;
+      if (dataTypeId === 'INTEGRATED_VIEW_TERMINAL') {
+        selectedDeviceType = 'INTEGRATED_VIEW_TERMINAL';
+      } else if (dataTypeId === 'INTEGRATED_VIEW_PRINTER_OTHER') {
+        selectedDeviceType = 'INTEGRATED_VIEW_PRINTER_OTHER';
+      } else if (dataTypeId === 'INTEGRATED_VIEW') {
+        selectedDeviceType = 'INTEGRATED_VIEW';
+      }
+    }
+    
     const querySelector = document.querySelector('.query-selector');
     const refreshButton = document.getElementById('refreshButton');
     const errorDiv = document.getElementById('error');
@@ -350,7 +364,21 @@
     if (currentLocation) {
       const queryType = document.querySelector('input[name="queryType"]:checked').value;
       const deviceTypeSelect = document.getElementById('deviceType');
-      const selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
+      const dataTypeSelect = document.getElementById('dataType');
+      
+      // データタイプIDから適切なdeviceTypeを決定
+      let selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
+      if (dataTypeSelect && dataTypeSelect.value) {
+        const dataTypeId = dataTypeSelect.value;
+        if (dataTypeId === 'INTEGRATED_VIEW_TERMINAL') {
+          selectedDeviceType = 'INTEGRATED_VIEW_TERMINAL';
+        } else if (dataTypeId === 'INTEGRATED_VIEW_PRINTER_OTHER') {
+          selectedDeviceType = 'INTEGRATED_VIEW_PRINTER_OTHER';
+        } else if (dataTypeId === 'INTEGRATED_VIEW') {
+          selectedDeviceType = 'INTEGRATED_VIEW';
+        }
+      }
+      
       loadSpreadsheet(currentLocation, queryType, selectedDeviceType);
     }
   }
@@ -1238,7 +1266,20 @@
     const refreshButton = document.getElementById('refreshButton');
     const queryType = document.querySelector('input[name="queryType"]:checked')?.value || 'all';
     const deviceTypeSelect = document.getElementById('deviceType');
-    const selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
+    const dataTypeSelect = document.getElementById('dataType');
+    
+    // データタイプIDから適切なdeviceTypeを決定
+    let selectedDeviceType = deviceTypeSelect ? deviceTypeSelect.value : 'terminal';
+    if (dataTypeSelect && dataTypeSelect.value) {
+      const dataTypeId = dataTypeSelect.value;
+      if (dataTypeId === 'INTEGRATED_VIEW_TERMINAL') {
+        selectedDeviceType = 'INTEGRATED_VIEW_TERMINAL';
+      } else if (dataTypeId === 'INTEGRATED_VIEW_PRINTER_OTHER') {
+        selectedDeviceType = 'INTEGRATED_VIEW_PRINTER_OTHER';
+      } else if (dataTypeId === 'INTEGRATED_VIEW') {
+        selectedDeviceType = 'INTEGRATED_VIEW';
+      }
+    }
     
     // ボタンのローディング状態を設定
     if (refreshButton) {
@@ -3088,7 +3129,7 @@
           errorDiv.textContent = 'エラーが発生しました: ' + error;
           tableContainer.innerHTML = '';
         })
-        .getSpreadsheetData(location, queryType);
+        .getSpreadsheetData(location, queryType, deviceType);
     } catch (error) {
       if (DEBUG_MODE) {
         showDebugInfo('強制更新処理エラー', { error });
