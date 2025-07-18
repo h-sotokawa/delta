@@ -488,6 +488,33 @@
       tableContainer.innerHTML = '<p>データがありません</p>';
       return;
     }
+    
+    // ヘッダーのみの場合（データ行がない）
+    if (data.length === 1) {
+      showDebugInfo('データ行なし（ヘッダーのみ）', {});
+      const tableContainer = document.getElementById('tableContainer');
+      
+      // 現在選択されている拠点とデータタイプを取得
+      const locationSelect = document.getElementById('location');
+      const dataTypeSelect = document.getElementById('dataType');
+      const selectedLocation = locationSelect ? locationSelect.options[locationSelect.selectedIndex].text : '';
+      const selectedDataType = dataTypeSelect ? dataTypeSelect.options[dataTypeSelect.selectedIndex].text : '';
+      
+      let message = '<div style="text-align: center; padding: 40px; color: #666;">';
+      message += '<p style="font-size: 18px; margin-bottom: 10px;">データがありません</p>';
+      
+      if (selectedLocation && selectedLocation !== '全ての拠点') {
+        message += `<p style="font-size: 14px;">${selectedLocation}には該当するデータが存在しません。</p>`;
+      } else {
+        message += '<p style="font-size: 14px;">該当するデータが存在しません。</p>';
+      }
+      
+      message += '<p style="font-size: 12px; margin-top: 20px; color: #999;">データが存在する場合は、統合ビューの更新が必要な可能性があります。</p>';
+      message += '</div>';
+      
+      tableContainer.innerHTML = message;
+      return;
+    }
 
     showDebugInfo('テーブル作成開始', { 
       rows: data.length, 
