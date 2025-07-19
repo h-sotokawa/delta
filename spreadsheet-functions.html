@@ -1871,52 +1871,7 @@
   
   // 列を表示すべきか判定
   function shouldShowColumn(columnHeader, statusPrefix, nestedStatusPrefix) {
-    if (!columnHeader) return true;
-    
-    const headerStr = columnHeader.toString();
-    
-    // 基本列は常に表示
-    const baseColumns = [
-      '拠点管理番号',
-      '機器種別',
-      '機種名',
-      '製造番号',
-      'タイムスタンプ',
-      '0-4.ステータス',
-      '更新日時',
-      '更新日',
-      '作成日'
-    ];
-    
-    // 基本列は常に表示
-    for (const baseCol of baseColumns) {
-      if (headerStr.includes(baseCol)) {
-        return true;
-      }
-    }
-    
-    // 数字-数字.パターンの列をチェック
-    const match = headerStr.match(/^(\d+)-(\d+)\./); 
-    if (match) {
-      const prefix = match[1];
-      const subPrefix = match[2];
-      
-      // ステータスの接頭辞と一致するかチェック
-      if (prefix !== statusPrefix) {
-        return false;
-      }
-      
-      // 3.社内にて保管中の場合のネスト処理
-      if (statusPrefix === '3' && nestedStatusPrefix && subPrefix !== '0') {
-        // 3-0.社内ステータスは常に表示
-        // 3-X-パターンはネストステータスが一致する場合のみ表示
-        return subPrefix === nestedStatusPrefix;
-      }
-      
-      return true;
-    }
-    
-    // その他の列は表示
+    // ステータスによる列フィルタリングを無効化 - すべての列を表示
     return true;
   }
 
@@ -2066,59 +2021,9 @@
     const locationCodeColumnIndex = findLocationCodeColumnIndex(data[0]);
     
     // ステータス駆動型列フィルタリングのための処理
+    // ステータスによるフィルタリングを無効化
     let statusPrefixFilter = null;
     let nestedStatusFilter = null;
-    
-    // 統合ビューの場合のみステータス駆動型フィルタリングを適用
-    if (dataTypeId && dataTypeId.includes('INTEGRATED_VIEW') && displayMode === 'main') {
-      // 0-4.ステータス列を探す
-      const statusColumnIndex = data[0].findIndex(header => header && header.includes('0-4.ステータス'));
-      
-      if (statusColumnIndex !== -1 && data.length > 1) {
-        // データの中からステータス値を取得（代表的な値を使用）
-        const sampleStatusValue = getSampleStatusValue(data, statusColumnIndex);
-        
-        if (sampleStatusValue) {
-          // ステータスの接頭辞数字を抽出
-          const match = sampleStatusValue.match(/^(\d+)\./); 
-          if (match) {
-            statusPrefixFilter = match[1];
-            
-            if (DEBUG_MODE) {
-              showDebugInfo('ステータス駆動型フィルタリング適用', {
-                statusColumnIndex,
-                sampleStatusValue,
-                statusPrefixFilter,
-                dataTypeId
-              });
-            }
-            
-            // 3.社内にて保管中の場合、ネストしたステータスを確認
-            if (statusPrefixFilter === '3') {
-              const nestedStatusColumnIndex = data[0].findIndex(header => header && header.includes('3-0.社内ステータス'));
-              
-              if (nestedStatusColumnIndex !== -1) {
-                const sampleNestedStatusValue = getSampleStatusValue(data, nestedStatusColumnIndex);
-                if (sampleNestedStatusValue) {
-                  const nestedMatch = sampleNestedStatusValue.match(/^(\d+)\./); 
-                  if (nestedMatch) {
-                    nestedStatusFilter = nestedMatch[1];
-                    
-                    if (DEBUG_MODE) {
-                      showDebugInfo('ネストステータスフィルタリング適用', {
-                        nestedStatusColumnIndex,
-                        sampleNestedStatusValue,
-                        nestedStatusFilter
-                      });
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
     
     // 空の列をチェックする関数
     function isColumnEmpty(columnIndex) {
