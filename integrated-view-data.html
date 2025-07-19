@@ -43,8 +43,8 @@ IntegratedView.onLocationMasterLoaded = function(locations) {
 // 拠点マスタ読み込みエラー時
 IntegratedView.onLocationMasterError = function(error) {
   console.error('Failed to load location master:', error);
-  // エラーは表示しないが、ログに記録
-  // 拠点選択なしでも動作可能
+  // 一時的にエラーを表示してデバッグ
+  this.showError('拠点マスタの読み込みに失敗しました: ' + error.toString());
 };
 
 // 統合ビューデータ読み込み

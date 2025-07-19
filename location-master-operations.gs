@@ -152,7 +152,9 @@ function getLocationMaster() {
       const locationId = getValueByColumnName(row, headers, '拠点ID');
       if (!locationId || locationId === '') continue;
       
-      locations.push({
+      // フロントエンドとの互換性のため、配列アクセス形式とオブジェクト形式の両方を提供
+      const locationData = {
+        // オブジェクト形式
         locationId: locationId,
         locationName: getValueByColumnName(row, headers, '拠点名'),
         locationCode: getValueByColumnName(row, headers, '拠点コード'),
@@ -160,8 +162,17 @@ function getLocationMaster() {
         groupEmail: getValueByColumnName(row, headers, 'グループメール') || getValueByColumnName(row, headers, 'グループメールアドレス'),
         createdDate: getValueByColumnName(row, headers, '作成日時') || getValueByColumnName(row, headers, '作成日'),
         statusNotification: statusNotificationCol >= 0 ? (row[statusNotificationCol] === true || row[statusNotificationCol] === 'TRUE' || row[statusNotificationCol] === 'true') : false,
-        status: getValueByColumnName(row, headers, 'ステータス') || 'active'
-      });
+        status: getValueByColumnName(row, headers, 'ステータス') || 'active',
+        
+        // 配列アクセス形式（フロントエンド互換性）
+        '拠点ID': locationId,
+        '拠点名': getValueByColumnName(row, headers, '拠点名'),
+        '拠点コード': getValueByColumnName(row, headers, '拠点コード'),
+        '管轄': getValueByColumnName(row, headers, '管轄'),
+        'ステータス': getValueByColumnName(row, headers, 'ステータス') === 'inactive' ? '無効' : '有効'
+      };
+      
+      locations.push(locationData);
     }
     
     endPerformanceTimer(startTime, '拠点マスタ取得');

@@ -13,28 +13,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **フォーム**: Google Forms
 - **QRコード**: Firebase Hosting (リダイレクト用)
 
-## 開発コマンド
-
-### Google Apps Script デプロイ
-```bash
-# claspを使用したプッシュ
-clasp push
-
-# Web Appとしてデプロイ
-clasp deploy
-```
-
-### Firebase デプロイ (QRコードリダイレクト用)
-```bash
-cd .site/a/firebase-qr-redirect
-firebase deploy
-```
-
-### テスト実行
-GAS上でテストファイルを直接実行：
-- `test-url-generation-complete.gs`
-- `test-terminal-attributes.gs`
-- `test-qr-generation.gs`
 
 ## アーキテクチャ概要
 
