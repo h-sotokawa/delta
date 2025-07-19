@@ -1586,16 +1586,22 @@ function normalizeLocationCode(locationCode) {
   
   const code = locationCode.toString().toUpperCase();
   
-  // 例外処理：Osaka, Kobe, Himejiの場合（実データで頭文字のみ大文字の形式に対応）
+  // 例外処理：Osaka, Kobe, Himejiの場合（実データの頭文字のみ大文字形式に対応）
   const exceptions = {
+    // 大文字形式
     'OSAKA': 'OSAKA',
     'KOBE': 'KOBE', 
-    'HIMEJI': 'HIMEJI'
+    'HIMEJI': 'HIMEJI',
+    'HIME': 'HIMEJI',  // Hime → Himeji への変換
+    // 頭文字のみ大文字形式（実データ）
+    'OSAKA-': 'OSAKA',  // Osaka- の形式
+    'KOBE_': 'KOBE',    // Kobe_ の形式
+    'HIME_': 'HIMEJI'   // Hime_ の形式
   };
   
-  // 既に正しい形式の場合はそのまま返す
+  // 例外処理に該当する場合は統一形式を返す
   if (exceptions[code]) {
-    return code;
+    return exceptions[code];
   }
   
   // その他の一般的な形式も許容
@@ -1770,8 +1776,16 @@ function getIntegratedViewData(location, viewType) {
       for (let i = 1; i < allData.length; i++) {
         const managementNumber = allData[i][managementNumberIndex];
         if (managementNumber) {
-          // 拠点管理番号から拠点コードを抽出（最初の_まで）
-          const dataLocationCode = managementNumber.toString().split('_')[0];
+          // 拠点管理番号から拠点コードを抽出（_または-まで）
+          const managementStr = managementNumber.toString();
+          let dataLocationCode;
+          
+          // 大阪は"-"、その他は"_"で区切られている
+          if (managementStr.includes('-')) {
+            dataLocationCode = managementStr.split('-')[0];
+          } else {
+            dataLocationCode = managementStr.split('_')[0];
+          }
           
           if (dataLocationCode) {
             // 拠点コードも正規化して比較
