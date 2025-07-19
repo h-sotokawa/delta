@@ -990,15 +990,15 @@ function getLatestStatusCollectionData() {
         let shouldUpdate = !statusMap[managementNumber];
         if (!shouldUpdate && timestamp) {
           try {
-            const newDate = timestamp instanceof Date ? timestamp : new Date(timestamp);
-            const existingTimestamp = statusMap[managementNumber]['タイムスタンプ'];
-            const existingDate = existingTimestamp instanceof Date ? existingTimestamp : new Date(existingTimestamp);
+            // 日付をテキスト形式に正規化
+            const newTimestamp = formatTimestampForComparison(timestamp);
+            const existingTimestamp = formatTimestampForComparison(statusMap[managementNumber]['タイムスタンプ']);
             
-            // 有効な日付の場合のみ比較
-            if (!isNaN(newDate.getTime()) && !isNaN(existingDate.getTime())) {
-              shouldUpdate = newDate > existingDate;
+            // テキスト比較で新しいかどうか判定
+            if (newTimestamp && existingTimestamp) {
+              shouldUpdate = newTimestamp > existingTimestamp;
             } else {
-              // 日付が無効な場合は更新する
+              // いずれかが無効な場合は更新する
               shouldUpdate = true;
             }
           } catch (error) {
@@ -1257,6 +1257,7 @@ function integrateDeviceDataForView(deviceData, statusData, locationMap, deviceT
     if (latestStatus && latestStatus['0-4.ステータス'] === '1.貸出中' && latestStatus['タイムスタンプ']) {
       try {
         const timestamp = latestStatus['タイムスタンプ'];
+        // Dateオブジェクトに変換
         const loanDate = timestamp instanceof Date ? timestamp : new Date(timestamp);
         
         if (!isNaN(loanDate.getTime())) {
@@ -1285,7 +1286,7 @@ function integrateDeviceDataForView(deviceData, statusData, locationMap, deviceT
         device['OS'] || '',                           // G: OS
         
         // 収集シートデータ（H-AN列）- ステータスデータの列名をそのまま使用
-        latestStatus['タイムスタンプ'] || '',                           // H: タイムスタンプ
+        formatTimestampForComparison(latestStatus['タイムスタンプ']) || '',  // H: タイムスタンプ
         latestStatus['9999.管理ID'] || '',                              // I: 9999.管理ID
         latestStatus['0-0.拠点管理番号'] || '',                         // J: 0-0.拠点管理番号
         latestStatus['0-1.担当者'] || '',                               // K: 0-1.担当者
@@ -1339,7 +1340,7 @@ function integrateDeviceDataForView(deviceData, statusData, locationMap, deviceT
         device['製造番号'] || '',                     // D: 製造番号
         
         // 収集シートデータ（E-AO列）- ステータスデータの列名をそのまま使用
-        latestStatus['タイムスタンプ'] || '',                           // E: タイムスタンプ
+        formatTimestampForComparison(latestStatus['タイムスタンプ']) || '',  // E: タイムスタンプ
         latestStatus['9999.管理ID'] || '',                              // F: 9999.管理ID
         latestStatus['0-0.拠点管理番号'] || '',                         // G: 0-0.拠点管理番号
         latestStatus['0-1.担当者'] || '',                               // H: 0-1.担当者
@@ -1647,6 +1648,40 @@ function getAvailableLocationsFromIntegratedView() {
   } catch (error) {
     console.error('拠点リスト取得エラー:', error);
     return [];
+  }
+}
+
+/**
+ * 日付フォーマット関数（CLAUDE.md標準仕様準拠）
+ * @param {*} dateValue - 日付値（Date、文字列、数値）
+ * @return {string} yyyy/MM/dd形式の文字列
+ */
+function formatTimestampForComparison(dateValue) {
+  if (!dateValue) return '';
+  
+  try {
+    // 既に文字列の場合はそのまま返す（yyyy/MM/dd形式を想定）
+    if (typeof dateValue === 'string') {
+      return dateValue;
+    }
+    
+    // Dateオブジェクトの場合
+    if (dateValue instanceof Date) {
+      return Utilities.formatDate(dateValue, 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
+    }
+    
+    // 数値の場合（シリアル値など）はDateに変換
+    if (typeof dateValue === 'number') {
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        return Utilities.formatDate(date, 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
+      }
+    }
+    
+    return dateValue.toString();
+  } catch (error) {
+    console.error('日付フォーマットエラー:', error, dateValue);
+    return '';
   }
 }
 
