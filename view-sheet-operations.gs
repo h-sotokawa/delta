@@ -1586,10 +1586,10 @@ function normalizeLocationCode(locationCode) {
   
   const code = locationCode.toString().toUpperCase();
   
-  // 例外処理：Osaka, Kobe, Himejiの場合
+  // 例外処理：Osaka, Kobe, Himejiの場合（実データで頭文字のみ大文字の形式に対応）
   const exceptions = {
     'OSAKA': 'OSAKA',
-    'KOBE': 'KOBE',
+    'KOBE': 'KOBE', 
     'HIMEJI': 'HIMEJI'
   };
   
