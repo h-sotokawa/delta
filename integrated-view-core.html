@@ -1,0 +1,126 @@
+<!-- integrated-view-core.html - 統合ビューのメインコントローラー -->
+<script>
+// 統合ビューの名前空間
+window.IntegratedView = {
+  // 状態管理
+  state: {
+    currentLocation: '',
+    currentViewType: 'terminal',
+    locationMaster: [],
+    isLoading: false,
+    currentData: null
+  },
+  
+  // 初期化
+  init: function() {
+    console.log('IntegratedView initialization started');
+    
+    // 状態を初期化
+    this.state.currentLocation = '';
+    this.state.currentViewType = 'terminal';
+    this.state.isLoading = false;
+    
+    // UIの初期設定
+    this.setupUI();
+    
+    // 拠点マスタを読み込み
+    this.loadLocationMaster();
+    
+    // 初期データを読み込み（全拠点の端末データ）
+    this.loadData();
+  },
+  
+  // UI初期設定
+  setupUI: function() {
+    // エラー表示をクリア
+    this.clearError();
+    
+    // ビュータイプを初期値に設定
+    const viewTypeSelect = document.getElementById('viewType');
+    if (viewTypeSelect) {
+      viewTypeSelect.value = this.state.currentViewType;
+    }
+  },
+  
+  // 拠点変更ハンドラー
+  handleLocationChange: function() {
+    const locationSelect = document.getElementById('location');
+    if (!locationSelect) return;
+    
+    const newLocation = locationSelect.value;
+    console.log('Location changed:', newLocation);
+    
+    this.state.currentLocation = newLocation;
+    this.loadData();
+  },
+  
+  // ビュータイプ変更ハンドラー
+  handleViewTypeChange: function() {
+    const viewTypeSelect = document.getElementById('viewType');
+    if (!viewTypeSelect) return;
+    
+    const newViewType = viewTypeSelect.value;
+    console.log('View type changed:', newViewType);
+    
+    this.state.currentViewType = newViewType;
+    this.loadData();
+  },
+  
+  // 更新ボタンハンドラー
+  refresh: function() {
+    console.log('Refresh button clicked');
+    this.loadData();
+  },
+  
+  // エラー表示
+  showError: function(message) {
+    const errorDiv = document.getElementById('error');
+    if (errorDiv) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+    console.error('IntegratedView Error:', message);
+  },
+  
+  // エラークリア
+  clearError: function() {
+    const errorDiv = document.getElementById('error');
+    if (errorDiv) {
+      errorDiv.textContent = '';
+      errorDiv.style.display = 'none';
+    }
+  },
+  
+  // ローディング表示制御
+  showLoading: function(show) {
+    const loadingDiv = document.getElementById('loading');
+    if (loadingDiv) {
+      loadingDiv.style.display = show ? 'block' : 'none';
+    }
+    
+    // 更新ボタンの状態も制御
+    const refreshButton = document.getElementById('refreshButton');
+    if (refreshButton) {
+      refreshButton.disabled = show;
+    }
+    
+    this.state.isLoading = show;
+  },
+  
+  // 空のメッセージ表示
+  showEmptyMessage: function() {
+    const container = document.getElementById('tableContainer');
+    if (container) {
+      container.innerHTML = '<div class="empty-message">表示するデータがありません</div>';
+    }
+  }
+};
+
+// ページ表示時の初期化
+window.initSpreadsheetPage = function() {
+  console.log('initSpreadsheetPage called');
+  if (window.IntegratedView && window.IntegratedView.init) {
+    window.IntegratedView.init();
+  }
+};
+</script>

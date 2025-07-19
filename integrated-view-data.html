@@ -1,0 +1,98 @@
+<!-- integrated-view-data.html - データ読み込み処理 -->
+<script>
+// 拠点マスタ読み込み
+IntegratedView.loadLocationMaster = function() {
+  console.log('Loading location master data...');
+  
+  google.script.run
+    .withSuccessHandler(this.onLocationMasterLoaded.bind(this))
+    .withFailureHandler(this.onLocationMasterError.bind(this))
+    .getLocationMaster();
+};
+
+// 拠点マスタ読み込み成功時
+IntegratedView.onLocationMasterLoaded = function(locations) {
+  console.log('Location master loaded:', locations.length, 'locations');
+  
+  this.state.locationMaster = locations;
+  
+  // 拠点選択プルダウンを更新
+  const locationSelect = document.getElementById('location');
+  if (!locationSelect) return;
+  
+  // 既存のオプションをクリア（最初の「全拠点」は残す）
+  while (locationSelect.options.length > 1) {
+    locationSelect.remove(1);
+  }
+  
+  // 拠点マスタから拠点を追加
+  locations.forEach(location => {
+    if (location['拠点名'] && location['ステータス'] === '有効') {
+      const option = document.createElement('option');
+      option.value = location['拠点名'];
+      option.textContent = location['拠点名'];
+      locationSelect.appendChild(option);
+    }
+  });
+};
+
+// 拠点マスタ読み込みエラー時
+IntegratedView.onLocationMasterError = function(error) {
+  console.error('Failed to load location master:', error);
+  // エラーは表示しないが、ログに記録
+  // 拠点選択なしでも動作可能
+};
+
+// 統合ビューデータ読み込み
+IntegratedView.loadData = function() {
+  if (this.state.isLoading) {
+    console.log('Already loading, skipping...');
+    return;
+  }
+  
+  console.log('Loading integrated view data...', {
+    location: this.state.currentLocation,
+    viewType: this.state.currentViewType
+  });
+  
+  this.clearError();
+  this.showLoading(true);
+  
+  google.script.run
+    .withSuccessHandler(this.onDataLoaded.bind(this))
+    .withFailureHandler(this.onDataError.bind(this))
+    .getIntegratedViewData(
+      this.state.currentLocation,
+      this.state.currentViewType
+    );
+};
+
+// データ読み込み成功時
+IntegratedView.onDataLoaded = function(response) {
+  console.log('Data loaded successfully');
+  this.showLoading(false);
+  
+  if (!response || response.error) {
+    this.showError(response ? response.error : 'データの読み込みに失敗しました');
+    return;
+  }
+  
+  if (!response.data || response.data.length === 0) {
+    this.showEmptyMessage();
+    return;
+  }
+  
+  // データを保持
+  this.state.currentData = response.data;
+  
+  // テーブルを表示
+  this.createTable(response.data);
+};
+
+// データ読み込みエラー時
+IntegratedView.onDataError = function(error) {
+  console.error('Data loading error:', error);
+  this.showLoading(false);
+  this.showError('データの読み込み中にエラーが発生しました: ' + error.toString());
+};
+</script>

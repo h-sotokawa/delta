@@ -1,0 +1,119 @@
+<!-- integrated-view-display.html - データ表示処理 -->
+<script>
+// テーブル作成
+IntegratedView.createTable = function(data) {
+  const container = document.getElementById('tableContainer');
+  if (!container) return;
+  
+  if (!data || data.length === 0) {
+    this.showEmptyMessage();
+    return;
+  }
+  
+  console.log('Creating table with', data.length, 'rows');
+  
+  let html = '<table class="data-table">';
+  
+  // ヘッダー行
+  if (data.length > 0) {
+    html += '<thead><tr>';
+    data[0].forEach((header, index) => {
+      // 空のヘッダーはスキップ
+      if (header || index === 0) {
+        html += `<th>${this.escapeHtml(header || '')}</th>`;
+      }
+    });
+    html += '</tr></thead>';
+  }
+  
+  // データ行
+  if (data.length > 1) {
+    html += '<tbody>';
+    for (let i = 1; i < data.length; i++) {
+      html += '<tr>';
+      data[i].forEach((cell, index) => {
+        // ヘッダーが空の列はスキップ
+        if (data[0][index] || index === 0) {
+          // 拠点管理番号（最初の列）は特別な処理
+          if (index === 0) {
+            html += `<td class="management-number">${this.escapeHtml(cell || '')}</td>`;
+          } else {
+            html += `<td>${this.formatCellValue(cell)}</td>`;
+          }
+        }
+      });
+      html += '</tr>';
+    }
+    html += '</tbody>';
+  }
+  
+  html += '</table>';
+  
+  container.innerHTML = html;
+  
+  // テーブルが作成されたことをログ
+  console.log('Table created successfully');
+};
+
+// セル値のフォーマット
+IntegratedView.formatCellValue = function(value) {
+  // null, undefined, 空文字の場合
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+  
+  // 日付の場合
+  if (value instanceof Date) {
+    return this.formatDate(value);
+  }
+  
+  // 数値の場合
+  if (typeof value === 'number') {
+    // 整数の場合はそのまま、小数の場合は適切にフォーマット
+    if (Number.isInteger(value)) {
+      return value.toString();
+    } else {
+      return value.toFixed(2);
+    }
+  }
+  
+  // 真偽値の場合
+  if (typeof value === 'boolean') {
+    return value ? '○' : '';
+  }
+  
+  // その他（文字列など）
+  return this.escapeHtml(value.toString());
+};
+
+// 日付フォーマット
+IntegratedView.formatDate = function(date) {
+  if (!date || !(date instanceof Date)) return '';
+  
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  
+  return `${year}/${month}/${day} ${hours}:${minutes}`;
+};
+
+// 表示する列の判定（将来の拡張用）
+IntegratedView.shouldShowColumn = function(header, index) {
+  // 現在はすべての列を表示
+  // 将来的に特定の列を非表示にする場合はここで制御
+  return true;
+};
+
+// テーブルのエクスポート機能（将来の拡張用）
+IntegratedView.exportTable = function(format) {
+  if (!this.state.currentData) {
+    this.showError('エクスポートするデータがありません');
+    return;
+  }
+  
+  // TODO: CSV, Excel形式でのエクスポート実装
+  console.log('Export table in format:', format);
+};
+</script>

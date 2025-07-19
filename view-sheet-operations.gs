@@ -1386,3 +1386,87 @@ function testViewSheets() {
   
   console.log('=== ビューシートテスト完了 ===');
 }
+
+/**
+ * 統合ビューデータを取得（シンプル版）
+ * @param {string} location - 拠点名（空文字の場合は全拠点）
+ * @param {string} viewType - ビュータイプ（terminal/printer_other）
+ * @return {Object} レスポンスオブジェクト
+ */
+function getIntegratedViewData(location, viewType) {
+  const startTime = startPerformanceTimer();
+  addLog('統合ビューデータ取得開始', { location, viewType });
+  
+  try {
+    // ビューシートを取得
+    let sheet;
+    if (viewType === 'terminal') {
+      sheet = getIntegratedViewTerminalSheet();
+    } else if (viewType === 'printer_other') {
+      sheet = getIntegratedViewPrinterOtherSheet();
+    } else {
+      throw new Error('不正なビュータイプ: ' + viewType);
+    }
+    
+    if (!sheet) {
+      throw new Error('統合ビューシートが見つかりません');
+    }
+    
+    // 全データを取得
+    const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    
+    if (lastRow === 0) {
+      return {
+        success: true,
+        data: [],
+        metadata: {
+          viewType: viewType,
+          location: location,
+          totalRows: 0
+        }
+      };
+    }
+    
+    const allData = sheet.getRange(1, 1, lastRow, lastColumn).getValues();
+    
+    // 拠点でフィルタリング
+    let filteredData = allData;
+    if (location) {
+      // ヘッダー行を保持
+      filteredData = [allData[0]];
+      
+      // 拠点名列のインデックスを検索（AQ列 = 42）
+      const locationColumnIndex = 42; // AQ列
+      
+      // データ行をフィルタリング
+      for (let i = 1; i < allData.length; i++) {
+        if (allData[i][locationColumnIndex] === location) {
+          filteredData.push(allData[i]);
+        }
+      }
+    }
+    
+    endPerformanceTimer(startTime, '統合ビューデータ取得完了');
+    
+    return {
+      success: true,
+      data: filteredData,
+      metadata: {
+        viewType: viewType,
+        location: location || '全拠点',
+        totalRows: filteredData.length - 1 // ヘッダー行を除く
+      }
+    };
+    
+  } catch (error) {
+    endPerformanceTimer(startTime, '統合ビューデータ取得エラー');
+    addLog('統合ビューデータ取得エラー', { error: error.toString() });
+    
+    return {
+      success: false,
+      error: error.toString(),
+      data: null
+    };
+  }
+}

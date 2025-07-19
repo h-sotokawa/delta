@@ -1,0 +1,247 @@
+<!-- integrated-view-styles.html - 統合ビュー専用スタイル -->
+<style>
+/* 統合ビューコンテナ */
+.integrated-view-container {
+  padding: 2rem;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* ビューコントロール */
+.view-controls {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  align-items: center;
+  flex-wrap: wrap;
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.location-selector,
+.view-type-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.location-selector label,
+.view-type-selector label {
+  font-weight: 600;
+  color: #495057;
+  white-space: nowrap;
+}
+
+.location-selector select,
+.view-type-selector select {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 1rem;
+  min-width: 200px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.location-selector select:hover,
+.view-type-selector select:hover {
+  border-color: #86b7fe;
+}
+
+.location-selector select:focus,
+.view-type-selector select:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* 更新ボタン */
+.refresh-button {
+  padding: 0.5rem 1.5rem;
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s;
+  margin-left: auto;
+}
+
+.refresh-button:hover {
+  background-color: #0b5ed7;
+}
+
+.refresh-button:active {
+  transform: translateY(1px);
+}
+
+.refresh-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.refresh-button i {
+  font-size: 0.875rem;
+}
+
+/* ローディング表示 */
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+.loading::before {
+  content: "";
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.75rem;
+  vertical-align: middle;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #0d6efd;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* エラー表示 */
+.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 1rem 1.5rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border: 1px solid #f5c6cb;
+  display: none;
+}
+
+.error:not(:empty) {
+  display: block;
+}
+
+/* テーブルコンテナ */
+.table-responsive {
+  overflow-x: auto;
+  margin-top: 1rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* データテーブル */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid #dee2e6;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.data-table th {
+  background-color: #4472C4;
+  color: white;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.data-table tbody tr {
+  transition: background-color 0.1s;
+}
+
+.data-table tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.data-table tbody tr:hover {
+  background-color: #e9ecef;
+}
+
+/* 拠点管理番号列の強調 */
+.data-table td:first-child {
+  font-weight: 500;
+  color: #0d6efd;
+}
+
+/* 空データメッセージ */
+.empty-message {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .view-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .location-selector,
+  .view-type-selector {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .location-selector select,
+  .view-type-selector select {
+    width: 100%;
+  }
+  
+  .refresh-button {
+    margin-left: 0;
+    justify-content: center;
+  }
+  
+  .data-table {
+    font-size: 0.75rem;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 0.5rem;
+  }
+}
+
+/* プリント対応 */
+@media print {
+  .view-controls {
+    display: none;
+  }
+  
+  .data-table {
+    font-size: 10pt;
+  }
+  
+  .data-table th {
+    background-color: #333 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+</style>

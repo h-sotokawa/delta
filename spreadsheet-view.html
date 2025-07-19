@@ -1,0 +1,64 @@
+<!-- spreadsheet-view.html - 統合ビュー専用のUIコンポーネント -->
+<div id="spreadsheet" class="page-content">
+  <div class="integrated-view-container">
+    <h1>統合ビュー</h1>
+    
+    <!-- ビューコントロール -->
+    <div class="view-controls">
+      <!-- 拠点選択 -->
+      <div class="location-selector">
+        <label for="location">拠点：</label>
+        <select id="location" onchange="if(window.IntegratedView) IntegratedView.handleLocationChange()">
+          <option value="">全拠点</option>
+        </select>
+      </div>
+      
+      <!-- ビュータイプ選択 -->
+      <div class="view-type-selector">
+        <label for="viewType">表示タイプ：</label>
+        <select id="viewType" onchange="if(window.IntegratedView) IntegratedView.handleViewTypeChange()">
+          <option value="terminal">端末</option>
+          <option value="printer_other">プリンタ・その他</option>
+        </select>
+      </div>
+      
+      <!-- 更新ボタン -->
+      <button id="refreshButton" class="refresh-button" onclick="if(window.IntegratedView) IntegratedView.refresh()">
+        <i class="fas fa-sync-alt"></i>
+        更新
+      </button>
+    </div>
+    
+    <!-- ローディング表示 -->
+    <div id="loading" class="loading" style="display:none;">
+      データを読み込み中...
+    </div>
+    
+    <!-- エラー表示 -->
+    <div id="error" class="error"></div>
+    
+    <!-- テーブル表示エリア -->
+    <div class="table-responsive">
+      <div id="tableContainer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ページ初期化スクリプト -->
+<script>
+  // ページが表示されたときに初期化を実行
+  (function() {
+    // IntegratedViewが定義されていることを確認してから初期化
+    if (typeof window.IntegratedView !== 'undefined' && window.IntegratedView.init) {
+      // DOMが準備できたら初期化
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          window.IntegratedView.init();
+        });
+      } else {
+        // すでにDOMが準備できている場合
+        window.IntegratedView.init();
+      }
+    }
+  })();
+</script>

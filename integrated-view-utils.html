@@ -1,0 +1,147 @@
+<!-- integrated-view-utils.html - ユーティリティ関数 -->
+<script>
+// HTMLエスケープ
+IntegratedView.escapeHtml = function(str) {
+  if (str === null || str === undefined) return '';
+  
+  const div = document.createElement('div');
+  div.textContent = str.toString();
+  return div.innerHTML;
+};
+
+// デバッグログ
+IntegratedView.debug = function(message, data) {
+  if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+    console.log('[IntegratedView]', message, data || '');
+  }
+};
+
+// ローカルストレージへの保存
+IntegratedView.saveToLocalStorage = function(key, value) {
+  try {
+    localStorage.setItem('IntegratedView_' + key, JSON.stringify(value));
+  } catch (e) {
+    console.error('Failed to save to localStorage:', e);
+  }
+};
+
+// ローカルストレージからの読み込み
+IntegratedView.loadFromLocalStorage = function(key) {
+  try {
+    const value = localStorage.getItem('IntegratedView_' + key);
+    return value ? JSON.parse(value) : null;
+  } catch (e) {
+    console.error('Failed to load from localStorage:', e);
+    return null;
+  }
+};
+
+// 最後の設定を保存
+IntegratedView.saveLastSettings = function() {
+  this.saveToLocalStorage('lastSettings', {
+    location: this.state.currentLocation,
+    viewType: this.state.currentViewType,
+    timestamp: new Date().toISOString()
+  });
+};
+
+// 最後の設定を復元
+IntegratedView.restoreLastSettings = function() {
+  const settings = this.loadFromLocalStorage('lastSettings');
+  if (settings) {
+    // ビュータイプを復元
+    if (settings.viewType) {
+      const viewTypeSelect = document.getElementById('viewType');
+      if (viewTypeSelect) {
+        viewTypeSelect.value = settings.viewType;
+        this.state.currentViewType = settings.viewType;
+      }
+    }
+    
+    // 拠点は拠点マスタ読み込み後に復元
+    if (settings.location) {
+      this.state.pendingLocation = settings.location;
+    }
+  }
+};
+
+// CSV形式でのデータ取得
+IntegratedView.getDataAsCSV = function() {
+  if (!this.state.currentData || this.state.currentData.length === 0) {
+    return '';
+  }
+  
+  const data = this.state.currentData;
+  const csv = [];
+  
+  // BOMを追加（Excelでの文字化け対策）
+  csv.push('\uFEFF');
+  
+  // データを変換
+  data.forEach(row => {
+    const csvRow = row.map(cell => {
+      // nullやundefinedは空文字に
+      if (cell === null || cell === undefined) return '""';
+      
+      // 文字列に変換
+      let value = cell.toString();
+      
+      // ダブルクォートをエスケープ
+      value = value.replace(/"/g, '""');
+      
+      // カンマ、改行、ダブルクォートが含まれる場合はダブルクォートで囲む
+      if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+        value = '"' + value + '"';
+      }
+      
+      return value;
+    });
+    csv.push(csvRow.join(','));
+  });
+  
+  return csv.join('\n');
+};
+
+// ダウンロード処理
+IntegratedView.downloadCSV = function() {
+  const csv = this.getDataAsCSV();
+  if (!csv) {
+    this.showError('ダウンロードするデータがありません');
+    return;
+  }
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `integrated_view_${this.state.currentViewType}_${new Date().toISOString().slice(0, 10)}.csv`;
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  URL.revokeObjectURL(url);
+};
+
+// パフォーマンス計測
+IntegratedView.measurePerformance = function(operation, func) {
+  const start = performance.now();
+  const result = func();
+  const end = performance.now();
+  
+  this.debug(`Performance: ${operation} took ${(end - start).toFixed(2)}ms`);
+  return result;
+};
+
+// エラーハンドリングのラッパー
+IntegratedView.withErrorHandling = function(operation, func) {
+  try {
+    return func();
+  } catch (error) {
+    console.error(`Error in ${operation}:`, error);
+    this.showError(`処理中にエラーが発生しました: ${operation}`);
+    return null;
+  }
+};
+</script>
