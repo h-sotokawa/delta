@@ -1388,6 +1388,157 @@ function testViewSheets() {
 }
 
 /**
+ * 端末系統合ビューシートの診断関数
+ */
+function diagnoseTerminalIntegratedViewSheet() {
+  console.log('=== 端末系統合ビューシート診断開始 ===');
+  
+  try {
+    // シートの存在確認
+    const sheet = getIntegratedViewTerminalSheet();
+    console.log('1. シート取得成功:', sheet.getName());
+    
+    // 基本情報
+    const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    console.log('2. シート情報:');
+    console.log('   - 最終行:', lastRow);
+    console.log('   - 最終列:', lastColumn);
+    
+    // ヘッダー確認
+    if (lastRow >= 1) {
+      const headers = sheet.getRange(1, 1, 1, Math.min(lastColumn, 10)).getValues()[0];
+      console.log('3. ヘッダー（最初の10列）:', headers);
+    } else {
+      console.log('3. シートが完全に空です');
+    }
+    
+    // データ行の確認
+    if (lastRow > 1) {
+      console.log('4. データ行数:', lastRow - 1);
+      const firstDataRow = sheet.getRange(2, 1, 1, Math.min(lastColumn, 5)).getValues()[0];
+      console.log('   最初のデータ行（最初の5列）:', firstDataRow);
+    } else {
+      console.log('4. データ行がありません（ヘッダーのみ）');
+    }
+    
+    // getIntegratedViewData関数のテスト
+    console.log('5. getIntegratedViewData関数テスト:');
+    const result = getIntegratedViewData('', 'terminal');
+    console.log('   - success:', result.success);
+    console.log('   - データ行数:', result.data ? result.data.length : 'null');
+    console.log('   - メタデータ:', result.metadata);
+    if (result.error) {
+      console.log('   - エラー:', result.error);
+    }
+    
+    // 端末マスタデータの確認
+    console.log('6. 端末マスタデータ確認:');
+    const terminalData = getTerminalMasterData();
+    console.log('   - 端末マスタデータ件数:', terminalData.length);
+    
+    // ステータス収集データの確認
+    console.log('7. ステータス収集データ確認:');
+    const statusData = getLatestStatusCollectionData();
+    console.log('   - ステータスデータ件数:', Object.keys(statusData).length);
+    
+  } catch (error) {
+    console.error('診断中にエラーが発生しました:', error);
+    console.error('スタックトレース:', error.stack);
+  }
+  
+  console.log('=== 端末系統合ビューシート診断完了 ===');
+}
+
+/**
+ * プリンタ・その他系統合ビューシートの診断関数
+ */
+function diagnosePrinterOtherIntegratedViewSheet() {
+  console.log('=== プリンタ・その他系統合ビューシート診断開始 ===');
+  
+  try {
+    // シートの存在確認
+    const sheet = getIntegratedViewPrinterOtherSheet();
+    console.log('1. シート取得成功:', sheet.getName());
+    
+    // 基本情報
+    const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    console.log('2. シート情報:');
+    console.log('   - 最終行:', lastRow);
+    console.log('   - 最終列:', lastColumn);
+    
+    // ヘッダー確認
+    if (lastRow >= 1) {
+      const headers = sheet.getRange(1, 1, 1, Math.min(lastColumn, 10)).getValues()[0];
+      console.log('3. ヘッダー（最初の10列）:', headers);
+    } else {
+      console.log('3. シートが完全に空です');
+    }
+    
+    // データ行の確認
+    if (lastRow > 1) {
+      console.log('4. データ行数:', lastRow - 1);
+      const firstDataRow = sheet.getRange(2, 1, 1, Math.min(lastColumn, 5)).getValues()[0];
+      console.log('   最初のデータ行（最初の5列）:', firstDataRow);
+    } else {
+      console.log('4. データ行がありません（ヘッダーのみ）');
+    }
+    
+    // getIntegratedViewData関数のテスト
+    console.log('5. getIntegratedViewData関数テスト:');
+    const result = getIntegratedViewData('', 'printer_other');
+    console.log('   - success:', result.success);
+    console.log('   - データ行数:', result.data ? result.data.length : 'null');
+    console.log('   - メタデータ:', result.metadata);
+    if (result.error) {
+      console.log('   - エラー:', result.error);
+    }
+    
+  } catch (error) {
+    console.error('診断中にエラーが発生しました:', error);
+    console.error('スタックトレース:', error.stack);
+  }
+  
+  console.log('=== プリンタ・その他系統合ビューシート診断完了 ===');
+}
+
+/**
+ * 端末系統合ビューシートを手動で更新（テスト用）
+ */
+function manuallyUpdateTerminalIntegratedView() {
+  console.log('=== 端末系統合ビューシート手動更新開始 ===');
+  
+  try {
+    const result = updateIntegratedViewTerminal();
+    console.log('更新結果:', result);
+    
+    if (result.success) {
+      console.log('更新成功 - 更新行数:', result.rowsUpdated);
+      
+      // 更新後のシート状態を確認
+      const sheet = getIntegratedViewTerminalSheet();
+      console.log('更新後のシート情報:');
+      console.log('- 最終行:', sheet.getLastRow());
+      console.log('- 最終列:', sheet.getLastColumn());
+      
+      if (sheet.getLastRow() > 1) {
+        const firstDataRow = sheet.getRange(2, 1, 1, Math.min(sheet.getLastColumn(), 5)).getValues()[0];
+        console.log('- 最初のデータ行（最初の5列）:', firstDataRow);
+      }
+    } else {
+      console.error('更新失敗:', result.error);
+    }
+    
+  } catch (error) {
+    console.error('手動更新中にエラーが発生しました:', error);
+    console.error('スタックトレース:', error.stack);
+  }
+  
+  console.log('=== 端末系統合ビューシート手動更新完了 ===');
+}
+
+/**
  * 統合ビューデータを取得（シンプル版）
  * @param {string} location - 拠点名（空文字の場合は全拠点）
  * @param {string} viewType - ビュータイプ（terminal/printer_other）
@@ -1477,8 +1628,10 @@ function getIntegratedViewData(location, viewType) {
     let sheet;
     if (viewType === 'terminal') {
       sheet = getIntegratedViewTerminalSheet();
+      addLog('端末系統合ビューシート取得', { sheetName: sheet ? sheet.getName() : 'null' });
     } else if (viewType === 'printer_other') {
       sheet = getIntegratedViewPrinterOtherSheet();
+      addLog('プリンタ・その他系統合ビューシート取得', { sheetName: sheet ? sheet.getName() : 'null' });
     } else {
       throw new Error('不正なビュータイプ: ' + viewType);
     }
@@ -1491,7 +1644,14 @@ function getIntegratedViewData(location, viewType) {
     const lastRow = sheet.getLastRow();
     const lastColumn = sheet.getLastColumn();
     
+    addLog('シート情報', { 
+      sheetName: sheet.getName(),
+      lastRow: lastRow,
+      lastColumn: lastColumn 
+    });
+    
     if (lastRow === 0) {
+      addLog('シートが空です（行がありません）');
       return {
         success: true,
         data: [],
@@ -1503,7 +1663,26 @@ function getIntegratedViewData(location, viewType) {
       };
     }
     
+    if (lastRow === 1) {
+      // ヘッダーのみの場合
+      addLog('シートにはヘッダーのみがあります');
+      const headers = sheet.getRange(1, 1, 1, lastColumn).getValues();
+      return {
+        success: true,
+        data: headers,
+        metadata: {
+          viewType: viewType,
+          location: location,
+          totalRows: 0
+        }
+      };
+    }
+    
     const allData = sheet.getRange(1, 1, lastRow, lastColumn).getValues();
+    addLog('全データ取得完了', { 
+      totalRows: allData.length,
+      headerRow: allData[0] ? allData[0].slice(0, 5) : 'no header' // 最初の5列のみログに記録
+    });
     
     // 拠点でフィルタリング
     let filteredData = allData;
@@ -1516,6 +1695,10 @@ function getIntegratedViewData(location, viewType) {
       
       // 拠点コードの正規化（例外処理）
       const normalizedLocationCode = normalizeLocationCode(location);
+      addLog('拠点フィルタリング開始', { 
+        location: location,
+        normalizedLocationCode: normalizedLocationCode 
+      });
       
       // データ行をフィルタリング
       for (let i = 1; i < allData.length; i++) {
@@ -1534,11 +1717,16 @@ function getIntegratedViewData(location, viewType) {
           }
         }
       }
+      
+      addLog('拠点フィルタリング完了', { 
+        originalRows: allData.length - 1,
+        filteredRows: filteredData.length - 1
+      });
     }
     
     endPerformanceTimer(startTime, '統合ビューデータ取得完了');
     
-    return {
+    const result = {
       success: true,
       data: filteredData,
       metadata: {
@@ -1548,9 +1736,20 @@ function getIntegratedViewData(location, viewType) {
       }
     };
     
+    addLog('返却データ', {
+      success: result.success,
+      dataRows: result.data ? result.data.length : 0,
+      metadata: result.metadata
+    });
+    
+    return result;
+    
   } catch (error) {
     endPerformanceTimer(startTime, '統合ビューデータ取得エラー');
-    addLog('統合ビューデータ取得エラー', { error: error.toString() });
+    addLog('統合ビューデータ取得エラー', { 
+      error: error.toString(),
+      stack: error.stack || 'no stack trace'
+    });
     
     return {
       success: false,

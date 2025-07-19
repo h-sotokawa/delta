@@ -111,7 +111,9 @@ window.IntegratedView = {
   showEmptyMessage: function() {
     const container = document.getElementById('tableContainer');
     if (container) {
-      container.innerHTML = '<div class="empty-message">表示するデータがありません</div>';
+      const viewType = this.state.currentViewType === 'terminal' ? '端末' : 'プリンタ・その他';
+      const location = this.state.currentLocation || '全拠点';
+      container.innerHTML = `<div class="empty-message">${viewType}データがありません（${location}）</div>`;
     }
   }
 };

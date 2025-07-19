@@ -73,11 +73,18 @@ IntegratedView.loadData = function() {
 
 // データ読み込み成功時
 IntegratedView.onDataLoaded = function(response) {
-  console.log('Data loaded successfully');
+  console.log('Data loaded successfully', response);
   this.showLoading(false);
   
-  if (!response || response.error) {
-    this.showError(response ? response.error : 'データの読み込みに失敗しました');
+  // レスポンス形式の確認
+  if (!response) {
+    this.showError('データの読み込みに失敗しました');
+    return;
+  }
+  
+  // success/error形式のレスポンスをチェック
+  if (response.success === false) {
+    this.showError(response.error || 'データの読み込みに失敗しました');
     return;
   }
   
