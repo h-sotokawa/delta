@@ -1393,6 +1393,81 @@ function testViewSheets() {
  * @param {string} viewType - ビュータイプ（terminal/printer_other）
  * @return {Object} レスポンスオブジェクト
  */
+/**
+ * 拠点コードを正規化（大文字小文字の統一と例外処理）
+ * @param {string} locationCode - 拠点コード
+ * @return {string} 正規化された拠点コード
+ */
+function normalizeLocationCode(locationCode) {
+  if (!locationCode) return '';
+  
+  const code = locationCode.toString().toUpperCase();
+  
+  // 例外処理：Osaka, Kobe, Himejiの場合
+  const exceptions = {
+    'OSAKA': 'OSAKA',
+    'KOBE': 'KOBE',
+    'HIMEJI': 'HIMEJI'
+  };
+  
+  // 既に正しい形式の場合はそのまま返す
+  if (exceptions[code]) {
+    return code;
+  }
+  
+  // その他の一般的な形式も許容
+  return code;
+}
+
+/**
+ * 統合ビューから利用可能な拠点リストを取得
+ * @return {Array} 拠点コードの配列
+ */
+function getAvailableLocationsFromIntegratedView() {
+  try {
+    // 端末とプリンタ両方のシートから拠点を収集
+    const terminalSheet = getIntegratedViewTerminalSheet();
+    const printerSheet = getIntegratedViewPrinterOtherSheet();
+    
+    const locations = new Set();
+    
+    // 端末シートから拠点を収集
+    if (terminalSheet && terminalSheet.getLastRow() > 1) {
+      const terminalData = terminalSheet.getRange(2, 1, terminalSheet.getLastRow() - 1, 1).getValues();
+      terminalData.forEach(row => {
+        const managementNumber = row[0];
+        if (managementNumber) {
+          const locationCode = managementNumber.toString().split('_')[0];
+          if (locationCode) {
+            locations.add(locationCode);
+          }
+        }
+      });
+    }
+    
+    // プリンタシートから拠点を収集
+    if (printerSheet && printerSheet.getLastRow() > 1) {
+      const printerData = printerSheet.getRange(2, 1, printerSheet.getLastRow() - 1, 1).getValues();
+      printerData.forEach(row => {
+        const managementNumber = row[0];
+        if (managementNumber) {
+          const locationCode = managementNumber.toString().split('_')[0];
+          if (locationCode) {
+            locations.add(locationCode);
+          }
+        }
+      });
+    }
+    
+    // 配列に変換してソート
+    return Array.from(locations).sort();
+    
+  } catch (error) {
+    console.error('拠点リスト取得エラー:', error);
+    return [];
+  }
+}
+
 function getIntegratedViewData(location, viewType) {
   const startTime = startPerformanceTimer();
   addLog('統合ビューデータ取得開始', { location, viewType });
@@ -1436,13 +1511,27 @@ function getIntegratedViewData(location, viewType) {
       // ヘッダー行を保持
       filteredData = [allData[0]];
       
-      // 拠点名列のインデックスを検索（AQ列 = 42）
-      const locationColumnIndex = 42; // AQ列
+      // 拠点管理番号列のインデックスを検索（A列 = 0）
+      const managementNumberIndex = 0;
+      
+      // 拠点コードの正規化（例外処理）
+      const normalizedLocationCode = normalizeLocationCode(location);
       
       // データ行をフィルタリング
       for (let i = 1; i < allData.length; i++) {
-        if (allData[i][locationColumnIndex] === location) {
-          filteredData.push(allData[i]);
+        const managementNumber = allData[i][managementNumberIndex];
+        if (managementNumber) {
+          // 拠点管理番号から拠点コードを抽出（最初の_まで）
+          const dataLocationCode = managementNumber.toString().split('_')[0];
+          
+          if (dataLocationCode) {
+            // 拠点コードも正規化して比較
+            const normalizedDataCode = normalizeLocationCode(dataLocationCode);
+            
+            if (normalizedDataCode === normalizedLocationCode) {
+              filteredData.push(allData[i]);
+            }
+          }
         }
       }
     }
