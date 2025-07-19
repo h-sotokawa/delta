@@ -985,8 +985,30 @@ function getLatestStatusCollectionData() {
         
         // 既存のデータより新しい場合のみ更新
         const timestamp = getValueByColumnName(row, headers, 'タイムスタンプ');
-        if (!statusMap[managementNumber] || 
-            (timestamp && statusMap[managementNumber]['タイムスタンプ'] < timestamp)) {
+        
+        // 日付比較を安全に行う
+        let shouldUpdate = !statusMap[managementNumber];
+        if (!shouldUpdate && timestamp) {
+          try {
+            const newDate = timestamp instanceof Date ? timestamp : new Date(timestamp);
+            const existingTimestamp = statusMap[managementNumber]['タイムスタンプ'];
+            const existingDate = existingTimestamp instanceof Date ? existingTimestamp : new Date(existingTimestamp);
+            
+            // 有効な日付の場合のみ比較
+            if (!isNaN(newDate.getTime()) && !isNaN(existingDate.getTime())) {
+              shouldUpdate = newDate > existingDate;
+            } else {
+              // 日付が無効な場合は更新する
+              shouldUpdate = true;
+            }
+          } catch (error) {
+            // 日付変換エラーの場合は更新する
+            console.error('日付比較エラー:', error);
+            shouldUpdate = true;
+          }
+        }
+        
+        if (shouldUpdate) {
           // 行データをオブジェクトに変換（ヘッダーをキーとして使用）
           const statusRecord = rowToObject(row, headers);
           
@@ -1233,9 +1255,18 @@ function integrateDeviceDataForView(deviceData, statusData, locationMap, deviceT
     // 貸出日数を計算
     let loanDays = 0;
     if (latestStatus && latestStatus['0-4.ステータス'] === '1.貸出中' && latestStatus['タイムスタンプ']) {
-      const loanDate = new Date(latestStatus['タイムスタンプ']);
-      const today = new Date();
-      loanDays = Math.floor((today - loanDate) / (1000 * 60 * 60 * 24));
+      try {
+        const timestamp = latestStatus['タイムスタンプ'];
+        const loanDate = timestamp instanceof Date ? timestamp : new Date(timestamp);
+        
+        if (!isNaN(loanDate.getTime())) {
+          const today = new Date();
+          loanDays = Math.floor((today - loanDate) / (1000 * 60 * 60 * 24));
+        }
+      } catch (error) {
+        console.error('貸出日数計算エラー:', error);
+        loanDays = 0;
+      }
     }
     
     // 要注意フラグを判定
